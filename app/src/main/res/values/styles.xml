@@ -1,22 +1,14 @@
 <resources>
 
     <!--
-        Material 3 base theme (1.1.0): DayNight gives automatic dark mode.
-        The 2016-era custom attrs of the folder browser (folderUpImage,
-        fileImage, ...) are preserved on top of M3; DynamicColors (see
-        IkuraApplication) adds Material You wallpaper palettes on Android 12+.
+        Material 3, NoActionBar (1.2.0): every screen now supplies its own
+        MaterialToolbar, edge-to-edge insets are handled in code, and the
+        2011 folder-browser attrs (folderUpImage, fileImage, ...) are gone
+        together with the browser itself - replaced by the system SAF
+        picker. DayNight gives automatic dark mode; DynamicColors (see
+        IkuraApplication) adds Material You wallpaper palettes on 12+.
     -->
-    <style name="AppBaseTheme" parent="Theme.Material3.DayNight">
-        <item name="folderUpImage">@drawable/ic_folder_up_light</item>
-        <item name="fileImage">@drawable/ic_file_light</item>
-        <item name="folderImage">@drawable/ic_folder_light</item>
-        <item name="phoneImage">@drawable/ic_action_phone</item>
-        <item name="sdcardImage">@drawable/ic_action_sd_storage</item>
-        <item name="plusImage">@drawable/ic_action_new</item>
-
-        <item name="android:divider">@drawable/light_divider</item>
-        <item name="android:dividerHeight">1dp</item>
-
+    <style name="AppBaseTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Brand seed: warm "ikura" (salmon roe) orange. Used on Android <12;
              on 12+ the wallpaper palette takes over. -->
         <item name="colorPrimary">@color/ikura_primary</item>
