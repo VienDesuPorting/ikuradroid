@@ -16,10 +16,16 @@ import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AbsoluteLayout;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.os.*;
 import android.util.Log;
+import android.util.TypedValue;
+
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import android.graphics.*;
 import android.media.*;
 import android.hardware.*;
@@ -40,8 +46,7 @@ public class SDLActivity extends Activity {
     protected static SDLSurface mSurface;
     protected static View mTextEdit;
     protected static ViewGroup mLayout;
-    protected static SDLJoystickHandler mJoystickHandler;
-    private PowerManager.WakeLock wakeLock = null;
+    protected static SDLJoystickHandler_API12 mJoystickHandler;
     // This is what SDL runs in. It invokes SDL_main(), eventually
     protected static Thread mSDLThread;
     
@@ -101,67 +106,87 @@ public class SDLActivity extends Activity {
         // Set up the surface
         mSurface = new SDLSurface(getApplication());
         
-        if(Build.VERSION.SDK_INT >= 12) {
-            mJoystickHandler = new SDLJoystickHandler_API12();
-        }
-        else {
-            mJoystickHandler = new SDLJoystickHandler();
-        }
+        mJoystickHandler = new SDLJoystickHandler_API12();
+        // 1.3.0: the API < 12 null-handler branch is gone - minSdk 21.
         
 
         
-        mLayout = new AbsoluteLayout(this);
+        mLayout = new FrameLayout(this);
         mLayout.addView(mSurface);
         setContentView(mLayout);
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-                wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ON_AFTER_RELEASE, "SDLActivity");
-                wakeLock.acquire();
+        // 1.3.0: keep the screen bright with the window flag instead of the
+        // SCREEN_DIM_WAKE_LOCK - same effect, no WAKE_LOCK permission.
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
     
-    @Override
-        public boolean onPrepareOptionsMenu(Menu menu)
-        {
-                super.onPrepareOptionsMenu(menu);
-                menu.clear();
-                menu.add(Menu.NONE, Menu.FIRST, 0, getResources().getString(R.string.menu_title));
-                menu.add(Menu.NONE, Menu.FIRST+1, 0, getResources().getString(R.string.menu_save));
-                menu.add(Menu.NONE, Menu.FIRST+2, 0, getResources().getString(R.string.menu_load));
-                menu.add(Menu.NONE, Menu.FIRST+3, 0, getResources().getString(R.string.menu_skip));
-                menu.add(Menu.NONE, Menu.FIRST+4, 0, getResources().getString(R.string.menu_settings));
-                menu.add(Menu.NONE, Menu.FIRST+5, 0, getResources().getString(R.string.menu_quit));
-                
-                return true;
+    // 1.3.0: the in-game menu. BACK or MENU opens a Material 3 bottom
+    // sheet; each action maps to the virtual key the engine listens for
+    // (the F5/F6/F7/F8/F9 + CTRL mapping of the 2016 build is kept as is).
+    private void showGameMenu() {
+        BottomSheetDialog sheet = new BottomSheetDialog(this);
+        LinearLayout root = (LinearLayout) getLayoutInflater()
+                .inflate(R.layout.sheet_ingame, null);
+        LinearLayout items = (LinearLayout) root.findViewById(R.id.ingame_items);
+
+        addMenuRow(sheet, items, R.drawable.ic_ingame_title, R.string.menu_title, 0,
+                () -> onNativeKeyDown(KeyEvent.KEYCODE_F8));
+        addMenuRow(sheet, items, R.drawable.ic_ingame_save, R.string.menu_save, 0,
+                () -> onNativeKeyDown(KeyEvent.KEYCODE_F6));
+        addMenuRow(sheet, items, R.drawable.ic_ingame_load, R.string.menu_load, 0,
+                () -> onNativeKeyDown(KeyEvent.KEYCODE_F5));
+        addMenuRow(sheet, items, R.drawable.ic_ingame_skip, R.string.menu_skip,
+                skip ? R.string.skip_on : R.string.skip_off,
+                () -> {
+                    // Same toggle the 2016 options menu had: hold/release CTRL.
+                    if (skip) {
+                        onNativeKeyUp(KeyEvent.KEYCODE_CTRL_LEFT);
+                    } else {
+                        onNativeKeyDown(KeyEvent.KEYCODE_CTRL_LEFT);
+                    }
+                    skip = !skip;
+                });
+        addMenuRow(sheet, items, R.drawable.ic_ingame_settings, R.string.menu_settings, 0,
+                () -> onNativeKeyDown(KeyEvent.KEYCODE_F7));
+        addMenuRow(sheet, items, R.drawable.ic_ingame_quit, R.string.menu_quit, 0,
+                () -> onNativeKeyDown(KeyEvent.KEYCODE_F9));
+
+        sheet.setContentView(root);
+        sheet.show();
+    }
+
+    private void addMenuRow(final BottomSheetDialog sheet, LinearLayout items,
+                            int iconRes, int labelRes, int subRes,
+                            final Runnable action) {
+        View row = getLayoutInflater().inflate(R.layout.sheet_ingame_item, items, false);
+        ImageView icon = (ImageView) row.findViewById(R.id.ingame_icon);
+        TextView text = (TextView) row.findViewById(R.id.ingame_text);
+        TextView sub = (TextView) row.findViewById(R.id.ingame_sub);
+
+        icon.setImageResource(iconRes);
+        // Quit is destructive - paint it with the error color, keep the
+        // rest of the icons on the M3 secondary role.
+        icon.setImageTintList(android.content.res.ColorStateList.valueOf(themeColor(
+                labelRes == R.string.menu_quit
+                        ? com.google.android.material.R.attr.colorError
+                        : com.google.android.material.R.attr.colorOnSurfaceVariant)));
+        text.setText(labelRes);
+        if (subRes != 0) {
+            sub.setText(subRes);
+            sub.setVisibility(View.VISIBLE);
         }
-    @Override
-        public boolean onOptionsItemSelected(MenuItem item)
-        {
-        if (item.getItemId() == Menu.FIRST){
-                        onNativeKeyDown( KeyEvent.KEYCODE_F8 );
-                }               
-        else if (item.getItemId() == Menu.FIRST+1){
-                        onNativeKeyDown( KeyEvent.KEYCODE_F6 );
-                }               
-                else if (item.getItemId() == Menu.FIRST+2){
-                        onNativeKeyDown( KeyEvent.KEYCODE_F5 );
-                }                               
-                else if (item.getItemId() == Menu.FIRST+3){
-                        if(skip)
-                                onNativeKeyUp( KeyEvent.KEYCODE_CTRL_LEFT);
-                        else
-                                onNativeKeyDown( KeyEvent.KEYCODE_CTRL_LEFT);
-                  skip=!skip;
-                }  
-                else if (item.getItemId() == Menu.FIRST+4){
-                        onNativeKeyDown( KeyEvent.KEYCODE_F7 );
-                }               
-                else if (item.getItemId() == Menu.FIRST+5){
-                        onNativeKeyDown( KeyEvent.KEYCODE_F9 );
-                }
-                else{
-                        return false;
-                }
-                return true;
-        }
+        row.setOnClickListener(v -> {
+            sheet.dismiss();
+            action.run();
+        });
+        items.addView(row);
+    }
+
+    /** Resolves a theme attribute color (M3 roles come from the activity theme). */
+    private int themeColor(int attr) {
+        TypedValue tv = new TypedValue();
+        getTheme().resolveAttribute(attr, tv, true);
+        return tv.data;
+    }
     
 
     
@@ -175,16 +200,12 @@ public class SDLActivity extends Activity {
     @Override
     protected void onPause() {
         Log.v("SDL", "onPause()");
-                if( wakeLock != null )
-                        wakeLock.release();
         super.onPause();
         SDLActivity.handlePause();
     }
 
     @Override
     protected void onResume() {
-        if( wakeLock != null )
-                        wakeLock.acquire();
         Log.v("SDL", "onResume()");
         super.onResume();
         SDLActivity.handleResume();
@@ -244,16 +265,19 @@ public class SDLActivity extends Activity {
     public boolean dispatchKeyEvent(KeyEvent event) {
         int keyCode = event.getKeyCode();
 
-        if (keyCode== KeyEvent.KEYCODE_BACK) {
-                openOptionsMenu();
-                return false;
+        // 1.3.0: BACK and MENU open the Material 3 in-game menu; the event
+        // is consumed so the engine never sees it (the same contract the
+        // 2016 options menu had).
+        if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_MENU) {
+                showGameMenu();
+                return true;
         }
 
         // Ignore certain special keys so they're handled by Android
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ||
             keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
             keyCode == KeyEvent.KEYCODE_CAMERA ||
-            keyCode == KeyEvent.KEYCODE_MENU  || 
+
             keyCode == 168 || /* API 11: KeyEvent.KEYCODE_ZOOM_IN */
             keyCode == 169 /* API 11: KeyEvent.KEYCODE_ZOOM_OUT */
             ) {
@@ -461,8 +485,13 @@ public class SDLActivity extends Activity {
 
         @Override
         public void run() {
-            AbsoluteLayout.LayoutParams params = new AbsoluteLayout.LayoutParams(
-                    w, h + HEIGHT_PADDING, x, y);
+            // 1.3.0: FrameLayout + margins replaces the deprecated
+            // AbsoluteLayout (identical x/y/w/h placement).
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    w, h + HEIGHT_PADDING);
+            params.gravity = Gravity.TOP | Gravity.START;
+            params.leftMargin = x;
+            params.topMargin = y;
 
             if (mTextEdit == null) {
                 mTextEdit = new DummyEdit(getContext());
@@ -1041,19 +1070,9 @@ class SDLInputConnection extends BaseInputConnection {
     }
 }
 
-/* A null joystick handler for API level < 12 devices (the accelerometer is handled separately) */
-class SDLJoystickHandler {
-    
-    public boolean handleMotionEvent(MotionEvent event) {
-        return false;
-    }
-    
-    public void pollInputDevices() {
-    }
-}
-
-/* Actual joystick functionality available for API >= 12 devices */
-class SDLJoystickHandler_API12 extends SDLJoystickHandler {
+/* 1.3.0: the null-handler stub for API < 12 is gone (minSdk 21); this is
+   the only joystick handler now. */
+class SDLJoystickHandler_API12 {
   
     class SDLJoystick {
         public int device_id;
@@ -1076,7 +1095,6 @@ class SDLJoystickHandler_API12 extends SDLJoystickHandler {
         mJoysticks = new ArrayList<SDLJoystick>();
     }
 
-    @Override
     public void pollInputDevices() {
         int[] deviceIds = InputDevice.getDeviceIds();
         // It helps processing the device ids in reverse order
@@ -1150,7 +1168,6 @@ class SDLJoystickHandler_API12 extends SDLJoystickHandler {
         return null;
     }   
     
-    @Override        
     public boolean handleMotionEvent(MotionEvent event) {
         if ( (event.getSource() & InputDevice.SOURCE_JOYSTICK) != 0) {
             int actionPointerIndex = event.getActionIndex();
