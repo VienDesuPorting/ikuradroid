@@ -1,0 +1,199 @@
+/* src/common/config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Compilation date */
+#undef COMPILATION_DATE
+
+/* Define to 1 if you don't have `vprintf' but do have `_doprnt.' */
+#undef HAVE_DOPRNT
+
+/* Handles timezone and days */
+#undef HAVE_GETTIMEOFDAY
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* Updates blocks of ram */
+#undef HAVE_MEMSET
+
+/* Define to 1 if stdbool.h conforms to C99. */
+#undef HAVE_STDBOOL_H
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/select.h> header file. */
+#undef HAVE_SYS_SELECT_H
+
+/* Define to 1 if you have the <sys/socket.h> header file. */
+#undef HAVE_SYS_SOCKET_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the `vprintf' function. */
+#undef HAVE_VPRINTF
+
+/* Updates blocks of ram */
+#undef HAVE_WORDEXP_H
+
+/* Define to 1 if the system has the type `_Bool'. */
+#undef HAVE__BOOL
+
+/* Name of package */
+#undef PACKAGE
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Name of current line */
+#undef PACKAGE_LINE
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* SCM Revision */
+#undef SCM_VERSION
+
+/* Define to the type of arg 1 for `select'. */
+#undef SELECT_TYPE_ARG1
+
+/* Define to the type of args 2, 3 and 4 for `select'. */
+#undef SELECT_TYPE_ARG234
+
+/* Define to the type of arg 5 for `select'. */
+#undef SELECT_TYPE_ARG5
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
+
+/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
+#undef TIME_WITH_SYS_TIME
+
+/* Define to 1 if your <sys/time.h> declares `struct tm'. */
+#undef TM_IN_SYS_TIME
+
+/* Version number of package */
+#undef VERSION
+
+/* Compile code for a BSD based target */
+#undef VILE_ARCH_FREEBSD
+
+/* Compile code for a linuxbased target */
+#undef VILE_ARCH_LINUX
+
+/* Compile code for wintendo */
+#undef VILE_ARCH_MICROSOFT
+
+/* Use internal SDL_gfx code (Not library) */
+#undef VILE_BUILD_INTERNALGFX
+
+/* Use internal SDL_image code (Not library) */
+#undef VILE_BUILD_INTERNALIMAGE
+
+/* Use internal SDL_ttf code (Not library) */
+#undef VILE_BUILD_INTERNALTTF
+
+/* Build a native msys makefile */
+#undef VILE_BUILD_MSYS
+
+/* Enabling SDL 1.3 support */
+#undef VILE_BUILD_SDLHG
+
+/* Build standalone executable */
+#undef VILE_BUILD_STATIC
+
+/* Enabling UNICODE support */
+#undef VILE_BUILD_UNICODE
+
+/* Build with win32 console */
+#undef VILE_BUILD_W32CONSOLE
+
+/* Building with Electric Fence enabled */
+#undef VILE_FEATURE_EFENCE
+
+/* Building with ffmpeg */
+#undef VILE_FEATURE_FFMPEG
+
+/* Building with fluidsynth */
+#undef VILE_FEATURE_FLUIDSYNTH
+
+/* Building with hq scalers enabled */
+#undef VILE_FEATURE_SCALER
+
+/* Building with unittests enabled */
+#undef VILE_FEATURE_UNITTEST
+
+/* Build with debug information */
+#undef VILE_LOGGING_DEBUG
+
+/* Build with logging information */
+#undef VILE_LOGGING_ENABLED
+
+/* Default configuration file */
+#undef VILE_PATH_CFG
+
+/* Current working directory */
+#undef VILE_PATH_CWD
+
+/* Default path to load games from */
+#undef VILE_PATH_GAME
+
+/* Default resource file */
+#undef VILE_PATH_RES
+
+/* Default path for savegames */
+#undef VILE_PATH_SAVE
+
+/* Building with crowd support */
+#undef VILE_SUPPORT_CROWD
+
+/* Building with cware support */
+#undef VILE_SUPPORT_CWARE
+
+/* Building with ikura support */
+#undef VILE_SUPPORT_IKURA
+
+/* Building with jast support */
+#undef VILE_SUPPORT_JAST
+
+/* Building with True love support */
+#undef VILE_SUPPORT_TLOVE
+
+/* Building with will support */
+#undef VILE_SUPPORT_WILL
+
+/* Building with windy support */
+#undef VILE_SUPPORT_WINDY
+
+/* Define to empty if `const' does not conform to ANSI C. */
+#undef const

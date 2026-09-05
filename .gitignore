@@ -1,0 +1,17 @@
+# Build outputs
+build/
+.gradle/
+app/build/
+app/.cxx/
+local.properties
+captures/
+*.iml
+.idea/
+.DS_Store
+*.keystore.tmp
+
+# Stray duplicate of the jni tree that ships inside app/src/main/java/jni
+# in the user's original archive (build intermediates + duplicated SDL
+# sources, ~235 MB). Not referenced by ndk-build (real path:
+# app/src/main/jni). Kept on disk for archaeology, kept out of the repo.
+app/src/main/java/jni/
