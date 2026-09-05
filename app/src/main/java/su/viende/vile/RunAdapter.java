@@ -35,10 +35,15 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
         @Override
         public void onClick(View v) {
             int position = getPosition();
-			Intent intent = new Intent(v.getContext(), SDLActivity.class);
-			intent.putExtra("fname",  mFeedItem.getTitle());
-			intent.putExtra("fpath",  mFeedItem.getPath());
-			v.getContext().startActivity(intent);
+                        // 0.54.4: the engine fopen()s its font inside the game
+                        // folder (see GameFontInstaller) - ship it there first,
+                        // otherwise a fresh game renders no text at all.
+                        GameFontInstaller.ensureFont(v.getContext(),
+                                        mFeedItem.getPath() + "/" + mFeedItem.getTitle());
+                        Intent intent = new Intent(v.getContext(), SDLActivity.class);
+                        intent.putExtra("fname",  mFeedItem.getTitle());
+                        intent.putExtra("fpath",  mFeedItem.getPath());
+                        v.getContext().startActivity(intent);
         }
     }
  
@@ -47,7 +52,7 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
     }
     
     public void swapArray(ArrayList<RunItem> dataset)  {
-    	mDataset = dataset;   
+        mDataset = dataset;   
     }
     
     @Override

@@ -17,8 +17,8 @@ android {
         // Single source of truth for the version. NB: values here override
         // android:versionCode/versionName in AndroidManifest.xml — keep the
         // manifest attributes removed to avoid silent mismatches.
-        versionCode 4
-        versionName "0.54.3-arm64"
+        versionCode 5
+        versionName "0.54.4-arm64"
 
         externalNativeBuild {
             ndkBuild {
