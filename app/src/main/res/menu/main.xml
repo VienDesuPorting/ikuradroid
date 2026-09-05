@@ -10,9 +10,9 @@
         app:showAsAction="ifRoom"/>
    
     <item
-        android:id="@+id/menu_version"
-        android:icon="@drawable/ic_launcher_settings"
-        android:title="@string/menu_version"
-        app:showAsAction="never"/> 
+        android:id="@+id/menu_about"
+        android:icon="@drawable/ic_action_info"
+        android:title="@string/menu_about"
+        app:showAsAction="never"/>
 
 </menu>
