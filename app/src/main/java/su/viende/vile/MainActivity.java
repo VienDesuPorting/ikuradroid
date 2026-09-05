@@ -64,7 +64,9 @@ public class MainActivity extends AppCompatActivity
                 final ActionBar actionBar = getSupportActionBar();
                 // actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
                 actionBar.setTitle(R.string.app_name);
-                actionBar.setSubtitle("visual_android");
+                // Branding of the 2026 revival; the original visual_android VK
+                // public is an independent project (see README / Provenance).
+                actionBar.setSubtitle("VienDesu! Porting Team");
                 actionBar.setDisplayShowHomeEnabled(true);
 
                 final RecyclerView recyclerView = findViewById(R.id.my_recycler_view);
@@ -215,8 +217,8 @@ public class MainActivity extends AppCompatActivity
         @Override
         public boolean onOptionsItemSelected(MenuItem item) {
                 int id = item.getItemId();
-                if (id == R.id.menu_version) {
-                        Toast.makeText(this, R.string.version, Toast.LENGTH_SHORT).show();
+                if (id == R.id.menu_about) {
+                        showAboutDialog();
                         return true;
                 }
 
@@ -248,6 +250,27 @@ public class MainActivity extends AppCompatActivity
                 });
                 builder.setNegativeButton(android.R.string.cancel, null);
                 mSaveDirBrowse.setDialog(builder.create());
+        }
+
+        // 1.1.0: attribution dialog - the ViLE engine (ViLE Team, GPLv3), the
+        // original anonymous Android developer ("Ivan"), the revival team
+        // (VienDesu! Porting Team) and third-party components. Replaces the
+        // bare version toast of the 2016 launcher.
+        private void showAboutDialog() {
+                View v = getLayoutInflater().inflate(R.layout.about_dialog, null);
+                TextView version = (TextView) v.findViewById(R.id.about_version);
+                String verName;
+                try {
+                        verName = getPackageManager()
+                                        .getPackageInfo(getPackageName(), 0).versionName;
+                } catch (Exception e) {
+                        verName = "?";
+                }
+                version.setText(getString(R.string.app_name) + " " + verName);
+                new AlertDialog.Builder(this)
+                                .setView(v)
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show();
         }
 
         protected void setPath(String path) {
