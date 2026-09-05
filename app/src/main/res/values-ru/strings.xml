@@ -8,7 +8,7 @@
     <string name="menu_settings">Настройки</string>
     <string name="menu_title">Гл.меню</string>
     <string name="menu_quit">Выйти</string>
-    <string name="menu_version">Версия</string>
+    <string name="menu_about">О приложении</string>
     <string name="dir_change">Сменить папку новелл</string>
     <string name="directory_back">(Назад)</string>
     <string name="message_cannot_find_internal_storage">Не найдена встроенная память!</string>      
@@ -188,4 +188,15 @@
     <string name="storage_access_title">Нужен доступ к памяти</string>
     <string name="storage_access_message">Браузер папок 2016 года читает общее хранилище обычными файловыми API. На современных Android нужно выдать разрешение «Доступ ко всем файлам» на следующем экране, иначе папки с играми будут выглядеть пустыми.</string>
     <string name="storage_access_grant">Выдать доступ</string>
+
+    <!-- Экран «О приложении» (1.1.0) -->
+    <string name="about_tagline">Интерпретатор визуальных новелл Ikura GDL для Android</string>
+    <string name="about_engine_header">Движок</string>
+    <string name="about_engine">ViLE — Visual Library Engine, © ViLE Team, 2010–2012. Лицензия GPLv3.</string>
+    <string name="about_people_header">Люди</string>
+    <string name="about_people">«Иван» — анонимный и изначальный разработчик Android-реализации ViLE (2015–2016).\n\nВозрождение и поддержка — VienDesu! Porting Team (2026).</string>
+    <string name="about_thirdparty_header">Сторонние компоненты</string>
+    <string name="about_thirdparty">SDL 2.0.3, SDL_image, SDL_mixer, SDL_ttf, SDL_gfx, libmikmod, smpeg2, libwebp; фильтры HQx © MaxSt (LGPL 2.1+); utf8cpp © Nemanja Trifunovic; движок Will портирован из VNMV © soywiz.</string>
+    <string name="about_links_header">Ссылки</string>
+    <string name="about_links">https://sourceforge.net/projects/vilevn/\nhttps://vk.ru/topic-69564393_33447386</string>
 </resources>
