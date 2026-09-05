@@ -1,0 +1,18 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="jp.ogapee.onscripter.MainActivity" >
+   
+   <item
+        android:id="@+id/dir_change"
+        android:icon="@drawable/ic_folder_light"
+        android:title="@string/dir_change"
+        app:showAsAction="ifRoom"/>
+   
+    <item
+        android:id="@+id/menu_version"
+        android:icon="@drawable/ic_launcher_settings"
+        android:title="@string/menu_version"
+        app:showAsAction="never"/> 
+
+</menu>
