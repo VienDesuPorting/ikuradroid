@@ -15,9 +15,9 @@ android {
         // it. Renaming it would risk breaking the native bridge for zero benefit.
         applicationId "su.viende.ikuradroid"
         minSdk 21
-        // 35 breaks the 2016-era file browser permission model less than expected:
-        // WRITE_EXTERNAL_STORAGE still grants access to shared storage roots via
-        // MANAGE_EXTERNAL_STORAGE below, and app-private dirs always work.
+        // 1.2.0: SAF-only storage - the app needs no storage permission on any
+        // Android version (persisted ACTION_OPEN_DOCUMENT_TREE grant + the
+        // app-private files dir for the game copies and savegames).
         targetSdk 35
         // Single source of truth for the version. NB: values here override
         // android:versionCode/versionName in AndroidManifest.xml — keep the
@@ -25,8 +25,8 @@ android {
         // 1.0.0 restarts both versionName and the versionCode lineage: the new
         // applicationId makes it a fresh install, there is no upgrade path from
         // the 0.54.x line (su.viende.vile).
-        versionCode 3
-        versionName "1.1.0"
+        versionCode 4
+        versionName "1.2.0"
 
         externalNativeBuild {
             ndkBuild {
@@ -66,11 +66,10 @@ android {
 }
 
 dependencies {
+    // 1.2.0 dependency diet: viewpager / fragment / preference / cardview
+    // (2011-era or unused) are gone together with the old folder browser.
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
-    implementation 'androidx.fragment:fragment:1.5.5'
-    implementation 'androidx.viewpager:viewpager:1.0.0'
-    implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.preference:preference:1.2.1'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
 }
