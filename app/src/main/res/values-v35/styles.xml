@@ -1,0 +1,9 @@
+<resources>
+    <!-- targetSdk 35 enforces edge-to-edge on Android 15; the 2016-era
+         launcher is not inset-aware yet (full rework follows the SAF file
+         manager in 1.2.0), so opt out for now to keep the grid below the
+         system bars. -->
+    <style name="AppTheme" parent="AppBaseTheme">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>

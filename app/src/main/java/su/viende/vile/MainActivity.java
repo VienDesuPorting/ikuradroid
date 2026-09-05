@@ -16,8 +16,8 @@ import android.content.DialogInterface.OnClickListener;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -231,7 +231,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         private void createDirectoryBrowserDialog() {
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
                 builder.setView(mSaveDirBrowse.getDialogLayout());
                 // 0.54.2: was a hardcoded "test"
                 builder.setTitle(R.string.dialog_select_folder_title);
@@ -267,7 +267,7 @@ public class MainActivity extends AppCompatActivity
                         verName = "?";
                 }
                 version.setText(getString(R.string.app_name) + " " + verName);
-                new AlertDialog.Builder(this)
+                new MaterialAlertDialogBuilder(this)
                                 .setView(v)
                                 .setPositiveButton(android.R.string.ok, null)
                                 .show();
@@ -289,7 +289,7 @@ public class MainActivity extends AppCompatActivity
                                 || Environment.isExternalStorageManager())
                         return;
                 try {
-                        new AlertDialog.Builder(this)
+                        new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.storage_access_title)
                                 .setMessage(R.string.storage_access_message)
                                 .setPositiveButton(R.string.storage_access_grant, new OnClickListener() {
