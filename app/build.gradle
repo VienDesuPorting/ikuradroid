@@ -8,7 +8,12 @@ android {
     ndkVersion '27.2.12479018'
 
     defaultConfig {
-        applicationId "su.viende.vile"
+        // 1.0.0 rebrand: applicationId moved su.viende.vile -> su.viende.ikuradroid.
+        // The Java namespace above INTENTIONALLY stays su.viende.vile: the SDL JNI
+        // bridge (SDL_JAVA_PACKAGE_PATH := su_viende_vile in jni/Android.mk),
+        // org.libsdl.app.* references and Java package declarations all depend on
+        // it. Renaming it would risk breaking the native bridge for zero benefit.
+        applicationId "su.viende.ikuradroid"
         minSdk 21
         // 35 breaks the 2016-era file browser permission model less than expected:
         // WRITE_EXTERNAL_STORAGE still grants access to shared storage roots via
@@ -17,8 +22,11 @@ android {
         // Single source of truth for the version. NB: values here override
         // android:versionCode/versionName in AndroidManifest.xml — keep the
         // manifest attributes removed to avoid silent mismatches.
-        versionCode 5
-        versionName "0.54.4-arm64"
+        // 1.0.0 restarts both versionName and the versionCode lineage: the new
+        // applicationId makes it a fresh install, there is no upgrade path from
+        // the 0.54.x line (su.viende.vile).
+        versionCode 1
+        versionName "1.0.0"
 
         externalNativeBuild {
             ndkBuild {
