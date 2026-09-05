@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VILE</string>
+    <string name="app_name">IkuraDroid</string>
     <bool name="use_launcher">true</bool>
     <bool name="use_download">false</bool>    
-    <string name="version">Vile 0.54</string>
+    <string name="version">IkuraDroid 1.0.0</string>
     <string name="menu_version">version</string>
     
     <string name="menu_automode">Automode</string>
