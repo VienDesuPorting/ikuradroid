@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark scheme of the "ikura" seed: lighter tones for legibility
+         on dark surfaces (M3 DayNight picks these automatically). -->
+    <color name="ikura_primary">#FFB59A</color>
+    <color name="ikura_on_primary">#5C1A00</color>
+    <color name="ikura_primary_container">#8D2E00</color>
+    <color name="ikura_on_primary_container">#FFDBCC</color>
+</resources>

@@ -71,7 +71,12 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
         String fPath = mDataset.get(position).getPath();
         String iPath = fPath + "/"+ fName+ "/icon.png";
         File file = new File(iPath);
-        if (file.exists()) holder.mImageView.setImageURI( Uri.fromFile( new File( iPath ) ) );
+        // 1.1.0: reset to the placeholder when a recycled tile loses its
+        // per-game icon.png (prevents icon bleed-through in the grid)
+        if (file.exists())
+                holder.mImageView.setImageURI( Uri.fromFile( new File( iPath ) ) );
+        else
+                holder.mImageView.setImageResource(R.drawable.card_img);
         holder.mFeedItem = mDataset.get(position);
         holder.mTextView.setText(fName);
     }
