@@ -1,89 +1,94 @@
 package su.viende.vile;
 
-import android.content.Intent;
 import android.net.Uri;
-import android.os.Environment;
-import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
- 
+
 import java.io.File;
-import java.io.FileFilter;
 import java.util.ArrayList;
 
-import org.libsdl.app.SDLActivity;
- 
- 
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+/**
+ * 1.2.0: library grid adapter. Tiles bind a game title and its per-game
+ * icon.png - readable from the install area once the game has been copied;
+ * until then the placeholder is shown. Clicks are delegated to the host
+ * (MainActivity installs and launches the game).
+ */
 public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
- 
-    private ArrayList<RunItem> mDataset;
- 
-    public static class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
-        public TextView mTextView;
-        public ImageView mImageView;
-        public RunItem mFeedItem;
+
+    /** Click callback for a library tile. */
+    public interface OnGameClickListener {
+        void onGameClick(RunItem item);
+    }
+
+    private final ArrayList<RunItem> mDataset = new ArrayList<>();
+    private final OnGameClickListener mListener;
+
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        public final TextView mTextView;
+        public final ImageView mImageView;
+        public RunItem mItem;
+
         public ViewHolder(View v) {
-            super(v);            
-            v.setOnClickListener(this);
+            super(v);
             mTextView = (TextView) v.findViewById(R.id.tv_recycler_item);
             mImageView = (ImageView) v.findViewById(R.id.iv_recycler_item);
         }
-        @Override
-        public void onClick(View v) {
-            int position = getPosition();
-                        // 0.54.4: the engine fopen()s its font inside the game
-                        // folder (see GameFontInstaller) - ship it there first,
-                        // otherwise a fresh game renders no text at all.
-                        GameFontInstaller.ensureFont(v.getContext(),
-                                        mFeedItem.getPath() + "/" + mFeedItem.getTitle());
-                        Intent intent = new Intent(v.getContext(), SDLActivity.class);
-                        intent.putExtra("fname",  mFeedItem.getTitle());
-                        intent.putExtra("fpath",  mFeedItem.getPath());
-                        v.getContext().startActivity(intent);
+    }
+
+    public RunAdapter(OnGameClickListener listener) {
+        mListener = listener;
+    }
+
+    public void swapArray(ArrayList<RunItem> dataset) {
+        mDataset.clear();
+        if (dataset != null) {
+            mDataset.addAll(dataset);
         }
     }
- 
-    public RunAdapter(ArrayList<RunItem> dataset) {
-        mDataset = dataset;        
+
+    public RunItem getItem(int position) {
+        return mDataset.get(position);
     }
-    
-    public void swapArray(ArrayList<RunItem> dataset)  {
-        mDataset = dataset;   
-    }
-    
+
+    @NonNull
     @Override
-    public RunAdapter.ViewHolder onCreateViewHolder(ViewGroup parent,
-                                                   int viewType) {
+    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.run_item, parent, false);
- 
-        ViewHolder vh = new ViewHolder(v);
-        return vh;
+        return new ViewHolder(v);
     }
- 
+
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        String fName = mDataset.get(position).getTitle();
-        String fPath = mDataset.get(position).getPath();
-        String iPath = fPath + "/"+ fName+ "/icon.png";
-        File file = new File(iPath);
-        // 1.1.0: reset to the placeholder when a recycled tile loses its
-        // per-game icon.png (prevents icon bleed-through in the grid)
-        if (file.exists())
-                holder.mImageView.setImageURI( Uri.fromFile( new File( iPath ) ) );
-        else
-                holder.mImageView.setImageResource(R.drawable.card_img);
-        holder.mFeedItem = mDataset.get(position);
-        holder.mTextView.setText(fName);
+        final RunItem item = mDataset.get(position);
+        holder.mTextView.setText(item.getTitle());
+        File icon = item.getInstalledPath() == null ? null
+                : new File(item.getInstalledPath(), "icon.png");
+        // 1.1.0: reset on recycle so icons never bleed through tiles
+        if (icon != null && icon.isFile()) {
+            holder.mImageView.setImageURI(Uri.fromFile(icon));
+        } else {
+            holder.mImageView.setImageResource(R.drawable.card_img);
+        }
+        holder.mItem = item;
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mListener != null) {
+                    mListener.onGameClick(item);
+                }
+            }
+        });
     }
- 
+
     @Override
     public int getItemCount() {
         return mDataset.size();
     }
-    
 }

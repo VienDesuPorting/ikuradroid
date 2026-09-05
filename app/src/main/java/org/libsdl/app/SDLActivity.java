@@ -7,12 +7,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import su.viende.vile.MainActivity;
 import su.viende.vile.R;
 
 import android.app.*;
 import android.content.*;
-import android.content.SharedPreferences.Editor;
 import android.view.*;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
@@ -49,11 +47,10 @@ public class SDLActivity extends Activity {
     
     // Audio
     protected static AudioTrack mAudioTrack;
-	public static String gCurrentDirectoryPath;
-	public static String gCurrentSavePath;
+        public static String gCurrentDirectoryPath;
+        public static String gCurrentSavePath;
     // Load the .so
     static {
-    	//System.loadLibrary("crystax");
         System.loadLibrary("SDL2");
         System.loadLibrary("SDL2_image");
         System.loadLibrary("SDL2_ttf");
@@ -90,17 +87,17 @@ public class SDLActivity extends Activity {
         Log.v("SDL", "onCreate():" + mSingleton);
         super.onCreate(savedInstanceState);
         
-    	Intent intent = getIntent();
-		String fName = intent.getStringExtra("fname");
-		String fPath = intent.getStringExtra("fpath");
-		gCurrentDirectoryPath = fPath + "/"+ fName;
-		gCurrentSavePath = getExternalFilesDir(null).getAbsolutePath();
-		
+        Intent intent = getIntent();
+                String fName = intent.getStringExtra("fname");
+                String fPath = intent.getStringExtra("fpath");
+                gCurrentDirectoryPath = fPath + "/"+ fName;
+                gCurrentSavePath = getExternalFilesDir(null).getAbsolutePath();
+                
         SDLActivity.initialize();
         // So we can call stuff from static callbacks
         mSingleton = this;
 
-		
+                
         // Set up the surface
         mSurface = new SDLSurface(getApplication());
         
@@ -117,54 +114,54 @@ public class SDLActivity extends Activity {
         mLayout.addView(mSurface);
         setContentView(mLayout);
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-		wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ON_AFTER_RELEASE, "SDLActivity");
-		wakeLock.acquire();
+                wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ON_AFTER_RELEASE, "SDLActivity");
+                wakeLock.acquire();
     }
     
     @Override
- 	public boolean onPrepareOptionsMenu(Menu menu)
- 	{
- 		super.onPrepareOptionsMenu(menu);
- 		menu.clear();
- 		menu.add(Menu.NONE, Menu.FIRST, 0, getResources().getString(R.string.menu_title));
- 		menu.add(Menu.NONE, Menu.FIRST+1, 0, getResources().getString(R.string.menu_save));
- 		menu.add(Menu.NONE, Menu.FIRST+2, 0, getResources().getString(R.string.menu_load));
- 		menu.add(Menu.NONE, Menu.FIRST+3, 0, getResources().getString(R.string.menu_skip));
- 		menu.add(Menu.NONE, Menu.FIRST+4, 0, getResources().getString(R.string.menu_settings));
- 		menu.add(Menu.NONE, Menu.FIRST+5, 0, getResources().getString(R.string.menu_quit));
- 		
- 		return true;
- 	}
+        public boolean onPrepareOptionsMenu(Menu menu)
+        {
+                super.onPrepareOptionsMenu(menu);
+                menu.clear();
+                menu.add(Menu.NONE, Menu.FIRST, 0, getResources().getString(R.string.menu_title));
+                menu.add(Menu.NONE, Menu.FIRST+1, 0, getResources().getString(R.string.menu_save));
+                menu.add(Menu.NONE, Menu.FIRST+2, 0, getResources().getString(R.string.menu_load));
+                menu.add(Menu.NONE, Menu.FIRST+3, 0, getResources().getString(R.string.menu_skip));
+                menu.add(Menu.NONE, Menu.FIRST+4, 0, getResources().getString(R.string.menu_settings));
+                menu.add(Menu.NONE, Menu.FIRST+5, 0, getResources().getString(R.string.menu_quit));
+                
+                return true;
+        }
     @Override
-	public boolean onOptionsItemSelected(MenuItem item)
-	{
-    	if (item.getItemId() == Menu.FIRST){
-			onNativeKeyDown( KeyEvent.KEYCODE_F8 );
-		}		
-    	else if (item.getItemId() == Menu.FIRST+1){
-			onNativeKeyDown( KeyEvent.KEYCODE_F6 );
-		}		
-		else if (item.getItemId() == Menu.FIRST+2){
-			onNativeKeyDown( KeyEvent.KEYCODE_F5 );
-		}				
-		else if (item.getItemId() == Menu.FIRST+3){
-			if(skip)
-				onNativeKeyUp( KeyEvent.KEYCODE_CTRL_LEFT);
-			else
-				onNativeKeyDown( KeyEvent.KEYCODE_CTRL_LEFT);
-		  skip=!skip;
-		}  
-		else if (item.getItemId() == Menu.FIRST+4){
-			onNativeKeyDown( KeyEvent.KEYCODE_F7 );
-		}		
-		else if (item.getItemId() == Menu.FIRST+5){
-			onNativeKeyDown( KeyEvent.KEYCODE_F9 );
-		}
-		else{
-			return false;
-		}
-		return true;
-	}
+        public boolean onOptionsItemSelected(MenuItem item)
+        {
+        if (item.getItemId() == Menu.FIRST){
+                        onNativeKeyDown( KeyEvent.KEYCODE_F8 );
+                }               
+        else if (item.getItemId() == Menu.FIRST+1){
+                        onNativeKeyDown( KeyEvent.KEYCODE_F6 );
+                }               
+                else if (item.getItemId() == Menu.FIRST+2){
+                        onNativeKeyDown( KeyEvent.KEYCODE_F5 );
+                }                               
+                else if (item.getItemId() == Menu.FIRST+3){
+                        if(skip)
+                                onNativeKeyUp( KeyEvent.KEYCODE_CTRL_LEFT);
+                        else
+                                onNativeKeyDown( KeyEvent.KEYCODE_CTRL_LEFT);
+                  skip=!skip;
+                }  
+                else if (item.getItemId() == Menu.FIRST+4){
+                        onNativeKeyDown( KeyEvent.KEYCODE_F7 );
+                }               
+                else if (item.getItemId() == Menu.FIRST+5){
+                        onNativeKeyDown( KeyEvent.KEYCODE_F9 );
+                }
+                else{
+                        return false;
+                }
+                return true;
+        }
     
 
     
@@ -173,23 +170,21 @@ public class SDLActivity extends Activity {
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-
-        //setContentView(R.layout.activity_about);
     }
     // Events
     @Override
     protected void onPause() {
         Log.v("SDL", "onPause()");
-		if( wakeLock != null )
-			wakeLock.release();
+                if( wakeLock != null )
+                        wakeLock.release();
         super.onPause();
         SDLActivity.handlePause();
     }
 
     @Override
     protected void onResume() {
-    	if( wakeLock != null )
-			wakeLock.acquire();
+        if( wakeLock != null )
+                        wakeLock.acquire();
         Log.v("SDL", "onResume()");
         super.onResume();
         SDLActivity.handleResume();
@@ -239,9 +234,9 @@ public class SDLActivity extends Activity {
         SDLActivity.initialize();
                 
         try{
-			Thread.sleep(100); // The event is sent asynchronously, allow app to save it's state, and call exit() itself.
-		} catch (InterruptedException e) {}
-		System.exit(0);
+                        Thread.sleep(100); // The event is sent asynchronously, allow app to save it's state, and call exit() itself.
+                } catch (InterruptedException e) {}
+                System.exit(0);
 
     }
 
@@ -250,8 +245,8 @@ public class SDLActivity extends Activity {
         int keyCode = event.getKeyCode();
 
         if (keyCode== KeyEvent.KEYCODE_BACK) {
-        	openOptionsMenu();
-        	return false;
+                openOptionsMenu();
+                return false;
         }
 
         // Ignore certain special keys so they're handled by Android
@@ -610,7 +605,7 @@ class SDLMain implements Runnable {
     @Override
     public void run() {
         // Runs SDL_main()
-    	   Log.i("vile", "nativeInit in " +SDLActivity.gCurrentDirectoryPath);
+           Log.i("vile", "nativeInit in " +SDLActivity.gCurrentDirectoryPath);
         SDLActivity.nativeInit(SDLActivity.gCurrentDirectoryPath,SDLActivity.gCurrentSavePath);
      
         //Log.v("SDL", "SDL thread terminated");
@@ -828,7 +823,7 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
         float x,y,p;
         
 
-        	
+                
         switch(action) {
             case MotionEvent.ACTION_MOVE:
                 for (i = 0; i < pointerCount; i++) {
@@ -847,8 +842,8 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
             case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_POINTER_DOWN:
                 if(SDLActivity.skip){
-                	SDLActivity.onNativeKeyUp( KeyEvent.KEYCODE_CTRL_LEFT);
-                	SDLActivity.skip=!SDLActivity.skip;
+                        SDLActivity.onNativeKeyUp( KeyEvent.KEYCODE_CTRL_LEFT);
+                        SDLActivity.skip=!SDLActivity.skip;
                 }
                 // Non primary pointer up/down
                 if (i == -1) {

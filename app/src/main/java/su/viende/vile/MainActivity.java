@@ -1,215 +1,299 @@
 package su.viende.vile;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import android.Manifest;
-import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Environment;
-import android.preference.PreferenceManager;
-import android.content.Context;
+import android.annotation.SuppressLint;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import android.util.Log;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentPagerAdapter;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.viewpager.widget.ViewPager;
+
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class MainActivity extends AppCompatActivity
 {
-        private SharedPreferences mPrefs = null;
-        public static String SETTINGS_FOLDER_DEFAULT_KEY = null;
-        private static final String LAST_DIRECTORY = "last_directory_key";
-        private static File DEFAULT_LOCATION;
-        public String currentPath;
-        private static RunAdapter ra;
-        private TextView mHint;
+        private static final int REQUEST_PICK_FOLDER = 42;
+
+        private RunAdapter ra;
+        private View mEmptyState;
 
         @Override
         protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
 
-                requestAllFilesAccessIfNeeded();
-
-                mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-                SETTINGS_FOLDER_DEFAULT_KEY = getString(R.string.settings_folder_default_key);
-                DEFAULT_LOCATION = Environment2.getExternalSDCardDirectory() != null ?
-                                Environment2.getExternalSDCardDirectory() : Environment.getExternalStorageDirectory();
-                File directory = getStartingDirectory();
-                if (directory != null)
-                        currentPath = directory.getAbsolutePath();
-
+                // 1.2.0: edge-to-edge on every supported version (the Android 15
+                // opt-out values-v35 was removed together with this change)
+                WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
                 setContentView(R.layout.main);
-                mHint = (TextView) findViewById(R.id.library_hint);
-                mSaveDirBrowse = new FolderBrowserDialogWrapper(this, true, true);
-                createDirectoryBrowserDialog();
-                final ActionBar actionBar = getSupportActionBar();
-                // actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
-                actionBar.setTitle(R.string.app_name);
-                // Branding of the 2026 revival; the original visual_android VK
-                // public is an independent project (see README / Provenance).
-                actionBar.setSubtitle("VienDesu! Porting Team");
-                actionBar.setDisplayShowHomeEnabled(true);
+                applyInsets();
 
-                final RecyclerView recyclerView = findViewById(R.id.my_recycler_view);
+                MaterialToolbar toolbar = (MaterialToolbar) findViewById(R.id.toolbar);
+                setSupportActionBar(toolbar);
+                if (getSupportActionBar() != null) {
+                        getSupportActionBar().setTitle(R.string.app_name);
+                        // Branding of the 2026 revival; the original visual_android VK
+                        // public is an independent project (see README / Provenance).
+                        getSupportActionBar().setSubtitle("VienDesu! Porting Team");
+                }
 
-                GridLayoutManager layoutManager = new GridLayoutManager(this, 3);
-                recyclerView.setLayoutManager(layoutManager);
+                final RecyclerView recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
+                recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
+                ra = new RunAdapter(new RunAdapter.OnGameClickListener() {
+                        @Override
+                        public void onGameClick(RunItem item) {
+                                onGameClicked(item);
+                        }
+                });
+                recyclerView.setAdapter(ra);
 
+                mEmptyState = findViewById(R.id.empty_state);
+                View pickButton = findViewById(R.id.button_pick_folder);
+                if (pickButton != null) {
+                        pickButton.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                        pickFolder();
+                                }
+                        });
+                }
+        }
+
+        // ------------------------------------------------------------------
+        // Edge-to-edge insets (Material 3, 1.2.0)
+        // ------------------------------------------------------------------
+
+        private void applyInsets() {
+                View root = findViewById(R.id.main_root);
+                View appbar = findViewById(R.id.appbar);
+                if (root == null) {
+                        return;
+                }
+                ViewCompat.setOnApplyWindowInsetsListener(root, new androidx.core.view.OnApplyWindowInsetsListener() {
+                        @Override
+                        public WindowInsetsCompat onApplyWindowInsets(View v, WindowInsetsCompat windowInsets) {
+                                Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+                                if (appbar != null) {
+                                        appbar.setPadding(0, bars.top, 0, 0);
+                                }
+                                v.setPadding(0, 0, 0, bars.bottom);
+                                return WindowInsetsCompat.CONSUMED;
+                        }
+                });
+        }
+
+        // ------------------------------------------------------------------
+        // Library scanning
+        // ------------------------------------------------------------------
+
+        private void rescanLibrary() {
                 new Thread(new Runnable() {
                         @Override
                         public void run() {
-                                // final RunAdapter adapter = new RunAdapter(getDataSet());
-                                ra = new RunAdapter(getDataSet());
+                                // SAF queries are slow; the scan runs off the UI thread
+                                final ArrayList<RunItem> dataset = GameLibrary.scan(MainActivity.this);
                                 runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
-                                                recyclerView.setAdapter(ra);
-                                                updateHint();
+                                                if (ra == null) {
+                                                        return;
+                                                }
+                                                ra.swapArray(dataset);
+                                                ra.notifyDataSetChanged();
+                                                updateEmptyState();
                                         }
                                 });
                         }
                 }).start();
         }
 
-        // 0.54.2: returning from the All-Files-Access settings screen (or from a
-        // finished SDLActivity) must rescan the library, otherwise the grid stays
-        // empty until the process is killed.
-        @Override
-        protected void onResume() {
-                super.onResume();
-                if (ra != null) {
-                        ra.swapArray(getDataSet());
-                        runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                        ra.notifyDataSetChanged();
-                                        updateHint();
-                                }
-                        });
+        private void updateEmptyState() {
+                if (mEmptyState == null || ra == null) {
+                        return;
                 }
+                boolean empty = ra.getItemCount() == 0;
+                mEmptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
+                findViewById(R.id.my_recycler_view).setVisibility(empty ? View.GONE : View.VISIBLE);
         }
 
-        // 0.54.2: the grid shows one tile per game. A game is a folder with a
-        // vilevn.pck inside. Two layouts are accepted:
-        //   <selected>/Crescendo/vilevn.pck  (library root selected - classic flow)
-        //   <selected>/vilevn.pck            (game folder selected directly)
-        // The selected folder itself is scanned as a game too, which fixes the
-        // "empty folder" report when the novel sits in the storage root.
-        private ArrayList<RunItem> getDataSet() {
-                ArrayList<RunItem> mDataSet = new ArrayList<>();
-                File mCurrentDirectory = getStartingDirectory();
-                if (mCurrentDirectory == null)
-                        return mDataSet;
-                currentPath = mCurrentDirectory.getAbsolutePath();
+        // ------------------------------------------------------------------
+        // Game installation and launch
+        // ------------------------------------------------------------------
 
-                // The selected folder itself may be a game folder
-                if (new File(currentPath, "vilevn.pck").isFile()) {
-                        RunItem m = new RunItem();
-                        m.setTitle(mCurrentDirectory.getName());
-                        m.setPath(mCurrentDirectory.getParent());
-                        mDataSet.add(m);
+        private void onGameClicked(final RunItem item) {
+                if (item == null) {
+                        return;
                 }
+                if (item.getSafUri() == null) {
+                        // Installed-only game (e.g. the SAF grant was revoked) -
+                        // the private copy always runs without any permissions
+                        launchInstalled(item.getInstalledPath());
+                        return;
+                }
+                installAndLaunch(item);
+        }
 
-                File[] mDirectoryFiles = mCurrentDirectory.listFiles(new FileFilter() {
-                        public boolean accept(File file) {
-                                return (!file.isHidden() && file.isDirectory());
+        private void installAndLaunch(final RunItem item) {
+                final AtomicBoolean cancelled = new AtomicBoolean(false);
+                final AlertDialogHolder dialog = showInstallDialog(cancelled);
+
+                new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                                try {
+                                        final String path = GameLibrary.install(MainActivity.this, item,
+                                                        new GameLibrary.Progress() {
+                                                                @Override
+                                                                public void onProgress(final String fileName) {
+                                                                        runOnUiThread(new Runnable() {
+                                                                                @Override
+                                                                                public void run() {
+                                                                                        dialog.fileNameView.setText(fileName);
+                                                                                }
+                                                                        });
+                                                                }
+
+                                                                @Override
+                                                                public boolean isCancelled() {
+                                                                        return cancelled.get();
+                                                                }
+                                                        });
+                                        item.setInstalledPath(path);
+                                        runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                        dialog.holder.dismiss();
+                                                        launchInstalled(path);
+                                                }
+                                        });
+                                } catch (final Exception e) {
+                                        runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                        dialog.holder.dismiss();
+                                                        if (!cancelled.get()) {
+                                                                Toast.makeText(MainActivity.this,
+                                                                                R.string.install_failed,
+                                                                                Toast.LENGTH_LONG).show();
+                                                        }
+                                                }
+                                        });
+                                }
+                        }
+                }).start();
+        }
+
+        /** Small aggregate: the dialog and the file-name label inside it. */
+        private static class AlertDialogHolder {
+                android.app.Dialog holder;
+                TextView fileNameView;
+        }
+
+        private AlertDialogHolder showInstallDialog(final AtomicBoolean cancelled) {
+                AlertDialogHolder result = new AlertDialogHolder();
+                View content = LayoutInflater.from(this).inflate(R.layout.dialog_install, null);
+                result.fileNameView = (TextView) content.findViewById(R.id.install_file);
+                result.holder = new MaterialAlertDialogBuilder(this)
+                                .setTitle(R.string.install_progress_title)
+                                .setView(content)
+                                .setNegativeButton(R.string.install_cancel, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                                cancelled.set(true);
+                                        }
+                                })
+                                .create();
+                result.holder.setCanceledOnTouchOutside(false);
+                // Fires for the Cancel button as well as for BACK
+                result.holder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                        @Override
+                        public void onCancel(DialogInterface dialog) {
+                                cancelled.set(true);
                         }
                 });
-
-                // listFiles() returns null when the All-Files-Access grant is
-                // missing on Android 11+; never crash on it (0.54.1 bug)
-                if (mDirectoryFiles == null)
-                        return mDataSet;
-
-                for (int i = 0; i < mDirectoryFiles.length; i++) {
-                        File[] mDirectoryFiles2 = mDirectoryFiles[i].listFiles(new FileFilter() {
-                                public boolean accept(File file) {
-                                        return (file.isFile() && file.getName().equals("vilevn.pck"));
-                                }
-                        });
-
-                        if (mDirectoryFiles2 != null && mDirectoryFiles2.length != 0){
-                                RunItem m = new RunItem();
-                                m.setTitle(mDirectoryFiles[i].getName());
-                                m.setPath(mDirectoryFiles[i].getParent());
-                                mDataSet.add(m);
-                        }
-                }
-
-                return mDataSet;
+                result.holder.show();
+                return result;
         }
 
-        private void updateHint() {
-                if (mHint == null)
+        private void launchInstalled(String gamePath) {
+                if (gamePath == null) {
                         return;
-                boolean empty = (ra == null || ra.getItemCount() == 0);
-                boolean granted = true;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-                        granted = Environment.isExternalStorageManager();
-                // Show the long troubleshooting hint only when storage is readable,
-                // otherwise the permission dialog explains what to do
-                mHint.setText(empty ? R.string.empty_library_hint : R.string.library_hint);
-                mHint.setVisibility(empty && granted ? View.VISIBLE : View.GONE);
+                }
+                File game = new File(gamePath);
+                // The engine contract (sdl_main.c): chdir(fpath + "/" + fname),
+                // saves keep going to the app-private files root
+                Intent intent = new Intent(this, org.libsdl.app.SDLActivity.class);
+                intent.putExtra("fname", game.getName());
+                intent.putExtra("fpath", game.getParent());
+                startActivity(intent);
         }
 
-        private File getStartingDirectory() {
-                // Detect folder location if none is provided
-                String path = mPrefs.getString(SETTINGS_FOLDER_DEFAULT_KEY, null);
+        // ------------------------------------------------------------------
+        // SAF folder picking
+        // ------------------------------------------------------------------
 
-                if (path == null) {
-                        // Check to see if there is a <internal storage>/ons
-                        File onsDefaultDir = new File(Environment.getExternalStorageDirectory() + "/ons");
-                        if (onsDefaultDir.exists()) {
-                                path = onsDefaultDir.getPath();
-                                mPrefs.edit().putString(SETTINGS_FOLDER_DEFAULT_KEY, path).apply();
-                        } else if (Environment2.hasExternalSDCard()) {
-                                // Check to see if there is a <extSdCard storage>/ons
-                                onsDefaultDir = new File(Environment2.getExternalSDCardDirectory() + "/ons");
-                                if (onsDefaultDir.exists()) {
-                                        path = onsDefaultDir.getPath();
-                                        mPrefs.edit().putString(SETTINGS_FOLDER_DEFAULT_KEY, path).apply();
-                                }
+        /** Launches the system folder picker (replaces the 2016 browser). */
+        private void pickFolder() {
+                try {
+                        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                                        | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+                        startActivityForResult(intent, REQUEST_PICK_FOLDER);
+                } catch (Exception e) {
+                        Toast.makeText(this, R.string.folder_picker_unavailable,
+                                        Toast.LENGTH_SHORT).show();
+                }
+        }
+
+        @SuppressLint("WrongConstant")
+        @Override
+        protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                super.onActivityResult(requestCode, resultCode, data);
+                if (requestCode != REQUEST_PICK_FOLDER || data == null || data.getData() == null) {
+                        return;
+                }
+                Uri treeUri = data.getData();
+                try {
+                        // Persist the grant across reboots
+                        getContentResolver().takePersistableUriPermission(treeUri,
+                                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                        | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+                } catch (SecurityException e) {
+                        // Some providers do not hand out prefix grants - keep
+                        // going with the plain read grant
+                        try {
+                                getContentResolver().takePersistableUriPermission(treeUri,
+                                                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        } catch (SecurityException ignored) {
                         }
                 }
-                // Set path unless it still can't find it, then set default folder
-                File directory = null;
-                if (path != null && new File(path).exists()) {
-                        directory = new File(path);
-                } else {
-                        directory = DEFAULT_LOCATION;
-                        if (directory != null)
-                                mPrefs.edit().putString(SETTINGS_FOLDER_DEFAULT_KEY, DEFAULT_LOCATION.getPath()).apply();
-                }
-                if (directory == null || !directory.exists()) {
-                        // showError(getString(R.string.message_cannot_find_internal_storage));
-                        return null;
-                }
-                return directory;
+                GameLibrary.setTreeUri(this, treeUri);
+                rescanLibrary();
         }
 
-        // Launcher contributed by katane-san
+        // ------------------------------------------------------------------
+        // Menu
+        // ------------------------------------------------------------------
+
         @Override
         public boolean onCreateOptionsMenu(Menu menu) {
-                // Inflate the menu; this adds items to the action bar if it is present.
                 getMenuInflater().inflate(R.menu.main, menu);
                 return super.onCreateOptionsMenu(menu);
         }
@@ -217,108 +301,26 @@ public class MainActivity extends AppCompatActivity
         @Override
         public boolean onOptionsItemSelected(MenuItem item) {
                 int id = item.getItemId();
+                if (id == R.id.menu_engines) {
+                        startActivity(new Intent(this, EnginesActivity.class));
+                        return true;
+                }
                 if (id == R.id.menu_about) {
-                        showAboutDialog();
+                        startActivity(new Intent(this, AboutActivity.class));
                         return true;
                 }
-
                 if (id == R.id.dir_change) {
-                        mSaveDirBrowse.show(currentPath);
+                        pickFolder();
                         return true;
                 }
-
                 return super.onOptionsItemSelected(item);
         }
 
-        private void createDirectoryBrowserDialog() {
-                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
-                builder.setView(mSaveDirBrowse.getDialogLayout());
-                // 0.54.2: was a hardcoded "test"
-                builder.setTitle(R.string.dialog_select_folder_title);
-                builder.setPositiveButton(R.string.dialog_select_button_text, new OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                                Editor editor = mPrefs.edit();
-                                String path = mSaveDirBrowse.getResultDirectory().getPath();
-                                editor.putString(SETTINGS_FOLDER_DEFAULT_KEY, path);
-                                editor.apply();
-                                setPath(path);
-                                ra.swapArray(getDataSet());
-                                ra.notifyDataSetChanged();
-                                updateHint();
-                        }
-                });
-                builder.setNegativeButton(android.R.string.cancel, null);
-                mSaveDirBrowse.setDialog(builder.create());
-        }
-
-        // 1.1.0: attribution dialog - the ViLE engine (ViLE Team, GPLv3), the
-        // original anonymous Android developer ("Ivan"), the revival team
-        // (VienDesu! Porting Team) and third-party components. Replaces the
-        // bare version toast of the 2016 launcher.
-        private void showAboutDialog() {
-                View v = getLayoutInflater().inflate(R.layout.about_dialog, null);
-                TextView version = (TextView) v.findViewById(R.id.about_version);
-                String verName;
-                try {
-                        verName = getPackageManager()
-                                        .getPackageInfo(getPackageName(), 0).versionName;
-                } catch (Exception e) {
-                        verName = "?";
-                }
-                version.setText(getString(R.string.app_name) + " " + verName);
-                new MaterialAlertDialogBuilder(this)
-                                .setView(v)
-                                .setPositiveButton(android.R.string.ok, null)
-                                .show();
-        }
-
-        protected void setPath(String path) {
-                currentPath = path;
-        }
-
-        private FolderBrowserDialogWrapper mSaveDirBrowse = null;
-
-        // Android 11+ (API 30+): the 2016-era browser uses java.io.File on shared
-        // storage, which requires the MANAGE_EXTERNAL_STORAGE (All-Files-Access) grant.
-        // 0.54.2: explain why before jumping into settings; the previous build
-        // silently launched the settings screen on every start, which looked
-        // like the app "forgetting" the user.
-        private void requestAllFilesAccessIfNeeded() {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R
-                                || Environment.isExternalStorageManager())
-                        return;
-                try {
-                        new MaterialAlertDialogBuilder(this)
-                                .setTitle(R.string.storage_access_title)
-                                .setMessage(R.string.storage_access_message)
-                                .setPositiveButton(R.string.storage_access_grant, new OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialog, int which) {
-                                                launchAllFilesAccessSettings();
-                                        }
-                                })
-                                .setNegativeButton(android.R.string.cancel, null)
-                                .show();
-                } catch (Exception e) {
-                        // Theme/window issues at onCreate time - fall back to direct launch
-                        launchAllFilesAccessSettings();
-                }
-        }
-
-        private void launchAllFilesAccessSettings() {
-                try {
-                        android.content.Intent intent =
-                                        new android.content.Intent(
-                                                        android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                                        Uri.parse("package:" + getPackageName()));
-                        startActivity(intent);
-                } catch (Exception e) {
-                        try {
-                                startActivity(new android.content.Intent(
-                                                android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
-                        } catch (Exception ignored) {
-                        }
-                }
+        // 1.2.0: returning from a finished SDLActivity must rescan the
+        // library (a first launch may have just installed a game copy)
+        @Override
+        protected void onResume() {
+                super.onResume();
+                rescanLibrary();
         }
 }
