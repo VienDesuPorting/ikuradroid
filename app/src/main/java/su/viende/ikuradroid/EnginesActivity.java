@@ -1,4 +1,4 @@
-package su.viende.vile;
+package su.viende.ikuradroid;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;

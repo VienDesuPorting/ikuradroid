@@ -3,16 +3,20 @@ plugins {
 }
 
 android {
-    namespace 'su.viende.vile'
+    namespace 'su.viende.ikuradroid'
     compileSdk 35
     ndkVersion '27.2.12479018'
 
     defaultConfig {
-        // 1.0.0 rebrand: applicationId moved su.viende.vile -> su.viende.ikuradroid.
-        // The Java namespace above INTENTIONALLY stays su.viende.vile: the SDL JNI
-        // bridge (SDL_JAVA_PACKAGE_PATH := su_viende_vile in jni/Android.mk),
-        // org.libsdl.app.* references and Java package declarations all depend on
-        // it. Renaming it would risk breaking the native bridge for zero benefit.
+        // applicationId has been su.viende.ikuradroid since the 1.0.0 rebrand.
+        // 1.4.0: the Java namespace is now aligned with it (was su.viende.vile,
+        // kept in 1.0.0 "for the SDL JNI bridge"). The pre-rename audit proved
+        // the native side has zero coupling to the app package: no
+        // Java_su_viende_vile_* symbols in C/C++, no FindClass of the app
+        // package (SDL_android.c resolves only org/libsdl/app/* and framework
+        // classes), and the SDL_JAVA_PACKAGE_PATH define in jni/Android.mk is
+        // consumed by no source file. org.libsdl.app.* is untouched, so all
+        // SDL JNI symbols (Java_org_libsdl_app_*) stay valid.
         applicationId "su.viende.ikuradroid"
         minSdk 21
         // 1.2.0: SAF-only storage - the app needs no storage permission on any
@@ -25,8 +29,8 @@ android {
         // 1.0.0 restarts both versionName and the versionCode lineage: the new
         // applicationId makes it a fresh install, there is no upgrade path from
         // the 0.54.x line (su.viende.vile).
-        versionCode 5
-        versionName "1.3.0"
+        versionCode 6
+        versionName "1.4.0"
 
         externalNativeBuild {
             ndkBuild {

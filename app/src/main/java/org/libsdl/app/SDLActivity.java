@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import su.viende.vile.R;
+import su.viende.ikuradroid.R;
 
 import android.app.*;
 import android.content.*;
