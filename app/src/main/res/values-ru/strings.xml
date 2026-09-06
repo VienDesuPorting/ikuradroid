@@ -6,7 +6,11 @@
 
     <string name="app_name">IkuraDroid</string>
 
-    <!-- Внутриигровое меню SDL (org.libsdl.app.SDLActivity -> F5-F9, CTRL) -->
+    <!-- Внутриигровое меню (1.3.0 — Material 3 bottom sheet).
+         SDLActivity проецирует пункты на F5–F9 и CTRL движка. -->
+    <string name="ingame_menu">Меню игры</string>
+    <string name="skip_on">Автопропуск включён</string>
+    <string name="skip_off">Автопропуск выключен</string>
     <string name="menu_title">Гл.меню</string>
     <string name="menu_save">Сохранить</string>
     <string name="menu_load">Загрузить</string>

@@ -33,10 +33,12 @@
             android:exported="false">
         </activity>
 
+        <!-- 1.3.0: M3 fullscreen theme (was Theme.NoTitleBar.Fullscreen)
+             so the in-game bottom sheet matches the app. -->
         <activity android:name="org.libsdl.app.SDLActivity"
             android:label="@string/app_name"
             android:screenOrientation="sensorLandscape"
-            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:theme="@style/SDLTheme"
             android:configChanges="orientation|keyboardHidden|screenSize">
         </activity>
 
@@ -45,10 +47,8 @@
     <!-- OpenGL ES 2.0 -->
     <uses-feature android:glEsVersion="0x00020000" />
 
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
-
-    <!-- 1.2.0: all storage permissions are gone. Games are read through
-         the persisted SAF tree grant (system folder picker) and copied
-         into the app-private area, which needs no permission at all;
-         savegames live in getExternalFilesDir() - also permission-free. -->
+    <!-- 1.3.0: even WAKE_LOCK is gone - the game screen stays on via the
+         window flag FLAG_KEEP_SCREEN_ON, which needs no permission.
+         1.2.0 removed all storage permissions (SAF). The app now requests
+         no permissions at all. -->
 </manifest>
