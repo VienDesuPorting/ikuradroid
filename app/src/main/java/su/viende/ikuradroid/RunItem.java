@@ -1,4 +1,4 @@
-package su.viende.vile;
+package su.viende.ikuradroid;
 
 /**
  * 1.2.0: one tile in the library grid - a folder containing vilevn.pck.

@@ -3,7 +3,7 @@
 #
 # Original legacy build: 2015-2016, gnustl_static / armeabi-v7a
 #
-SDL_JAVA_PACKAGE_PATH := su_viende_vile
+SDL_JAVA_PACKAGE_PATH := su_viende_ikuradroid
 SDL_TRACKBALL_KEYUP_DELAY := 1
 
 include $(call all-subdir-makefiles)
