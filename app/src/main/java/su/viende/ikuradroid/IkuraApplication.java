@@ -1,4 +1,4 @@
-package su.viende.vile;
+package su.viende.ikuradroid;
 
 import android.app.Application;
 
