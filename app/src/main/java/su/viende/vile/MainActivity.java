@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -253,8 +252,7 @@ public class MainActivity extends AppCompatActivity
                 try {
                         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-                                        | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+                                        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                         startActivityForResult(intent, REQUEST_PICK_FOLDER);
                 } catch (Exception e) {
                         Toast.makeText(this, R.string.folder_picker_unavailable,
@@ -262,7 +260,6 @@ public class MainActivity extends AppCompatActivity
                 }
         }
 
-        @SuppressLint("WrongConstant")
         @Override
         protected void onActivityResult(int requestCode, int resultCode, Intent data) {
                 super.onActivityResult(requestCode, resultCode, data);
@@ -270,18 +267,23 @@ public class MainActivity extends AppCompatActivity
                         return;
                 }
                 Uri treeUri = data.getData();
-                try {
-                        // Persist the grant across reboots
-                        getContentResolver().takePersistableUriPermission(treeUri,
-                                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                                        | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
-                } catch (SecurityException e) {
-                        // Some providers do not hand out prefix grants - keep
-                        // going with the plain read grant
+                // Persist the grant across reboots. Only the READ/WRITE bits
+                // are persistable: since Android 11 the result intent may also
+                // carry FLAG_GRANT_PREFIX_URI_PERMISSION, and passing that bit
+                // to takePersistableUriPermission throws IllegalArgument-
+                // Exception ("Requested flags 0x81, but only 0x3 are allowed",
+                // a fatal crash right after the user taps "Allow") - so the
+                // flags are masked down to the two accepted bits (1.4.0).
+                int takeFlags = data.getFlags()
+                                & (Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                if (takeFlags != 0) {
                         try {
                                 getContentResolver().takePersistableUriPermission(treeUri,
-                                                Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        } catch (SecurityException ignored) {
+                                                takeFlags);
+                        } catch (SecurityException e) {
+                                // Provider refused to persist - the session grant
+                                // is still valid for this process lifetime
                         }
                 }
                 GameLibrary.setTreeUri(this, treeUri);
