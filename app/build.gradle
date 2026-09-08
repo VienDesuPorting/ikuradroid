@@ -8,26 +8,11 @@ android {
     ndkVersion '27.2.12479018'
 
     defaultConfig {
-        // applicationId and the Java namespace are aligned
-        // (su.viende.ikuradroid). The native side has zero coupling to the
-        // app package: no Java_su_viende_* symbols in C/C++, no FindClass of
-        // the app package (SDL_android.c resolves only org/libsdl/app/* and
-        // framework classes), and the SDL_JAVA_PACKAGE_PATH define in
-        // jni/Android.mk is consumed by no source file. org.libsdl.app.* is
-        // untouched, so all SDL JNI symbols (Java_org_libsdl_app_*) stay
-        // valid.
         applicationId "su.viende.ikuradroid"
         minSdk 21
-        // SAF-only storage: no storage permission on any Android version
-        // (persisted ACTION_OPEN_DOCUMENT_TREE grant + the app-private files
-        // dir for the game copies and savegames).
         targetSdk 35
-        // Single source of truth for the version. NB: values here override
-        // android:versionCode/versionName in AndroidManifest.xml — keep the
-        // manifest attributes removed to avoid silent mismatches.
-        // The lineage restarts at the 2026 rebrand: the new applicationId
-        // makes it a fresh install, there is no upgrade path from the old
-        // su.viende.vile builds.
+        // The only place the version is defined; the manifest carries no
+        // version attributes of its own.
         versionCode 8
         versionName "1.6.0"
 
@@ -47,9 +32,7 @@ android {
 
     signingConfigs {
         release {
-            // Local builds and CI produce identically signed releases.
-            // Credentials live in gradle.properties (the repo is private and
-            // the keystore ships in it - owner's decision).
+            // Credentials live in gradle.properties; CI uses the same file.
             storeFile rootProject.file(project.property('IKURA_STORE_FILE'))
             storePassword project.property('IKURA_STORE_PASSWORD')
             keyAlias project.property('IKURA_KEY_ALIAS')
