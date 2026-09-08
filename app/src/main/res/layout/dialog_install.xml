@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 1.2.0: shown while a game is copied from the SAF tree into the
+<!-- Shown while a game is copied from the SAF tree into the
      app-private install area (GameLibrary.install). Indeterminate, because
      the total byte count of a document tree is unknown up front. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"

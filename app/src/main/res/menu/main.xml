@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 1.2.0: launcher menu. Vector icons with theme tint replace the 2016
-     hdpi-only PNGs; "Engines" opens the new engines/titles screen. -->
+<!-- Launcher menu: vector icons with theme tint; "Engines" opens the
+     engines/titles screen. -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 

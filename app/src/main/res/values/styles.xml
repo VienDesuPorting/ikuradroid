@@ -1,11 +1,10 @@
 <resources>
 
     <!--
-        Material 3, NoActionBar (1.2.0): every screen now supplies its own
-        MaterialToolbar, edge-to-edge insets are handled in code, and the
-        2011 folder-browser attrs (folderUpImage, fileImage, ...) are gone
-        together with the browser itself - replaced by the system SAF
-        picker. DayNight gives automatic dark mode; DynamicColors (see
+        Material 3, NoActionBar: every screen now supplies its own
+        MaterialToolbar, edge-to-edge insets are handled in code, and
+        games are picked with the system SAF picker. DayNight gives
+        automatic dark mode; DynamicColors (see
         IkuraApplication) adds Material You wallpaper palettes on 12+.
     -->
     <style name="AppBaseTheme" parent="Theme.Material3.DayNight.NoActionBar">
@@ -20,11 +19,10 @@
     <!-- Application theme. -->
     <style name="AppTheme" parent="AppBaseTheme"/>
 
-    <!-- 1.3.0: the in-game (SDL) screen. M3 descendant so the in-game
+    <!-- The in-game (SDL) screen. M3 descendant so the in-game
          bottom sheet matches the rest of the app; the opaque black
-         window background replaces the 2016 Theme.NoTitleBar.Fullscreen
-         (black screen while the engine boots, status bar hidden below
-         Android 15 where edge-to-edge is enforced anyway). -->
+         window background covers the engine boot (status bar hidden
+         below Android 15 where edge-to-edge is enforced anyway). -->
     <style name="SDLTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowBackground">@android:color/black</item>

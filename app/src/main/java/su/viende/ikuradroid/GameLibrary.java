@@ -17,19 +17,18 @@ import java.util.Comparator;
 import androidx.documentfile.provider.DocumentFile;
 
 /**
- * 1.2.0: SAF-based game library. Replaces the 2016 All-Files-Access flow.
+ * SAF-based game library (no storage permissions).
  *
  * The user picks the library root once with the system folder picker
  * (ACTION_OPEN_DOCUMENT_TREE); the grant is persisted. The engine itself
- * still uses plain stdio and cannot read content:// URIs, so on launch the
+ * uses plain stdio and cannot read content:// URIs, so on launch the
  * game folder is copied (idempotently - existing files with matching sizes
  * are skipped) into the app-private area:
  *
  *     getExternalFilesDir(null)/games/<title>/
  *
- * The native side chdir()s into the copied folder (sdl_main.c) and keeps
- * writing saves to the same getExternalFilesDir(null) path as before, so
- * savegames survive the migration from 1.1.x untouched.
+ * The native side chdir()s into the copied folder (sdl_main.c) and
+ * writes saves to the same getExternalFilesDir(null) root.
  */
 public final class GameLibrary {
 
@@ -184,7 +183,7 @@ public final class GameLibrary {
      * Copies the game from the SAF tree into the install area and returns
      * the absolute path of the installed folder. Files that already exist
      * with the same length are skipped, so repeated launches and updates
-     * are cheap. The engine font is bootstrapped afterwards (0.54.4 logic).
+     * are cheap. The engine font is bootstrapped afterwards.
      */
     public static String install(Context context, RunItem game, Progress progress) throws Exception {
         if (game.getSafUri() == null) {

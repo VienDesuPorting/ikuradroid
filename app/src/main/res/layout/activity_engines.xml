@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 1.2.0: engines and supported titles. The cards themselves are built
-     at runtime from the engine table in EnginesActivity (the data mirrors
-     libvile.so; see the class javadoc). -->
+<!-- Engines and supported titles. The cards themselves are built
+     at runtime from assets/engines.json (EnginesActivity; see the class
+     javadoc). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/engines_root"

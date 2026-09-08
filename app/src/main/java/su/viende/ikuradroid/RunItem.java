@@ -1,7 +1,7 @@
 package su.viende.ikuradroid;
 
 /**
- * 1.2.0: one tile in the library grid - a folder containing vilevn.pck.
+ * One tile in the library grid - a folder containing vilevn.pck.
  *
  * A game comes either from the SAF tree picked by the user (safUri), from
  * the app-private install area (installedPath), or from both. The install
