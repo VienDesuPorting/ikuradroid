@@ -41,6 +41,17 @@ public class SDLActivity extends Activity {
     public static boolean mIsPaused, mIsSurfaceReady, mHasFocus;
     public static boolean mExitCalledFromJava;
     public static boolean skip;
+
+    // 1.5.0: the in-game menu lives in exactly one dialog instance; the
+    // top-down swipe gesture tracking state (see dispatchTouchEvent).
+    private BottomSheetDialog mGameMenuSheet;
+    private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted;
+    private float mSwipeStartX, mSwipeStartY;
+    // The gesture starts inside the top strip and must travel at least
+    // this far down. Both in dp: sensorLandscape windows are short, so a
+    // fraction of the height would be either too small or unreachable.
+    private static final float MENU_SWIPE_ZONE_DP = 72f;
+    private static final float MENU_SWIPE_TRAVEL_DP = 96f;
     // Main components
     protected static SDLActivity mSingleton;
     protected static SDLSurface mSurface;
@@ -123,7 +134,13 @@ public class SDLActivity extends Activity {
     // sheet; each action maps to the virtual key the engine listens for
     // (the F5/F6/F7/F8/F9 + CTRL mapping of the 2016 build is kept as is).
     private void showGameMenu() {
-        BottomSheetDialog sheet = new BottomSheetDialog(this);
+        // 1.5.0: never stack a second sheet over a live one (the 1.3.0
+        // "menu opened twice" report: each dialog was a fresh local
+        // instance, so two BACK-triggered sheets could pile up)
+        if (mGameMenuSheet != null && mGameMenuSheet.isShowing()) {
+            return;
+        }
+        final BottomSheetDialog sheet = new BottomSheetDialog(this);
         LinearLayout root = (LinearLayout) getLayoutInflater()
                 .inflate(R.layout.sheet_ingame, null);
         LinearLayout items = (LinearLayout) root.findViewById(R.id.ingame_items);
@@ -150,6 +167,8 @@ public class SDLActivity extends Activity {
         addMenuRow(sheet, items, R.drawable.ic_ingame_quit, R.string.menu_quit, 0,
                 () -> onNativeKeyDown(KeyEvent.KEYCODE_F9));
 
+        sheet.setOnDismissListener(d -> mGameMenuSheet = null);
+        mGameMenuSheet = sheet;
         sheet.setContentView(root);
         sheet.show();
     }
@@ -268,8 +287,15 @@ public class SDLActivity extends Activity {
         // 1.3.0: BACK and MENU open the Material 3 in-game menu; the event
         // is consumed so the engine never sees it (the same contract the
         // 2016 options menu had).
+        // 1.5.0: dispatchKeyEvent sees BOTH the ACTION_DOWN and the
+        // ACTION_UP of a single physical press - showing the sheet on every
+        // event stacked two identical dialogs (the 1.3.0 "the menu opened
+        // twice" report). Open it once, on the key release, the same way
+        // the platform onBackPressed fires.
         if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_MENU) {
-                showGameMenu();
+                if (event.getAction() == KeyEvent.ACTION_UP) {
+                    showGameMenu();
+                }
                 return true;
         }
 
@@ -284,6 +310,98 @@ public class SDLActivity extends Activity {
             return false;
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    // ------------------------------------------------------------------
+    // 1.5.0: top-down swipe opens the in-game menu.
+    //
+    // Rationale: gesture-nav devices have no BACK button at all, and a
+    // permanent on-screen pause button would eat screen space and risk
+    // mis-taps while the player is rapidly advancing text. The swipe is
+    // invisible and never collides with engine input:
+    //
+    //  * a gesture starting inside the top strip is captured at
+    //    ACTION_DOWN - the engine sees NOTHING if it turns out to be a
+    //    swipe (the whole stream is consumed);
+    //  * a plain tap inside the strip is replayed to the engine as a
+    //    clean DOWN+UP pair once the finger lifts (forwardTapToEngine),
+    //    so clicks in the upper part of the game keep working;
+    //  * the very top edge stays with the system: pulling the
+    //    notification shade over a windowFullscreen activity still wins
+    //    that zone, which is harmless - the strip simply starts a bit
+    //    lower and is wide enough to be comfortable.
+    // ------------------------------------------------------------------
+
+    private float menuDp(float value) {
+        return value * getResources().getDisplayMetrics().density;
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        final int action = ev.getActionMasked();
+
+        if (!mSwipeTracking) {
+            if (action == MotionEvent.ACTION_DOWN
+                    && ev.getY() <= menuDp(MENU_SWIPE_ZONE_DP)) {
+                mSwipeTracking = true;
+                mSwipeConsumed = false;
+                mSwipeAborted = false;
+                mSwipeStartX = ev.getX();
+                mSwipeStartY = ev.getY();
+                return true; // hold the stream until intent is clear
+            }
+        } else {
+            switch (action) {
+                case MotionEvent.ACTION_MOVE:
+                    if (!mSwipeConsumed && !mSwipeAborted) {
+                        float dx = ev.getX() - mSwipeStartX;
+                        float dy = ev.getY() - mSwipeStartY;
+                        if (dy >= menuDp(MENU_SWIPE_TRAVEL_DP)
+                                && dy > 2f * Math.abs(dx)) {
+                            mSwipeConsumed = true;
+                            showGameMenu();
+                        }
+                    }
+                    return true;
+
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    // A second finger joined: neither menu nor replay,
+                    // but keep consuming so the stream is not split.
+                    mSwipeAborted = true;
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    mSwipeTracking = false;
+                    if (action == MotionEvent.ACTION_UP
+                            && !mSwipeConsumed && !mSwipeAborted) {
+                        forwardTapToEngine(ev);
+                    }
+                    return true;
+            }
+            return true;
+        }
+
+        return super.dispatchTouchEvent(ev);
+    }
+
+    /** Replays a captured top-strip tap as one clean engine click. */
+    private void forwardTapToEngine(MotionEvent ev) {
+        if (SDLSurface.mWidth <= 0f || SDLSurface.mHeight <= 0f) {
+            return;
+        }
+        // Parity with SDLSurface.onTouch: any game touch cancels auto-skip
+        if (skip) {
+            onNativeKeyUp(KeyEvent.KEYCODE_CTRL_LEFT);
+            skip = false;
+        }
+        float x = ev.getX() / SDLSurface.mWidth;
+        float y = ev.getY() / SDLSurface.mHeight;
+        float p = ev.getPressure();
+        onNativeTouch(ev.getDeviceId(), ev.getPointerId(0),
+                MotionEvent.ACTION_DOWN, x, y, p);
+        onNativeTouch(ev.getDeviceId(), ev.getPointerId(0),
+                MotionEvent.ACTION_UP, x, y, p);
     }
 
     /** Called by onPause or surfaceDestroyed. Even if surfaceDestroyed
