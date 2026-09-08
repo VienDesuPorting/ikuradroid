@@ -24,14 +24,21 @@
 
     <!-- Library -->
     <string name="library_empty_title">Library is empty</string>
-    <string name="library_empty_body">Choose the folder with your visual novels. Each game lives in its own subfolder containing vilevn.pck; picking a game folder directly works too. On first launch the game files are copied into the app storage - no storage permission is needed, and your savegames stay where they are.</string>
+    <string name="library_empty_body">Choose the folder with your visual novels. Each game lives in its own subfolder containing vilevn.pck; picking a game folder directly works too. Games are read from their folders in place, and your savegames stay in the app storage.</string>
     <string name="library_pick_folder">Choose folder</string>
-    <string name="folder_picker_unavailable">The system folder picker is not available on this device</string>
 
-    <!-- Game install (SAF copy into the app-private area) -->
-    <string name="install_progress_title">Copying game files…</string>
-    <string name="install_cancel">Cancel</string>
-    <string name="install_failed">Could not copy the game files</string>
+    <!-- In-app folder browser (the library root on the real file system) -->
+    <string name="picker_title">Select folder</string>
+    <string name="picker_select">Select this folder</string>
+    <string name="picker_game_badge">Game folder</string>
+    <string name="picker_empty">No subfolders here</string>
+
+    <!-- Storage access (real paths instead of SAF) -->
+    <string name="storage_access_title">File access</string>
+    <string name="storage_access_message">IkuraDroid reads novel folders from the shared device storage. Grant file access to pick the library folder.</string>
+    <string name="storage_access_denied">File access was not granted</string>
+    <string name="storage_settings_unavailable">The storage settings screen is not available on this device</string>
+    <string name="game_gone">The game folder is no longer accessible</string>
 
     <!-- Engines screen. Titles mirror the NativeName() strings of the
          compiled engine modules (jni/vile); statuses are honest: only

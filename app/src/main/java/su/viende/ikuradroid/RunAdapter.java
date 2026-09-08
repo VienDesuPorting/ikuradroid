@@ -15,9 +15,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 /**
  * Library grid adapter. Tiles bind a game title and its per-game
- * icon.png - readable from the install area once the game has been copied;
- * until then the placeholder is shown. Clicks are delegated to the host
- * (MainActivity installs and launches the game).
+ * icon.png - read straight from the real game folder, with the legacy
+ * install-area copy as a fallback; until then the placeholder is shown.
+ * Clicks are delegated to the host (MainActivity launches the game).
  */
 public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
 
@@ -68,8 +68,13 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
     public void onBindViewHolder(ViewHolder holder, int position) {
         final RunItem item = mDataset.get(position);
         holder.mTextView.setText(item.getTitle());
-        File icon = item.getInstalledPath() == null ? null
-                : new File(item.getInstalledPath(), "icon.png");
+        File icon = null;
+        if (item.getSourcePath() != null) {
+            icon = new File(item.getSourcePath(), "icon.png");
+        }
+        if ((icon == null || !icon.isFile()) && item.getInstalledPath() != null) {
+            icon = new File(item.getInstalledPath(), "icon.png");
+        }
         // Reset on recycle so icons never bleed through tiles
         if (icon != null && icon.isFile()) {
             holder.mImageView.setImageURI(Uri.fromFile(icon));

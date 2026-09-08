@@ -23,14 +23,21 @@
 
     <!-- Библиотека -->
     <string name="library_empty_title">Библиотека пуста</string>
-    <string name="library_empty_body">Выберите папку с вашими новеллами. Каждая игра лежит в своей подпапке с файлом vilevn.pck; можно выбрать и саму папку игры. При первом запуске файлы игры копируются в хранилище приложения — разрешение на доступ к памяти не требуется, сохранения остаются на своих местах.</string>
+    <string name="library_empty_body">Выберите папку с вашими новеллами. Каждая игра лежит в своей подпапке с файлом vilevn.pck; можно выбрать и саму папку игры. Игра читается прямо из своей папки, сохранения остаются в хранилище приложения.</string>
     <string name="library_pick_folder">Выбрать папку</string>
-    <string name="folder_picker_unavailable">Системный выбор папок недоступен на этом устройстве</string>
 
-    <!-- Установка игры (копирование из SAF в хранилище приложения) -->
-    <string name="install_progress_title">Копирование файлов игры…</string>
-    <string name="install_cancel">Отмена</string>
-    <string name="install_failed">Не удалось скопировать файлы игры</string>
+    <!-- Собственный браузер папок (корень библиотеки в реальной ФС) -->
+    <string name="picker_title">Выбор папки</string>
+    <string name="picker_select">Выбрать эту папку</string>
+    <string name="picker_game_badge">Папка с игрой</string>
+    <string name="picker_empty">Подпапок нет</string>
+
+    <!-- Доступ к памяти (реальные пути вместо SAF) -->
+    <string name="storage_access_title">Доступ к файлам</string>
+    <string name="storage_access_message">IkuraDroid читает папки с новеллами из общего хранилища устройства. Выдайте доступ к файлам, чтобы выбрать папку библиотеки.</string>
+    <string name="storage_access_denied">Доступ к файлам не выдан</string>
+    <string name="storage_settings_unavailable">Экран настроек доступа к памяти недоступен на этом устройстве</string>
+    <string name="game_gone">Папка игры больше недоступна</string>
 
     <!-- Экран движков. Титулы повторяют строки NativeName() скомпилированных
          модулей (jni/vile); статусы честные: на реальном устройстве пока
