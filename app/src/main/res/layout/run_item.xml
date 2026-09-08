@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!-- 1.1.0: library tile restyled with Material 3. Ids (card_view,
+<!-- Library tile. Ids (card_view,
      iv_recycler_item, tv_recycler_item) are referenced by RunAdapter and
      must not change. -->
 

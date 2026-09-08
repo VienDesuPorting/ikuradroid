@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- IkuraDroid 1.1.0 brand seed: warm "ikura" (salmon roe) orange,
+    <!-- Brand seed: warm "ikura" (salmon roe) orange,
          M3 tonal values. Applied on Android <12; on 12+ DynamicColors
          (Material You wallpaper palettes) takes over. -->
     <color name="ikura_primary">#B02F00</color>

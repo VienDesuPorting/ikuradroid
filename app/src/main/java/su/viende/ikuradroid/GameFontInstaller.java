@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * 0.54.4: font bootstrap for game folders.
+ * Font bootstrap for game folders.
  *
  * The C++ engine resolves its UI/story font to an absolute path inside the
  * game folder on Android (vile.cpp, ANDROID branch: default_face =
