@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Long-press menu of a library tile.
+  Rounded panel behind the library tile context menu. The stock popup
+  menu background is nearly square; this one is noticeably rounder,
+  matching the M3 dialog look. The panel color follows the M3/Material
+  You palette in both light and dark themes.
 
   This file is part of IkuraDroid.
   Copyright (C) 2026 VienDesu! Porting Team
@@ -18,16 +21,8 @@
   You should have received a copy of the GNU General Public License
   along with this program. If not, see <https://www.gnu.org/licenses/>.
 -->
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- Files stay on the storage; re-adding the folder restores the title -->
-    <item
-        android:id="@+id/ctx_hide"
-        android:title="@string/ctx_hide"/>
-
-    <!-- Destructive: wipes the game folder(s) after a confirmation -->
-    <item
-        android:id="@+id/ctx_delete"
-        android:title="@string/ctx_delete"/>
-
-</menu>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="?attr/colorSurfaceContainerHigh"/>
+    <corners android:radius="16dp"/>
+</shape>
