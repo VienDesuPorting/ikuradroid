@@ -17,6 +17,10 @@
 #include "criticaltv.h"
 
 CriticalPoint::CriticalPoint(uString Path) : EngineWill(640,480) {
+	// CP-era script grammar: shorter argument blocks for OP4A/OP21/OP25/OP8A
+	// ("4A 1A 00", "21 01 <bgm>", "25 <u32> <se>", "8A 01 00")
+	script_v2=true;
+
 	// Add resources
 	AddBGM(new ArchiveWillARC(Path+"Bgm.arc"));
 	AddVoices(new ArchiveWillARC(Path+"Voice.arc"));

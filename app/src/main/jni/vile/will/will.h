@@ -63,6 +63,13 @@ class EngineWill : public EngineVN {
 		int table_varkind;			//!< Variable to register kind in
 		uString bgname;			//!< Name of current bg resource
 
+	protected:
+		//! CP/LMM-era scripts use shorter argument blocks
+		//! (OP4A=3B, OP21=2B, OP25=5B, OP8A=3B); set by the game subclass
+		bool script_v2;
+
+	private:
+
 		// Opcode handlers
 		bool OP01();				//!< Conditional jump
 		bool OP02();				//!< Decision box
