@@ -1,0 +1,70 @@
+{
+  "engines": [
+    {
+      "name": "Ikura GDL",
+      "tested": true,
+      "titles": [
+        { "name": "Crescendo", "tested": true },
+        { "name": "Heart de Roommate", "tested": false },
+        { "name": "Cat Girl Alliance", "tested": false },
+        { "name": "Hitomi -My Stepsister-", "tested": false },
+        { "name": "Idols Galore!", "tested": false },
+        { "name": "Kana ... Okaeri!", "tested": false },
+        { "name": "Kana ~ Little Sister", "tested": false },
+        { "name": "The Sagara Family", "tested": false },
+        { "name": "Snow", "tested": false },
+        { "name": "Virgin", "tested": false }
+      ]
+    },
+    {
+      "name": "Will",
+      "tested": false,
+      "titles": [
+        { "name": "Critical Point", "tested": false },
+        { "name": "Princess Waltz", "tested": false },
+        { "name": "Starry Sky", "tested": false },
+        { "name": "Yume Miru Kusuri", "tested": false }
+      ]
+    },
+    {
+      "name": "Crowd",
+      "tested": false,
+      "titles": [
+        { "name": "Tokimeki Check-in!", "tested": false },
+        { "name": "XChange 1", "tested": false },
+        { "name": "XChange 3", "tested": false }
+      ]
+    },
+    {
+      "name": "C-Ware",
+      "tested": false,
+      "titles": [
+        { "name": "DiviDead", "tested": false }
+      ]
+    },
+    {
+      "name": "JAST",
+      "tested": false,
+      "titles": [
+        { "name": "Season of the Sakura", "tested": false },
+        { "name": "3 Sisters Story", "tested": false },
+        { "name": "Runaway City", "tested": false }
+      ]
+    },
+    {
+      "name": "Windy",
+      "tested": false,
+      "titles": [
+        { "name": "Mayclub VR Dating SX", "tested": false },
+        { "name": "Nocturnal Illusion Renewal", "tested": false }
+      ]
+    },
+    {
+      "name": "T-Love",
+      "tested": false,
+      "titles": [
+        { "name": "True Love", "tested": false }
+      ]
+    }
+  ]
+}

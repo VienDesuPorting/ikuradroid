@@ -8,29 +8,28 @@ android {
     ndkVersion '27.2.12479018'
 
     defaultConfig {
-        // applicationId has been su.viende.ikuradroid since the 1.0.0 rebrand.
-        // 1.4.0: the Java namespace is now aligned with it (was su.viende.vile,
-        // kept in 1.0.0 "for the SDL JNI bridge"). The pre-rename audit proved
-        // the native side has zero coupling to the app package: no
-        // Java_su_viende_vile_* symbols in C/C++, no FindClass of the app
-        // package (SDL_android.c resolves only org/libsdl/app/* and framework
-        // classes), and the SDL_JAVA_PACKAGE_PATH define in jni/Android.mk is
-        // consumed by no source file. org.libsdl.app.* is untouched, so all
-        // SDL JNI symbols (Java_org_libsdl_app_*) stay valid.
+        // applicationId and the Java namespace are aligned
+        // (su.viende.ikuradroid). The native side has zero coupling to the
+        // app package: no Java_su_viende_* symbols in C/C++, no FindClass of
+        // the app package (SDL_android.c resolves only org/libsdl/app/* and
+        // framework classes), and the SDL_JAVA_PACKAGE_PATH define in
+        // jni/Android.mk is consumed by no source file. org.libsdl.app.* is
+        // untouched, so all SDL JNI symbols (Java_org_libsdl_app_*) stay
+        // valid.
         applicationId "su.viende.ikuradroid"
         minSdk 21
-        // 1.2.0: SAF-only storage - the app needs no storage permission on any
-        // Android version (persisted ACTION_OPEN_DOCUMENT_TREE grant + the
-        // app-private files dir for the game copies and savegames).
+        // SAF-only storage: no storage permission on any Android version
+        // (persisted ACTION_OPEN_DOCUMENT_TREE grant + the app-private files
+        // dir for the game copies and savegames).
         targetSdk 35
         // Single source of truth for the version. NB: values here override
         // android:versionCode/versionName in AndroidManifest.xml — keep the
         // manifest attributes removed to avoid silent mismatches.
-        // 1.0.0 restarts both versionName and the versionCode lineage: the new
-        // applicationId makes it a fresh install, there is no upgrade path from
-        // the 0.54.x line (su.viende.vile).
-        versionCode 7
-        versionName "1.5.0"
+        // The lineage restarts at the 2026 rebrand: the new applicationId
+        // makes it a fresh install, there is no upgrade path from the old
+        // su.viende.vile builds.
+        versionCode 8
+        versionName "1.6.0"
 
         externalNativeBuild {
             ndkBuild {
@@ -48,9 +47,9 @@ android {
 
     signingConfigs {
         release {
-            // 1.3.0: signed releases both locally and in GitHub Actions CI.
+            // Local builds and CI produce identically signed releases.
             // Credentials live in gradle.properties (the repo is private and
-            // the keystore ships in it - owner's decision, 2026).
+            // the keystore ships in it - owner's decision).
             storeFile rootProject.file(project.property('IKURA_STORE_FILE'))
             storePassword project.property('IKURA_STORE_PASSWORD')
             keyAlias project.property('IKURA_KEY_ALIAS')
@@ -83,8 +82,6 @@ android {
 }
 
 dependencies {
-    // 1.2.0 dependency diet: viewpager / fragment / preference / cardview
-    // (2011-era or unused) are gone together with the old folder browser.
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'

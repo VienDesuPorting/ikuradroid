@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 1.2.0: the resource leak of 2016 is closed. This file now carries
-         only the strings actually referenced from Java or layouts; the
-         ~170 leftover strings of the ONScripter-era settings UI (download
-         manager, hwkey remap, trackball, Google Play Games helpers, ...)
-         are gone. English is the source language. -->
+    <!-- Only the strings actually referenced from Java or layouts live
+         here; English is the source language. -->
 
     <string name="app_name">IkuraDroid</string>
 
-    <!-- In-game menu (1.3.0 Material 3 bottom sheet). SDLActivity maps the
+    <!-- In-game menu. SDLActivity maps the
          items to the F5/F6/F7/F8/F9 and CTRL hotkeys of the engine. -->
     <string name="ingame_menu">Game menu</string>
     <string name="skip_on">Auto-skip enabled</string>
@@ -42,6 +39,7 @@
     <string name="engines_note">Script engines implemented by ViLE and compiled into this build. Ikura GDL is verified - Crescendo runs end to end; every other engine and title is marked "not tested" until it has been checked on a real device.</string>
     <string name="engine_status_tested">tested</string>
     <string name="engine_status_not_tested">not tested</string>
+    <string name="engines_data_error">The engine list (engines.json) is missing or malformed.</string>
 
     <!-- About screen -->
     <string name="about_tagline">Ikura GDL visual novel interpreter for Android</string>
