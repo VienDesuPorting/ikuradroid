@@ -2,20 +2,24 @@ package su.viende.ikuradroid;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.view.LayoutInflater;
+import android.os.Environment;
+import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -29,9 +33,12 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 public class MainActivity extends AppCompatActivity
 {
         private static final int REQUEST_PICK_FOLDER = 42;
+        private static final int REQUEST_STORAGE_ACCESS = 43;
 
         private RunAdapter ra;
         private View mEmptyState;
+        // Action to rerun once storage access has been granted
+        private Runnable mPendingAfterGrant;
 
         @Override
         protected void onCreate(Bundle savedInstanceState) {
@@ -104,7 +111,7 @@ public class MainActivity extends AppCompatActivity
                 new Thread(new Runnable() {
                         @Override
                         public void run() {
-                                // SAF queries are slow; the scan runs off the UI thread
+                                // Storage scans are slow; the scan runs off the UI thread
                                 final ArrayList<RunItem> dataset = GameLibrary.scan(MainActivity.this);
                                 runOnUiThread(new Runnable() {
                                         @Override
@@ -131,109 +138,28 @@ public class MainActivity extends AppCompatActivity
         }
 
         // ------------------------------------------------------------------
-        // Game installation and launch
+        // Game launch
         // ------------------------------------------------------------------
 
         private void onGameClicked(final RunItem item) {
                 if (item == null) {
                         return;
                 }
-                if (item.getSafUri() == null) {
-                        // Installed-only game (e.g. the SAF grant was revoked) -
-                        // the private copy always runs without any permissions
-                        launchInstalled(item.getInstalledPath());
+                // Real folder first; the legacy app-private copy as a fallback
+                String path = item.getSourcePath() != null ? item.getSourcePath() : item.getInstalledPath();
+                if (path == null) {
                         return;
                 }
-                installAndLaunch(item);
+                launchGame(path);
         }
 
-        private void installAndLaunch(final RunItem item) {
-                final AtomicBoolean cancelled = new AtomicBoolean(false);
-                final AlertDialogHolder dialog = showInstallDialog(cancelled);
-
-                new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                                try {
-                                        final String path = GameLibrary.install(MainActivity.this, item,
-                                                        new GameLibrary.Progress() {
-                                                                @Override
-                                                                public void onProgress(final String fileName) {
-                                                                        runOnUiThread(new Runnable() {
-                                                                                @Override
-                                                                                public void run() {
-                                                                                        dialog.fileNameView.setText(fileName);
-                                                                                }
-                                                                        });
-                                                                }
-
-                                                                @Override
-                                                                public boolean isCancelled() {
-                                                                        return cancelled.get();
-                                                                }
-                                                        });
-                                        item.setInstalledPath(path);
-                                        runOnUiThread(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                        dialog.holder.dismiss();
-                                                        launchInstalled(path);
-                                                }
-                                        });
-                                } catch (final Exception e) {
-                                        runOnUiThread(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                        dialog.holder.dismiss();
-                                                        if (!cancelled.get()) {
-                                                                Toast.makeText(MainActivity.this,
-                                                                                R.string.install_failed,
-                                                                                Toast.LENGTH_LONG).show();
-                                                        }
-                                                }
-                                        });
-                                }
-                        }
-                }).start();
-        }
-
-        /** Small aggregate: the dialog and the file-name label inside it. */
-        private static class AlertDialogHolder {
-                android.app.Dialog holder;
-                TextView fileNameView;
-        }
-
-        private AlertDialogHolder showInstallDialog(final AtomicBoolean cancelled) {
-                AlertDialogHolder result = new AlertDialogHolder();
-                View content = LayoutInflater.from(this).inflate(R.layout.dialog_install, null);
-                result.fileNameView = (TextView) content.findViewById(R.id.install_file);
-                result.holder = new MaterialAlertDialogBuilder(this)
-                                .setTitle(R.string.install_progress_title)
-                                .setView(content)
-                                .setNegativeButton(R.string.install_cancel, new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialog, int which) {
-                                                cancelled.set(true);
-                                        }
-                                })
-                                .create();
-                result.holder.setCanceledOnTouchOutside(false);
-                // Fires for the Cancel button as well as for BACK
-                result.holder.setOnCancelListener(new DialogInterface.OnCancelListener() {
-                        @Override
-                        public void onCancel(DialogInterface dialog) {
-                                cancelled.set(true);
-                        }
-                });
-                result.holder.show();
-                return result;
-        }
-
-        private void launchInstalled(String gamePath) {
-                if (gamePath == null) {
-                        return;
-                }
+        private void launchGame(String gamePath) {
                 File game = new File(gamePath);
+                if (!game.isDirectory()) {
+                        Toast.makeText(this, R.string.game_gone, Toast.LENGTH_LONG).show();
+                        return;
+                }
+                GameFontInstaller.ensureFont(this, game.getAbsolutePath());
                 // The engine contract (sdl_main.c): chdir(fpath + "/" + fname),
                 // saves keep going to the app-private files root
                 Intent intent = new Intent(this, org.libsdl.app.SDLActivity.class);
@@ -243,49 +169,107 @@ public class MainActivity extends AppCompatActivity
         }
 
         // ------------------------------------------------------------------
-        // SAF folder picking
+        // Storage access (real paths instead of SAF)
         // ------------------------------------------------------------------
 
-        /** Launches the system folder picker. */
-        private void pickFolder() {
-                try {
-                        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-                        startActivityForResult(intent, REQUEST_PICK_FOLDER);
-                } catch (Exception e) {
-                        Toast.makeText(this, R.string.folder_picker_unavailable,
-                                        Toast.LENGTH_SHORT).show();
+        private boolean hasStorageAccess() {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        return Environment.isExternalStorageManager();
                 }
+                return ContextCompat.checkSelfPermission(this,
+                                Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                                && ContextCompat.checkSelfPermission(this,
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        /** Runs the action now, or after the user grants storage access. */
+        private void ensureStorageAccess(Runnable action) {
+                if (hasStorageAccess()) {
+                        action.run();
+                        return;
+                }
+                mPendingAfterGrant = action;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        new MaterialAlertDialogBuilder(this)
+                                        .setTitle(R.string.storage_access_title)
+                                        .setMessage(R.string.storage_access_message)
+                                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                        requestAllFilesAccess();
+                                                }
+                                        })
+                                        .setNegativeButton(android.R.string.cancel, null)
+                                        .show();
+                } else {
+                        ActivityCompat.requestPermissions(this, new String[] {
+                                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                                        Manifest.permission.WRITE_EXTERNAL_STORAGE },
+                                        REQUEST_STORAGE_ACCESS);
+                }
+        }
+
+        private void requestAllFilesAccess() {
+                try {
+                        Intent intent = new Intent(
+                                        Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                        Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                        return;
+                } catch (Exception e) {
+                        // Some builds do not resolve the app-specific screen -
+                        // fall back to the generic all-files-access list
+                }
+                try {
+                        startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
+                } catch (Exception e) {
+                        Toast.makeText(this, R.string.storage_settings_unavailable,
+                                        Toast.LENGTH_LONG).show();
+                }
+        }
+
+        @Override
+        public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                if (requestCode != REQUEST_STORAGE_ACCESS) {
+                        return;
+                }
+                boolean granted = grantResults.length > 0;
+                for (int result : grantResults) {
+                        granted &= result == PackageManager.PERMISSION_GRANTED;
+                }
+                if (granted && mPendingAfterGrant != null) {
+                        Runnable action = mPendingAfterGrant;
+                        mPendingAfterGrant = null;
+                        action.run();
+                } else if (!granted) {
+                        Toast.makeText(this, R.string.storage_access_denied, Toast.LENGTH_LONG).show();
+                }
+        }
+
+        // ------------------------------------------------------------------
+        // Folder picking
+        // ------------------------------------------------------------------
+
+        private void pickFolder() {
+                ensureStorageAccess(new Runnable() {
+                        @Override
+                        public void run() {
+                                startActivityForResult(
+                                                new Intent(MainActivity.this, FolderPickerActivity.class),
+                                                REQUEST_PICK_FOLDER);
+                        }
+                });
         }
 
         @Override
         protected void onActivityResult(int requestCode, int resultCode, Intent data) {
                 super.onActivityResult(requestCode, resultCode, data);
-                if (requestCode != REQUEST_PICK_FOLDER || data == null || data.getData() == null) {
+                String path = data == null ? null : data.getStringExtra(FolderPickerActivity.EXTRA_PATH);
+                if (requestCode != REQUEST_PICK_FOLDER || path == null) {
                         return;
                 }
-                Uri treeUri = data.getData();
-                // Persist the grant across reboots. Only the READ/WRITE bits
-                // are persistable: since Android 11 the result intent may also
-                // carry FLAG_GRANT_PREFIX_URI_PERMISSION, and passing that bit
-                // to takePersistableUriPermission throws IllegalArgument-
-                // Exception ("Requested flags 0x81, but only 0x3 are allowed",
-                // a fatal crash right after the user taps "Allow") - so the
-                // flags are masked down to the two accepted bits.
-                int takeFlags = data.getFlags()
-                                & (Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                if (takeFlags != 0) {
-                        try {
-                                getContentResolver().takePersistableUriPermission(treeUri,
-                                                takeFlags);
-                        } catch (SecurityException e) {
-                                // Provider refused to persist - the session grant
-                                // is still valid for this process lifetime
-                        }
-                }
-                GameLibrary.setTreeUri(this, treeUri);
+                GameLibrary.setRootPath(this, path);
                 rescanLibrary();
         }
 
@@ -317,11 +301,16 @@ public class MainActivity extends AppCompatActivity
                 return super.onOptionsItemSelected(item);
         }
 
-        // Returning from a finished SDLActivity must rescan the
-        // library (a first launch may have just installed a game copy)
+        // Returning from the storage settings screen or from a finished
+        // SDLActivity must rerun the pending action and rescan the library
         @Override
         protected void onResume() {
                 super.onResume();
+                if (mPendingAfterGrant != null && hasStorageAccess()) {
+                        Runnable action = mPendingAfterGrant;
+                        mPendingAfterGrant = null;
+                        action.run();
+                }
                 rescanLibrary();
         }
 }

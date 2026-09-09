@@ -2,49 +2,32 @@ package su.viende.ikuradroid;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.net.Uri;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
-import androidx.documentfile.provider.DocumentFile;
-
 /**
- * SAF-based game library (no storage permissions).
+ * File-system game library.
  *
- * The user picks the library root once with the system folder picker
- * (ACTION_OPEN_DOCUMENT_TREE); the grant is persisted. The engine itself
- * uses plain stdio and cannot read content:// URIs, so on launch the
- * game folder is copied (idempotently - existing files with matching sizes
- * are skipped) into the app-private area:
+ * The user picks the library root once with the in-app folder browser
+ * (FolderPickerActivity) after granting storage access; the absolute path
+ * is persisted. The engine reads files with plain stdio, so game folders
+ * are passed to it as real paths - nothing is copied.
  *
- *     getExternalFilesDir(null)/games/<title>/
- *
- * The native side chdir()s into the copied folder (sdl_main.c) and
- * writes saves to the same getExternalFilesDir(null) root.
+ * Games are discovered in the root folder itself and one level below it.
+ * Legacy copies from the SAF era (getExternalFilesDir(null)/games/<title>/)
+ * keep working and are merged into the same list; saves always live in the
+ * app-private area.
  */
 public final class GameLibrary {
 
+    public static final String PCK_MARKER = "vilevn.pck";
+
     private static final String PREFS_FILE = "library";
-    private static final String KEY_TREE_URI = "tree_uri";
+    private static final String KEY_ROOT_PATH = "library_root";
     private static final String INSTALL_DIR = "games";
-    private static final String PCK_MARKER = "vilevn.pck";
-
-    /** Progress callbacks for the copy dialog. */
-    public interface Progress {
-        /** Called before each file that is about to be copied. */
-        void onProgress(String fileName);
-
-        /** Checked between every file and every buffer - abort when true. */
-        boolean isCancelled();
-    }
 
     private GameLibrary() {
     }
@@ -53,24 +36,23 @@ public final class GameLibrary {
     // Persisted library root
     // ------------------------------------------------------------------
 
-    public static Uri getTreeUri(Context context) {
+    public static String getRootPath(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
-        String uri = prefs.getString(KEY_TREE_URI, null);
-        return uri == null ? null : Uri.parse(uri);
+        return prefs.getString(KEY_ROOT_PATH, null);
     }
 
-    public static void setTreeUri(Context context, Uri treeUri) {
+    public static void setRootPath(Context context, String rootPath) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
-        if (treeUri == null) {
-            editor.remove(KEY_TREE_URI);
+        if (rootPath == null) {
+            editor.remove(KEY_ROOT_PATH);
         } else {
-            editor.putString(KEY_TREE_URI, treeUri.toString());
+            editor.putString(KEY_ROOT_PATH, rootPath);
         }
         editor.apply();
     }
 
-    /** Root of the app-private install area. */
+    /** Root of the legacy install area (game copies from the SAF era). */
     public static File installRoot(Context context) {
         File base = context.getExternalFilesDir(null);
         if (base == null) {
@@ -84,39 +66,39 @@ public final class GameLibrary {
     // ------------------------------------------------------------------
 
     /**
-     * Builds the library list: games under the persisted SAF tree plus the
-     * games already copied into the install area (merged by title, so the
-     * library still works when the SAF grant is lost or the SD card is
-     * unplugged). Never returns null.
+     * Builds the library list: games under the persisted root folder plus
+     * the legacy copies in the install area (merged by title, so the
+     * library still works when the root is missing or unreadable). Never
+     * returns null.
      */
     public static ArrayList<RunItem> scan(Context context) {
         ArrayList<RunItem> items = new ArrayList<>();
 
-        Uri treeUri = getTreeUri(context);
-        if (treeUri != null) {
-            try {
-                DocumentFile root = DocumentFile.fromTreeUri(context, treeUri);
-                if (root != null && root.canRead()) {
-                    // The picked folder itself may be a game folder
-                    if (hasPck(root)) {
-                        addSafGame(items, root, root.getName());
-                    }
-                    for (DocumentFile dir : root.listFiles()) {
+        String rootPath = getRootPath(context);
+        if (rootPath != null) {
+            File root = new File(rootPath);
+            if (root.isDirectory()) {
+                // The root folder itself may be a game folder
+                if (hasPck(root)) {
+                    addFsGame(items, root);
+                }
+                File[] children = root.listFiles();
+                if (children != null) {
+                    for (File dir : children) {
                         if (dir.isDirectory() && hasPck(dir)) {
-                            addSafGame(items, dir, dir.getName());
+                            addFsGame(items, dir);
                         }
                     }
-                } else {
-                    // Stale tree (grant revoked, provider gone) - drop it so
-                    // the empty state asks the user to pick the folder again
-                    setTreeUri(context, null);
                 }
-            } catch (SecurityException | IllegalStateException e) {
-                setTreeUri(context, null);
+            } else {
+                // The folder is gone (unmounted, deleted) - drop it so the
+                // empty state asks the user to pick the folder again
+                setRootPath(context, null);
             }
         }
 
-        // Merge the install area - these always work, no permission needed
+        // Merge the legacy install area - these always work, no permission
+        // is needed for the app-private files
         File[] installed = installRoot(context).listFiles();
         if (installed != null) {
             for (File dir : installed) {
@@ -144,7 +126,8 @@ public final class GameLibrary {
         return items;
     }
 
-    private static void addSafGame(ArrayList<RunItem> items, DocumentFile dir, String name) {
+    private static void addFsGame(ArrayList<RunItem> items, File dir) {
+        String name = dir.getName();
         if (name == null || name.length() == 0) {
             return;
         }
@@ -154,7 +137,7 @@ public final class GameLibrary {
         }
         RunItem item = new RunItem();
         item.setTitle(name);
-        item.setSafUri(dir.getUri().toString());
+        item.setSourcePath(dir.getAbsolutePath());
         items.add(item);
     }
 
@@ -167,117 +150,7 @@ public final class GameLibrary {
         return null;
     }
 
-    private static boolean hasPck(DocumentFile dir) {
-        try {
-            return dir.findFile(PCK_MARKER) != null;
-        } catch (SecurityException e) {
-            return false;
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Install (idempotent copy into the app-private area)
-    // ------------------------------------------------------------------
-
-    /**
-     * Copies the game from the SAF tree into the install area and returns
-     * the absolute path of the installed folder. Files that already exist
-     * with the same length are skipped, so repeated launches and updates
-     * are cheap. The engine font is bootstrapped afterwards.
-     */
-    public static String install(Context context, RunItem game, Progress progress) throws Exception {
-        if (game.getSafUri() == null) {
-            // Installed-only game: nothing to copy
-            if (game.getInstalledPath() == null) {
-                throw new FileNotFoundException("Game has neither a SAF source nor an installed copy");
-            }
-            return game.getInstalledPath();
-        }
-        DocumentFile source = DocumentFile.fromTreeUri(context, Uri.parse(game.getSafUri()));
-        if (source == null || !source.isDirectory()) {
-            throw new FileNotFoundException("The game folder is no longer accessible, pick the library folder again");
-        }
-        File destination = new File(installRoot(context), safeName(game.getTitle()));
-        copyTree(context, source, destination, progress);
-        GameFontInstaller.ensureFont(context, destination.getAbsolutePath());
-        return destination.getAbsolutePath();
-    }
-
-    private static void copyTree(Context context, DocumentFile source, File destination,
-                                 Progress progress) throws Exception {
-        if (!destination.exists() && !destination.mkdirs()) {
-            throw new IOException("Cannot create " + destination);
-        }
-        DocumentFile[] children = source.listFiles();
-        for (DocumentFile child : children) {
-            if (progress != null && progress.isCancelled()) {
-                throw new IOException("Cancelled");
-            }
-            String name = child.getName();
-            if (name == null || name.length() == 0) {
-                continue;
-            }
-            File out = new File(destination, safeName(name));
-            if (child.isDirectory()) {
-                copyTree(context, child, out, progress);
-                continue;
-            }
-            // Idempotency: same length means same content for our purposes
-            if (out.isFile() && out.length() == child.length()) {
-                continue;
-            }
-            if (progress != null) {
-                progress.onProgress(name);
-            }
-            copyFile(context, child, out, progress);
-        }
-    }
-
-    private static void copyFile(Context context, DocumentFile source, File out,
-                                 Progress progress) throws Exception {
-        InputStream in = null;
-        OutputStream os = null;
-        try {
-            in = context.getContentResolver().openInputStream(source.getUri());
-            if (in == null) {
-                throw new IOException("Cannot open " + source.getUri());
-            }
-            os = new FileOutputStream(out);
-            byte[] buffer = new byte[65536];
-            int n;
-            while ((n = in.read(buffer)) > 0) {
-                if (progress != null && progress.isCancelled()) {
-                    throw new IOException("Cancelled");
-                }
-                os.write(buffer, 0, n);
-            }
-            os.flush();
-        } catch (IOException e) {
-            // Never keep a half-written file: the next run will retry it
-            out.delete();
-            throw e;
-        } finally {
-            if (os != null) {
-                try {
-                    os.close();
-                } catch (IOException ignored) {
-                }
-            }
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException ignored) {
-                }
-            }
-        }
-    }
-
-    /** Filesystem-safe name: keeps the title readable, strips separators. */
-    private static String safeName(String name) {
-        String cleaned = name.replaceAll("[/\\\\]", "_").trim();
-        if (cleaned.length() == 0) {
-            cleaned = "game";
-        }
-        return cleaned;
+    private static boolean hasPck(File dir) {
+        return new File(dir, PCK_MARKER).isFile();
     }
 }

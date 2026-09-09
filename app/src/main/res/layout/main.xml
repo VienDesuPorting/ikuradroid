@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The library screen: a real top app
-     bar, an empty state with its own centered layout; games are picked
-     via the system SAF picker (see GameLibrary / MainActivity). -->
+     bar, an empty state with its own centered layout; games live in real
+     folders under the picked library root (see GameLibrary /
+     MainActivity). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main_root"
@@ -35,7 +36,7 @@
             android:padding="8dp"
             android:scrollbars="vertical" />
 
-        <!-- Empty library: explanation + the SAF folder picker button -->
+        <!-- Empty library: explanation + the folder picker button -->
         <LinearLayout
             android:id="@+id/empty_state"
             android:layout_width="match_parent"
