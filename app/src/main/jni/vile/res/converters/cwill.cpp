@@ -118,7 +118,9 @@ SDL_Surface *CWill::wip(RWops *Object,int Index){
 				}
 
 				// Prepp input/output
-				Uint8 *outbuffer=new Uint8[s];
+				// Zero-initialised: a corrupt or truncated stream that decodes
+				// short then leaves a deterministic tail instead of heap garbage
+				Uint8 *outbuffer=new Uint8[s]();
 				Uint8 *inbuffer=new Uint8[c];
 				if(Object->Read(inbuffer,c)==(int)c){
 					// LZ decoding (Thanks to Animed 0.6.8.141)
@@ -134,6 +136,29 @@ SDL_Surface *CWill::wip(RWops *Object,int Index){
 					unsigned int out=0;
 					Uint32 EAX,ECX,EDI;
 					Uint8 AL,DI;
+					// Uncompressed frame storage: 0xCCCCCCCC marker + u32
+					// raw size + planar pixel data. The Russian Critical
+					// Point release keeps MENUGP, CHARGP, the EPI_*/ED_*
+					// screens and the tail frames of CG/EV gallery files
+					// in this form; feeding such a frame through the LZ
+					// decoder produced garbage and SIGSEGV (menuan crash)
+					if(c>8 && inbuffer[0]==0xCC && inbuffer[1]==0xCC &&
+						inbuffer[2]==0xCC && inbuffer[3]==0xCC){
+						Uint32 rawsize=inbuffer[4]|(inbuffer[5]<<8)|
+							(inbuffer[6]<<16)|
+							((Uint32)inbuffer[7]<<24);
+						unsigned int avail=c-8;
+						unsigned int n=avail<s?avail:s;
+						if(rawsize!=s){
+							LogError("WIPF: raw frame %d: header size %u, expected %u, blob %u",
+								Index,rawsize,s,c);
+						}
+						memcpy(outbuffer,inbuffer+8,n);
+						out=n;
+						// The whole input block is consumed; the LZ loop
+						// below is skipped (c>in is false)
+						in=c;
+					}
 					// Every write to outbuffer is bounded by s=w*h*(bpp/8).
 					// A valid stream decodes to exactly s bytes; anything
 					// else means corrupt or repacked data and gets logged
