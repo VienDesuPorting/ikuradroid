@@ -16,6 +16,7 @@ class Selection : public DialogBase {
 		VALIGN valign;
 		int fontsize;
 	bool bfill; //!< Backing strips behind text items
+	bool swallow; //!< Ignore presses that miss every item
 	public:
 		Selection(EngineVN *Engine);
 		~Selection();
@@ -36,8 +37,10 @@ class Selection : public DialogBase {
 		void SetColors(Uint32 BGSColor,Uint32 FGSColor,
 				Uint32 BGUColor,Uint32 FGUColor);
 	void SetBackgroundFill(bool Enable);
+	void SetSwallowMisses(bool Enable);
 
 		// Hook into user input
+		bool MouseLeftDown(int X,int Y);
 		bool InputOk(Widget* Object);
 };
 

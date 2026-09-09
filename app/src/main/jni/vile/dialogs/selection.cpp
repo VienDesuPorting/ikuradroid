@@ -25,6 +25,7 @@ Selection::Selection(EngineVN *Engine) : DialogBase(Engine,false){
 	valign=VA_TOP;
 	fontsize=18;
 	bfill=true;
+	swallow=false;
 }
 
 Selection::~Selection(){
@@ -60,6 +61,30 @@ void Selection::SetColors(Uint32 BGSColor,Uint32 FGSColor,
  */
 void Selection::SetBackgroundFill(bool Enable){
 	bfill=Enable;
+}
+/*! \brief Enables or disables swallowing of missed presses
+ *
+ *  When enabled, presses that land inside the dialog rectangle but
+ *  outside every menu item are consumed instead of falling through
+ *  to the engine background. This keeps a stray tap from advancing
+ *  or skipping text while a choice is pending.
+ */
+void Selection::SetSwallowMisses(bool Enable){
+	swallow=Enable;
+}
+
+/*! \brief Routes a press to the item under the cursor
+ *
+ *  Lets DialogBase dispatch the press to the focused item, then
+ *  consumes misses that land inside the dialog rectangle when
+ *  SetSwallowMisses() was enabled.
+ */
+bool Selection::MouseLeftDown(int X,int Y){
+	bool retval=DialogBase::MouseLeftDown(X,Y);
+	if(!retval && swallow && !GetWidget(X,Y)){
+		retval=Widget::TestMouse(X,Y);
+	}
+	return retval;
 }
 
 
