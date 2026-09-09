@@ -47,10 +47,13 @@ public class SDLActivity extends Activity {
     private BottomSheetDialog mGameMenuSheet;
     private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted;
     private float mSwipeStartX, mSwipeStartY;
-    // The gesture starts inside the top strip and must travel at least
-    // this far down. Both in dp: sensorLandscape windows are short, so a
-    // fraction of the height would be either too small or unreachable.
-    private static final float MENU_SWIPE_ZONE_DP = 72f;
+    // The gesture starts inside a strip well below the status-bar area
+    // (the very top edge stays with the system) and must travel at least
+    // MENU_SWIPE_TRAVEL_DP down. All in dp: sensorLandscape windows are
+    // short, so a fraction of the height would be either too small or
+    // unreachable.
+    private static final float MENU_SWIPE_ZONE_TOP_DP = 96f;
+    private static final float MENU_SWIPE_ZONE_BOTTOM_DP = 168f;
     private static final float MENU_SWIPE_TRAVEL_DP = 96f;
     // Main components
     protected static SDLActivity mSingleton;
@@ -317,16 +320,16 @@ public class SDLActivity extends Activity {
     // mis-taps while the player is rapidly advancing text. The swipe is
     // invisible and never collides with engine input:
     //
-    //  * a gesture starting inside the top strip is captured at
-    //    ACTION_DOWN - the engine sees NOTHING if it turns out to be a
-    //    swipe (the whole stream is consumed);
+    //  * a gesture starting inside the strip is captured at ACTION_DOWN
+    //    - the engine sees NOTHING if it turns out to be a swipe (the
+    //    whole stream is consumed);
     //  * a plain tap inside the strip is replayed to the engine as a
     //    clean DOWN+UP pair once the finger lifts (forwardTapToEngine),
-    //    so clicks in the upper part of the game keep working;
-    //  * the very top edge stays with the system: pulling the
-    //    notification shade over a windowFullscreen activity still wins
-    //    that zone, which is harmless - the strip simply starts a bit
-    //    lower and is wide enough to be comfortable.
+    //    so clicks in that part of the game keep working;
+    //  * everything above the strip - the status bar and the
+    //    notification shade gesture zone - stays entirely with the
+    //    system: the strip starts at 96dp, so opening the menu never
+    //    fights the shade for the top edge.
     // ------------------------------------------------------------------
 
     private float menuDp(float value) {
@@ -339,7 +342,8 @@ public class SDLActivity extends Activity {
 
         if (!mSwipeTracking) {
             if (action == MotionEvent.ACTION_DOWN
-                    && ev.getY() <= menuDp(MENU_SWIPE_ZONE_DP)) {
+                    && ev.getY() >= menuDp(MENU_SWIPE_ZONE_TOP_DP)
+                    && ev.getY() <= menuDp(MENU_SWIPE_ZONE_BOTTOM_DP)) {
                 mSwipeTracking = true;
                 mSwipeConsumed = false;
                 mSwipeAborted = false;
