@@ -193,15 +193,24 @@ WILLANIMATION *EngineWill::LoadAnimation(uString Name){
 		int size=blob->Size();
 		unsigned char buffer[size];
 		if(blob->Read(buffer,size)==size){
+			// Guard the name extraction against unterminated data
+			buffer[size-1]=0;
 			retval=new WILLANIMATION;
 			retval->name=(char*)buffer;
 			retval->frames=EngineVN::LoadAnimation(retval->name);
 			if(retval->frames){
-				for(int i=0;i<100;i++){
-					for(int j=0;j<402;j++){
-						int a=9+(((i*401)+j)*2);
-						retval->entries[i][j]=GETWORD(buffer+a);
+				// The animation table is a fixed size structure;
+				// refuse to read past the buffer if the file is short
+				if(size>=80211){
+					for(int i=0;i<100;i++){
+						for(int j=0;j<402;j++){
+							int a=9+(((i*401)+j)*2);
+							retval->entries[i][j]=GETWORD(buffer+a);
+						}
 					}
+				}
+				else{
+					LogError("Animation table too small: %s (%d bytes)",Name.c_str(),size);
 				}
 				for(int i=0;i<100;i++){
 					retval->visible[i]=true;
@@ -1048,17 +1057,19 @@ bool EngineWill::OP43(){
 
 	// Load animation
 	LogVerbose("Loading animation file: %s",text.c_str());
-	if(anim_data){
+	if(anim_data && anim_data->frames){
 		for(int i=0;anim_data->frames[i];i++){
 			SDL_FreeSurface(anim_data->frames[i]);
 		}
 		delete anim_data;
+		anim_data=0;
 	}
 //*
 	anim_data=LoadAnimation(text);
 	// Display background frame
 	SDL_Rect rect;
-	if(GetImagePosition(anim_data->name,0,&rect)){
+	if(anim_data && anim_data->frames && anim_data->frames[0] &&
+				GetImagePosition(anim_data->name,0,&rect)){
 		SDL_Surface *frame=anim_data->frames[0];
 
 		if (!prev_aniSurface)
@@ -1075,6 +1086,11 @@ bool EngineWill::OP43(){
             EDL_BlendSurface(frame,0,aniSurface,&rect);
 		//	display->Blit(frame,0,&rect);
 		}
+	}
+	else if(!anim_data){
+		// Broken or missing WIPF resource: keep running without
+		// the animation instead of dereferencing a null pointer
+		LogError("Failed to load animation: %s",text.c_str());
 	}//*/
 	return false;
 }

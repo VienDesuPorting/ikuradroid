@@ -40,7 +40,23 @@ void LogBase(LOGLEVEL Level,uString Text,...){
 	Text=RebuildString(Text,arg);
 	va_end(arg);
 #ifdef ANDROID
-	LOGCAT("%s",Text.c_str());
+	// Map the level to an android log priority
+	int prio=ANDROID_LOG_INFO;
+	if(Level==LLERROR) prio=ANDROID_LOG_ERROR;
+	if(Level==LLWARNING) prio=ANDROID_LOG_WARN;
+#ifdef VILE_LOGGING_DEBUG
+	if(Level==LLDEBUG) prio=ANDROID_LOG_DEBUG;
+#endif
+	__android_log_print(prio, "vile", "%s", Text.c_str());
+	// Optional mirror to a log file (absolute path set at startup)
+	if(Cfg::System::Logfile.length()){
+		FILE *tf=fopen(Cfg::System::Logfile.c_str(),"ab");
+		if(tf){
+			fwrite(Text.c_str(),1,Text.length(),tf);
+			fwrite("\r\n",2,1,tf);
+			fclose(tf);
+		}
+	}
 #else
     printf("%s",Text.c_str());
 	if(Level>=MINLOGLEVEL){
