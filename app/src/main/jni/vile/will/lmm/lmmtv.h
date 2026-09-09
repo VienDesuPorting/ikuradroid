@@ -19,19 +19,24 @@
 #include "../../dialogs/textview.h"
 
 #define LMMTV_BACKGROUND			0
-#define LMMTV_HEADER				25
+#define LMMTV_HEADER							25
+#define LMMTV_POINTS_BAR					15	//!< POINTS gauge fill (252x14 @ 381,4)
 
 class LittleMyMaid;
 
 class LMMTextview : public Textview {
 	private:
 		Printer *header;
+		Printer *select; //!< "SELECT" caption shown above choices
+		Widget *bar; //!< POINTS gauge fill sprite (winbase0 frame 15)
 	public:
 		LMMTextview(LittleMyMaid *Engine);
 		~LMMTextview();
 
 		void PrintText(uString Title,uString Text);
 		void PrintText(uString Text);
+		void PrintSelectTitle();
+		void HideSelectTitle();
 };
 
 #endif

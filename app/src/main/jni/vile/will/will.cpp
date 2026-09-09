@@ -497,6 +497,7 @@ bool EngineWill::EventLoad(int Index){
 		// Clear existing data
 		selection->SetVisible(false);
 		textview->ClearText();
+		OnSelectClosed();
 		Stop();
 
 		// Recreate script stack
@@ -565,6 +566,7 @@ bool EngineWill::EventSave(int Index){
 
 void EngineWill::EventSelect(int Selection){
 	selection->SetVisible(false);
+	OnSelectClosed();
 	// Seek to the picked item's routing instruction; the regular
 	// opcode handlers then perform the jump/call/goto themselves
 	if(script && Selection>=0 && Selection<choicecount){
@@ -583,6 +585,8 @@ void EngineWill::EventGameDialog(VN_DIALOGS Dialog){
 		DestroyLayer(VL_OVERLAY);
 		DestroyLayer(VL_EXTRAS);
 		textview->SetVisible(false);
+		selection->SetVisible(false);
+		OnSelectClosed();
 		LoadWillScript("start");
 	}
 	else{
@@ -864,15 +868,12 @@ bool EngineWill::OP02(){
 				y+=(h+space);
 			}
 		}
-		else{
-			// Text menu fallback: the RU CP/LMM releases ship no
-			// selwnd graphics; draw translucent strips like the
-			// original menus instead of crashing on the NULL images
-			selection->SetFontSize(NativeHeight()/24);
-			selection->SetAlignment(HA_CENTER,VA_CENTER);
-			selection->SetColors(0x303030B0,0xFFFFFFFF,0x00000060,0xFFFFFFFF);
-			selection->SetText(&items);
-		}
+	else{
+		// Text menu fallback: the RU CP/LMM releases ship no
+		// selwnd graphics; the game module restyles its menu
+		// through LayoutTextSelection()
+		LayoutTextSelection(&items);
+	}
 		if(normal){
 			SDL_FreeSurface(normal);
 		}
@@ -887,6 +888,20 @@ bool EngineWill::OP02(){
 	// Nothing parsed - keep the engine alive and log loudly
 	LogError("OP02: no choices parsed at 0x%X",script->save);
 	return false;
+}
+
+/*! Default text fallback layout: centered translucent strips
+ */
+void EngineWill::LayoutTextSelection(Stringlist *items){
+	selection->SetFontSize(NativeHeight()/24);
+	selection->SetAlignment(HA_CENTER,VA_CENTER);
+	selection->SetColors(0x303030B0,0xFFFFFFFF,0x00000060,0xFFFFFFFF);
+	selection->SetText(items);
+}
+
+/*! Choice UI dismissed hook (no-op by default)
+ */
+void EngineWill::OnSelectClosed(){
 }
 
 /*! Calculations
