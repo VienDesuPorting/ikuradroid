@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Placeholder art of a library tile without its own icon.png: a sakura
+  over a violet-to-rose dusk gradient. Vector, so one file serves every
+  density; literal colors only, so the tile reads the same in the light
+  and the dark theme.
+
+  This file is part of IkuraDroid.
+  Copyright (C) 2026 VienDesu! Porting Team
+
+  IkuraDroid is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="120dp"
+    android:viewportWidth="480"
+    android:viewportHeight="240">
+
+    <!-- Dusk gradient backdrop -->
+    <path
+        android:pathData="M0,0h480v240h-480z">
+        <aapt:attr xmlns:aapt="http://schemas.android.com/aapt" name="android:fillColor">
+            <gradient
+                android:startColor="#8F6FD8"
+                android:endColor="#F08BB0"
+                android:angle="270"/>
+        </aapt:attr>
+    </path>
+
+    <!-- Scattered petals (behind the flower, faint) -->
+    <group
+        android:translateX="62"
+        android:translateY="66"
+        android:rotation="-38"
+        android:scaleX="0.30"
+        android:scaleY="0.30">
+        <path android:fillColor="#66FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+    </group>
+    <group
+        android:translateX="424"
+        android:translateY="52"
+        android:rotation="24"
+        android:scaleX="0.24"
+        android:scaleY="0.24">
+        <path android:fillColor="#59FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+    </group>
+    <group
+        android:translateX="398"
+        android:translateY="196"
+        android:rotation="160"
+        android:scaleX="0.34"
+        android:scaleY="0.34">
+        <path android:fillColor="#4DFFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+    </group>
+    <group
+        android:translateX="96"
+        android:translateY="200"
+        android:rotation="-140"
+        android:scaleX="0.20"
+        android:scaleY="0.20">
+        <path android:fillColor="#59FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+    </group>
+
+    <!-- Central sakura: five petals around a core disc -->
+    <group
+        android:translateX="240"
+        android:translateY="120"
+        android:scaleX="1.15"
+        android:scaleY="1.15">
+        <group android:rotation="0">
+            <path android:fillColor="#E6FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+        </group>
+        <group android:rotation="72">
+            <path android:fillColor="#E6FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+        </group>
+        <group android:rotation="144">
+            <path android:fillColor="#E6FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+        </group>
+        <group android:rotation="216">
+            <path android:fillColor="#E6FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+        </group>
+        <group android:rotation="288">
+            <path android:fillColor="#E6FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+        </group>
+        <path
+            android:fillColor="#FFF3C9"
+            android:pathData="M0,-10 a10,10 0 1,0 0,20 a10,10 0 1,0 0,-20 z"/>
+    </group>
+
+</vector>

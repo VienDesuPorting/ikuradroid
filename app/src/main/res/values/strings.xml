@@ -5,8 +5,8 @@
 
     <string name="app_name">IkuraDroid</string>
 
-    <!-- In-game menu. SDLActivity maps the
-         items to the F5/F6/F7/F8/F9 and CTRL hotkeys of the engine. -->
+    <!-- In-game menu. SDLActivity maps the items to the F5/F6/F7/F8 and
+         CTRL hotkeys of the engine; Quit exits from the app side. -->
     <string name="ingame_menu">Game menu</string>
     <string name="skip_on">Auto-skip enabled</string>
     <string name="skip_off">Auto-skip off</string>
@@ -20,12 +20,25 @@
     <!-- Launcher toolbar menu -->
     <string name="menu_about">About</string>
     <string name="menu_engines">Engines</string>
-    <string name="dir_change">Change game folder</string>
+    <string name="dir_change">Add game folder</string>
 
     <!-- Library -->
     <string name="library_empty_title">Library is empty</string>
-    <string name="library_empty_body">Choose the folder with your visual novels. Each game lives in its own subfolder containing vilevn.pck; picking a game folder directly works too. Games are read from their folders in place, and your savegames stay in the app storage.</string>
+    <string name="library_empty_body">Choose the folder with your visual novels. Each game lives in its own subfolder containing vilevn.pck; picking a game folder directly works too. Folders are added one by one, games are read from their folders in place, and your savegames stay in the app storage.</string>
     <string name="library_pick_folder">Choose folder</string>
+    <string name="library_added_title">Folder added</string>
+    <string name="library_added_message">“%1$s” is now in the library. Add another folder?</string>
+    <string name="library_add_more">Add another</string>
+
+    <!-- Long-press menu of a library tile -->
+    <string name="ctx_hide">Remove from list</string>
+    <string name="ctx_delete">Delete from device</string>
+    <string name="ctx_delete_title">Delete the game?</string>
+    <string name="ctx_delete_message">The folder “%1$s” and all its files will be permanently deleted from the device.</string>
+    <string name="ctx_delete_confirm">Delete</string>
+    <string name="ctx_hidden_toast">Removed from the list - files stay in place. Re-add its folder to bring it back</string>
+    <string name="ctx_deleted_toast">Game deleted</string>
+    <string name="ctx_delete_failed_toast">Some files could not be deleted</string>
 
     <!-- In-app folder browser (the library root on the real file system) -->
     <string name="picker_title">Select folder</string>
