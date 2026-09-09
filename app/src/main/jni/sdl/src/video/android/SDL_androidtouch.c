@@ -41,16 +41,6 @@
 #define ACTION_POINTER_DOWN 5
 #define ACTION_POINTER_UP 6
 
-static void Android_GetWindowCoordinates(float x, float y,
-                                         int *window_x, int *window_y)
-{
-    int window_w, window_h;
-
-    SDL_GetWindowSize(Android_Window, &window_w, &window_h);
-    *window_x = (int)(x * window_w);
-    *window_y = (int)(y * window_h);
-}
-
 void Android_InitTouch(void)
 {
     int i;
@@ -68,8 +58,6 @@ void Android_OnTouch(int touch_device_id_in, int pointer_finger_id_in, int actio
 {
     SDL_TouchID touchDeviceId = 0;
     SDL_FingerID fingerId = 0;
-    int window_x, window_y;
-    static SDL_FingerID pointerFingerID = 0;
 
     if (!Android_Window) {
         return;
@@ -81,35 +69,37 @@ void Android_OnTouch(int touch_device_id_in, int pointer_finger_id_in, int actio
     }
 
     fingerId = (SDL_FingerID)pointer_finger_id_in;
+    if (action == ACTION_DOWN || action == ACTION_UP) {
+        /* Diagnostics: proves touches reach the native SDL layer */
+        SDL_Log("Android touch: action=%d x=%.3f y=%.3f",
+                action, x, y);
+    }
     switch (action) {
         case ACTION_DOWN:
             /* Primary pointer down */
-            Android_GetWindowCoordinates(x, y, &window_x, &window_y);
-            /* send moved event */
-            SDL_SendMouseMotion(NULL, SDL_TOUCH_MOUSEID, 0, window_x, window_y);
-            /* send mouse down event */
-            SDL_SendMouseButton(NULL, SDL_TOUCH_MOUSEID, SDL_PRESSED, SDL_BUTTON_LEFT);
-            pointerFingerID = fingerId;
+            /* SDL 2.0.3 used to synthesise mouse events here
+             * (SDL_SendMouseMotion + SDL_SendMouseButton). The
+             * synthesised stream never reached the Vile host loop on
+             * some devices, which left every Will GUI dead on touch.
+             * The host now consumes finger events directly, so touch
+             * stays touch and mouse stays mouse. */
+            SDL_SendTouch(touchDeviceId, fingerId, SDL_TRUE, x, y, p);
+            break;
+
         case ACTION_POINTER_DOWN:
             /* Non primary pointer down */
             SDL_SendTouch(touchDeviceId, fingerId, SDL_TRUE, x, y, p);
             break;
             
         case ACTION_MOVE:
-            if (!pointerFingerID) {
-                Android_GetWindowCoordinates(x, y, &window_x, &window_y);
-
-                /* send moved event */
-                SDL_SendMouseMotion(NULL, SDL_TOUCH_MOUSEID, 0, window_x, window_y);
-            }
             SDL_SendTouchMotion(touchDeviceId, fingerId, x, y, p);
             break;
             
         case ACTION_UP:
             /* Primary pointer up */
-            /* send mouse up */
-            pointerFingerID = (SDL_FingerID) 0;
-            SDL_SendMouseButton(NULL, SDL_TOUCH_MOUSEID, SDL_RELEASED, SDL_BUTTON_LEFT);
+            SDL_SendTouch(touchDeviceId, fingerId, SDL_FALSE, x, y, p);
+            break;
+
         case ACTION_POINTER_UP:
             /* Non primary pointer up */
             SDL_SendTouch(touchDeviceId, fingerId, SDL_FALSE, x, y, p);

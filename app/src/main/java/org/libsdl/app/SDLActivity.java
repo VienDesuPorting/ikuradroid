@@ -340,6 +340,17 @@ public class SDLActivity extends Activity {
     public boolean dispatchTouchEvent(MotionEvent ev) {
         final int action = ev.getActionMasked();
 
+        // Diagnostics: the Will engines used to receive no clicks at all
+        // even though the view hierarchy consumed the events - this log
+        // shows whether the activity dispatch layer sees the taps and
+        // whether the swipe strip claims them.
+        if (action == MotionEvent.ACTION_DOWN
+                || action == MotionEvent.ACTION_UP) {
+            Log.i("vile", "dispatchTouch: action=" + action
+                    + " x=" + (int) ev.getX() + " y=" + (int) ev.getY()
+                    + " tracking=" + mSwipeTracking);
+        }
+
         if (!mSwipeTracking) {
             if (action == MotionEvent.ACTION_DOWN
                     && ev.getY() >= menuDp(MENU_SWIPE_ZONE_TOP_DP)
@@ -985,6 +996,11 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
             
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_DOWN:
+                // Diagnostics: proves the tap reached SDLSurface and was
+                // forwarded into the native SDL queue.
+                Log.i("vile", "SDLSurface touch: action=" + action
+                        + " x=" + (event.getX(0) / mWidth)
+                        + " y=" + (event.getY(0) / mHeight));
                 // Primary pointer up/down, the index is always zero
                 i = 0;
             case MotionEvent.ACTION_POINTER_UP:
