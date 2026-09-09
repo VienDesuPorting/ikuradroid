@@ -124,6 +124,7 @@ class EngineWill : public EngineVN {
 		bool OPB8();				//!< Clear layer
 		bool OPE2();				//!< Quickload
 		bool OPXX(int Size);		//!< Skip unknown/irrelevant opcode
+		bool OPXXName(int Size);//!< Skip opcode with name (LMM 0x0D family)
 	protected:
 		// Widgets
 		Widget *display;			//!< Widget for showing base graphics
