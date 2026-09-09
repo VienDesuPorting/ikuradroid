@@ -3,7 +3,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := vile
+LOCAL_MODULE := ikuradroid
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(APP_SUBDIR) \
 	$(LOCAL_PATH) \

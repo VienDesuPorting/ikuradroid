@@ -530,8 +530,8 @@ int main(int argc,char **argv){
 //		SDL_WM_SetCaption(caption.c_str(),NULL);
 
 #ifdef ANDROID
-		//Cfg::Path::cwd = "/sdcard/vile/Crescendo";
-		//Cfg::Path::game = "/sdcard/vile/Crescendo";
+		//Cfg::Path::cwd = "/sdcard/ikuradroid/Crescendo";
+		//Cfg::Path::game = "/sdcard/ikuradroid/Crescendo";
 		char buffer[100];
 		getcwd(buffer, 100);
 		Cfg::Path::cwd  = buffer;
@@ -543,7 +543,7 @@ int main(int argc,char **argv){
 
 		// Mirror engine logs to a file in the game directory.
 		// Truncated on every launch so a crashing run keeps its full log
-		Cfg::System::Logfile = Cfg::Path::cwd + "/vile_log.txt";
+		Cfg::System::Logfile = Cfg::Path::cwd + "/ikuradroid_log.txt";
 		FILE *logf=fopen(Cfg::System::Logfile.c_str(),"wb");
 		if(logf){
 			fclose(logf);

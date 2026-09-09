@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Engines and supported titles, data-driven from assets/engines.json.
  *
- * The JSON mirrors the script engines actually compiled into libvile.so
+ * The JSON mirrors the script engines actually compiled into libikuradroid.so
  * (jni/vile): ikura, will, crowd, cware, jast, windy, tlove. Titles are
  * the engine's own NativeName() strings wherever one exists, so the
  * screen never promises more than the engine implements.
