@@ -32,19 +32,26 @@ CriticalTextview::CriticalTextview(CriticalPoint *Engine) : Textview(Engine) {
 	SDL_Surface **winbase=Engine->LoadMaskedAnimation("winbase0");
 
 	if(winbase){
-		int ypos=0;
 		for(int i=0;winbase[i];i++){
 			if(Engine->GetImagePosition("winbase0",i,&rect)){
 
 
 				if(i==CRITICALTV_BACKGROUND){
-					ypos=Engine->NativeHeight()-rect.h;
-					int textx=50;
-					int texty=60;
-					int textw=600;
-					int texth=100;
+					// PC reference geometry: the dialog docks right
+					// below the top screen bar (game y=20), it does
+					// NOT sit at the bottom like most VNs. Trust the
+					// WIPF frame position when it lands in the
+					// plausible top strip; fall back to the measured
+					// PC geometry otherwise (frame y=0 would cover
+					// the CRITICAL POINT bar)
+					int boxx=(rect.x>=0 && rect.x<100)?rect.x:0;
+					int boxy=(rect.y>0 && rect.y<100)?rect.y:20;
+					int textx=12;
+					int texty=14;
+					int textw=(rect.w>24 && rect.w-24<590)?rect.w-24:590;
+					int texth=112;
 					SetTextPosition(textx,texty,textw,texth);
-					MoveDialog(rect.x+40,ypos);
+					MoveDialog(boxx,boxy);
 					Resize(rect.w,rect.h);
 					Set(winbase[i]);
 				}/*
