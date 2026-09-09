@@ -30,6 +30,7 @@ TextButton::TextButton(int X,int Y,uString Caption)
 	horizontal=HA_CENTER;
 	vertical=VA_CENTER;
 	fontsize=Cfg::Font::default_size;
+	bfill=true;
 	caption=Caption;
 	SetColorDefault();
 
@@ -42,6 +43,7 @@ TextButton::TextButton(int X,int Y,int Width,int Height,uString Caption)
 	horizontal=HA_CENTER;
 	vertical=VA_CENTER;
 	fontsize=Cfg::Font::default_size;
+	bfill=true;
 	caption=Caption;
 	SetColorDefault();
 	autogenerate();
@@ -53,6 +55,7 @@ TextButton::TextButton(SDL_Rect Dst,uString Caption)
 	horizontal=HA_CENTER;
 	vertical=VA_CENTER;
 	fontsize=Cfg::Font::default_size;
+	bfill=true;
 	caption=Caption;
 	SetColorDefault();
 	autogenerate();
@@ -62,6 +65,7 @@ TextButton::TextButton(SDL_Rect Dst) : StateWidget(Dst) {
 	fhittable=true;
 	horizontal=HA_CENTER;
 	vertical=VA_CENTER;
+	bfill=true;
 	SetColorDefault();
 }
 
@@ -69,7 +73,21 @@ TextButton::TextButton() : StateWidget() {
 	fhittable=true;
 	horizontal=HA_CENTER;
 	vertical=VA_CENTER;
+	bfill=true;
 	SetColorDefault();
+}
+
+/*! \brief Enables or disables the legacy translucent backing strip
+ *
+ *  Textless menu items of the original engines draw their captions on
+ *  a translucent black strip even when the configured background color
+ *  is fully transparent. Items that must blend into an already
+ *  translucent window (LMM in-window choices) can disable that
+ *  backing altogether.
+ */
+void TextButton::SetBackgroundFill(bool Enable){
+	bfill=Enable;
+	autogenerate();
 }
 
 /*! \brief Autoaligns the text in the widget
@@ -206,10 +224,13 @@ void TextButton::autogenerate(){
 
 				EDL_BlendSurface(txt,0,surface,&td);
 			}
-			else{
-			    Fill(0,0,0,128);
-				EDL_BlitSurface(txt,0,surface,&td);
-			}
+	else if(bfill){
+		Fill(0,0,0,128);
+		EDL_BlitSurface(txt,0,surface,&td);
+	}
+	else{
+		EDL_BlitSurface(txt,0,surface,&td);
+	}
 			Refresh();
 			Set(surface);
 

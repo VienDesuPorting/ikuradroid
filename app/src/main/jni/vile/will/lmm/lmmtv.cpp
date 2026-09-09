@@ -19,6 +19,15 @@
 LMMTextview::LMMTextview(LittleMyMaid *Engine) : Textview(Engine) {
         SDL_Rect rect;
         header=0;
+        bar=0;
+
+        // "SELECT" caption: the PC original prints it in plain white
+        // at (111,7), directly onto the translucent window and without
+        // any plate graphic (measured off a reference screenshot). It
+        // is shown through PrintSelectTitle() while choices are shown
+        select=new Printer(111,7,260,22);
+        select->SetVisible(false);
+        AddWidget(select);
 
         // winbase0.wip frame 0 carries the whole dialog chrome (points bar,
         // translucent body, RECORD/OPEN/STATUS buttons) and winbase0.msk is
@@ -52,6 +61,16 @@ LMMTextview::LMMTextview(LittleMyMaid *Engine) : Textview(Engine) {
                                                         winbase[i]->h);
                                         header->Blit(winbase[i]);
                                 }
+                                if(i==LMMTV_POINTS_BAR){
+                                        // POINTS gauge fill: the PC engine composites every
+                                        // winbase0 frame at its WIPF header position, so the
+                                        // gauge is a static part of the dialog chrome (byte
+                                        // audits of Rio.arc show the affection scores are
+                                        // never bound to it - they live in script variables)
+                                        bar=new Widget(rect.x,rect.y,rect.w,rect.h);
+                                        bar->Blit(winbase[i]);
+                                        AddWidget(bar);
+                                }
                         }
                         SDL_FreeSurface(winbase[i]);
                 }
@@ -77,4 +96,19 @@ void LMMTextview::PrintText(uString Text){
         }
         Textview::PrintText(Text);
 }
+
+void LMMTextview::PrintSelectTitle(){
+        if(select){
+                select->Clear();
+                select->Print("SELECT",0);
+                select->SetVisible(true);
+        }
+}
+
+void LMMTextview::HideSelectTitle(){
+        if(select){
+                select->SetVisible(false);
+        }
+}
+
 

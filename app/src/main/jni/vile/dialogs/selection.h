@@ -15,6 +15,7 @@ class Selection : public DialogBase {
 		HALIGN halign;
 		VALIGN valign;
 		int fontsize;
+	bool bfill; //!< Backing strips behind text items
 	public:
 		Selection(EngineVN *Engine);
 		~Selection();
@@ -34,6 +35,7 @@ class Selection : public DialogBase {
 		void SetAlignment(HALIGN Horizontal,VALIGN Vertical);
 		void SetColors(Uint32 BGSColor,Uint32 FGSColor,
 				Uint32 BGUColor,Uint32 FGUColor);
+	void SetBackgroundFill(bool Enable);
 
 		// Hook into user input
 		bool InputOk(Widget* Object);

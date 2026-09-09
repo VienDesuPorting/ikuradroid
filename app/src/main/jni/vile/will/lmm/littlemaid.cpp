@@ -34,13 +34,34 @@ LittleMyMaid::LittleMyMaid(uString Path) : EngineWill(640,480) {
 	textview=new LMMTextview(this);
 	AddWidget(textview,VL_TEXTVIEW);
 
-	// Centered selection box
-	selection->Resize(640/3,480/3);
-	selection->Move(640/3,480/3);
-	selection->SetAlignment(HA_CENTER,VA_CENTER);
-
 	// Boot the script chain (START.SCR -> BRAND.SCR -> MAINMENU.SCR)
 	EventGameDialog(VD_TITLE);
+}
+
+/*! LMM choice layout (byte-verified scripts + PC reference screenshot)
+ *
+ *  The original prints the choice captions as plain white lines inside
+ *  the dialog window: left-aligned at x=167, first line top y=32 with a
+ *  ~20px pitch, and the SELECT caption above them at (111,7). The item
+ *  rows stretch across the window body for comfortable touch input.
+ */
+void LittleMyMaid::LayoutTextSelection(Stringlist *items){
+	selection->SetFontSize(Cfg::Font::default_size);
+	selection->SetAlignment(HA_LEFT,VA_CENTER);
+	selection->SetColors(0x58585880,0xFFFFFFFF,0x00000000,0xFFFFFFFF);
+	selection->SetBackgroundFill(false);
+	uString text;
+	for(int i=0;items->GetString(i,&text);i++){
+		SDL_Rect area={167,26+i*22,368,22};
+		selection->SetText(text,area,i);
+	}
+	((LMMTextview*)textview)->PrintSelectTitle();
+}
+
+/*! Hides the SELECT caption once an item is picked
+ */
+void LittleMyMaid::OnSelectClosed(){
+	((LMMTextview*)textview)->HideSelectTitle();
 }
 
 const uString LittleMyMaid::NativeID(){

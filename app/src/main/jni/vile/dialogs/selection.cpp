@@ -24,6 +24,7 @@ Selection::Selection(EngineVN *Engine) : DialogBase(Engine,false){
 	halign=HA_LEFT;
 	valign=VA_TOP;
 	fontsize=18;
+	bfill=true;
 }
 
 Selection::~Selection(){
@@ -49,6 +50,18 @@ void Selection::SetColors(Uint32 BGSColor,Uint32 FGSColor,
 	bgucolor=BGUColor;
 	fgucolor=FGUColor;
 }
+
+/*! \brief Enables or disables the translucent strips behind text items
+ *
+ *  Forwarded to every text item created afterwards. The PC originals
+ *  of some Will releases (LMM) print their choice captions directly
+ *  onto the already translucent dialog window without any backing
+ *  graphics.
+ */
+void Selection::SetBackgroundFill(bool Enable){
+	bfill=Enable;
+}
+
 
 
 /*! \brief Registers two graphical surfaces as a item
@@ -99,8 +112,9 @@ void Selection::SetText(uString Caption,SDL_Rect Area,int ID){
 		button->SetColorBackground(WS_NORMAL,bgucolor);
 		button->SetColorForeground(WS_NORMAL,fgucolor);
 		button->SetFontSize(fontsize);
-		button->SetAlignment(halign,valign);
-		button->SetTag(ID);
+	button->SetAlignment(halign,valign);
+	button->SetBackgroundFill(bfill);
+	button->SetTag(ID);
 		AddWidget(button);
 	}
 }
@@ -140,8 +154,9 @@ void Selection::SetText(Stringlist *Captions){
 				button->SetColorBackground(WS_NORMAL,bgucolor);
 				button->SetColorForeground(WS_NORMAL,fgucolor);
 				button->SetFontSize(fontsize);
-				button->SetAlignment(halign,valign);
-				button->SetTag(GetWidgetCount());
+	button->SetAlignment(halign,valign);
+	button->SetBackgroundFill(bfill);
+	button->SetTag(GetWidgetCount());
 				AddWidget(button);
 			}
 			else{
