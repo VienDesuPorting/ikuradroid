@@ -38,6 +38,7 @@ EngineWill::EngineWill(int Width,int Height) : EngineVN(Width,Height){
 	ticks_value=0;
 	ticks_stamp=SDL_GetTicks();
 	state=WILLSTATE_NORMAL;
+	script_v2=false;	// YumeMiru-era grammar; CriticalPoint enables the shorter CP blocks
 
 	// Load gui interface
 	int owidth=Width/3;
@@ -195,7 +196,7 @@ WILLANIMATION *EngineWill::LoadAnimation(uString Name){
 		if(blob->Read(buffer,size)==size){
 			// Guard the name extraction against unterminated data
 			buffer[size-1]=0;
-			retval=new WILLANIMATION;
+			retval=new WILLANIMATION();
 			retval->name=(char*)buffer;
 			retval->frames=EngineVN::LoadAnimation(retval->name);
 			if(retval->frames){
@@ -237,26 +238,36 @@ WILLTABLE *EngineWill::LoadTable(uString Name){
 		int size=blob->Size();
 		unsigned char buffer[size];
 		if(blob->Read(buffer,size)==size){
-			retval=new WILLTABLE;
+			retval=new WILLTABLE();
 			retval->count=GETDWORD(buffer);
 			retval->surface=LoadImage((char*)buffer+4);
 //LogTest("NAME:%s IMAGE:%s COUNT:%d",Name.c_str(),buffer+4,retval->count);
 			if(retval->surface){
-				for(int i=0;i<0xFF;i++){
-					retval->flags[i+1]=GETDWORD(buffer+4+9+(i*4));
-//if(retval->flags[i+1]){
-//LogTest("FLAGS[%X]=0x%08X",i,retval->flags[i+1]);
-//}
+				// CP-era tables are compact: "count" flag entries
+				// follow the 13 byte header and there is no keymap.
+				// Bound every read to the actual buffer - the fixed
+				// 0xFF-entry loops used to overread short tables
+				// (MAINMENU.TBL is 241 bytes) by about a kilobyte.
+				int flagspace=(size-13)/4;
+				if(flagspace>0xFE){
+					flagspace=0xFE;
 				}
-				for(int i=0;i<0x12;i++){
+				for(int i=0;i<flagspace;i++){
+					retval->flags[i+1]=GETDWORD(buffer+4+9+(i*4));
+				}
+				int keymapspace=(size-(4+9+(0xFE*4)))/0x10;
+				if(keymapspace>0x12){
+					keymapspace=0x12;
+				}
+				for(int i=0;i<keymapspace;i++){
 					for(int j=0;j<0x10;j++){
 						int p=4+9+(0xFe*4)+(i*0x10)+j;
 						retval->keymap[i][j]=GETBYTE(buffer+p);
-//if(retval->keymap[i][j]){
-//LogTest("KEYMAP[%X][%X]=0x%04X (%d/%d)",i,j,retval->keymap[i][j],p,size);
-//}
 					}
 				}
+				LogTest("Will table: %s (%dx%d, %d zones)",
+						Name.c_str(),retval->surface->w,
+						retval->surface->h,retval->count);
 			}
 			else{
 				LogError("Failed to load table graphic: %s",buffer+4);
@@ -446,6 +457,10 @@ bool EngineWill::EventBackgroundMouseLeftDown(int X,int Y){
 					vars.SetUint16(table_varkind,pixels[0]);
 					state=WILLSTATE_NORMAL;
 					retval=true;
+					LogTest("Will GUI click: zone %d at %d,%d",pixels[0],X,Y);
+				}
+				else{
+					LogTest("Will GUI click: miss at %d,%d",X,Y);
 				}
 			}
 		}
@@ -655,7 +670,7 @@ bool EngineWill::EventGameProcess(){
 		else if(opcode==0x86)		retval=OPXX(2);
 		else if(opcode==0x88)		retval=OPXX(3);
 		else if(opcode==0x89)		retval=OPXX(1);
-		else if(opcode==0x8A)		retval=OPXX(1);
+		else if(opcode==0x8A)		retval=OPXX(script_v2?2:1);
 		else if(opcode==0x8C)		retval=OPXX(3);
 		else if(opcode==0x8E)		retval=OPXX(1);
 		else if(opcode==0xBC)		retval=OPXX(4);
@@ -918,7 +933,7 @@ bool EngineWill::OP0A(){
 bool EngineWill::OP21(){
 	//Uint8 repeats=GETBYTE(script->buffer+script->index+0);
 	//Uint16 fadein=GETWORD(script->buffer+script->index+1);
-	script->index+=3;
+	script->index+=script_v2?1:3;
 	aString text;
 	while(script->buffer[script->index]){
 		text+=script->buffer[script->index++];
@@ -960,7 +975,7 @@ bool EngineWill::OP25(){
 	//Uint8 start=GETBYTE(script->buffer+script->index+3);
 	//Uint16 fadein=GETWORD(script->buffer+script->index+4);
 	//Uint16 volume=GETWORD(script->buffer+script->index+6);
-	script->index+=8;
+	script->index+=script_v2?4:8;
 	aString text;
 	while(script->buffer[script->index]){
 		text+=script->buffer[script->index++];
@@ -1264,7 +1279,9 @@ bool EngineWill::OP74(){
 bool EngineWill::OP4A(){
 	//Uint8 type=GETBYTE(script->buffer+script->index+0);
 	Uint16 time=GETWORD(script->buffer+script->index+1);
-	script->index+=4;
+	// CP scripts pack the transition as "4A <u16 time>" (3 bytes total);
+	// YumeMiru-era scripts carry one extra byte
+	script->index+=script_v2?3:4;
 	LogVerbose("Transition time: %dmS",time);
 	SetTransit(time);
 	return true;
@@ -1474,6 +1491,9 @@ bool EngineWill::OP50(){
 		delete table_data;
 	}
 	table_data=LoadTable(text);
+	if(!table_data){
+		LogError("Will table not found: %s",text.c_str());
+	}
 	return false;
 }
 
@@ -1487,6 +1507,8 @@ bool EngineWill::OP51(){
 	table_varclick=flag_click;
 	table_varkind=flag_kind;
 	state=WILLSTATE_GUI;
+	LogTest("Will GUI: waiting clicks (click=var%d, kind=var%d)",
+				flag_click,flag_kind);
 	script->index+=5;
 	return true;
 }

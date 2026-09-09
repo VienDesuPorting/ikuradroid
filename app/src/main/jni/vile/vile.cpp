@@ -951,6 +951,39 @@ void ViLE::RunEngine(EngineVN *engine){
 	float xdown = 0;
 	float ydown = 0;
 
+	// The renderer letterboxes the game picture through
+	// SDL_RenderSetLogicalSize, but SDL input events keep arriving in raw
+	// window coordinates (screenSurface is NULL, so GetRelativeX/Y pass
+	// them through untouched). Map window coordinates into the engine's
+	// logical (native) space right here, mirroring the renderer's math.
+	int logicalw=0,logicalh=0;
+	SDL_RenderGetLogicalSize(EDLRenderer,&logicalw,&logicalh);
+	int winw=0,winh=0;
+	SDL_GetWindowSize(window,&winw,&winh);
+	float vscale=0,voffx=0,voffy=0;
+	if(logicalw>=1 && logicalh>=1 && winw>0 && winh>0){
+		float sx=winw/logicalw;
+		float sy=winh/logicalh;
+		vscale=(sx<sy)?sx:sy;
+		voffx=(winw-logicalw*vscale)/2;
+		voffy=(winh-logicalh*vscale)/2;
+	}
+
+	// Transform a window coordinate into a logical one
+	#define VILE_MAP_INPUT(ix,iy,gx,gy) do{ \
+		float fx_=(ix),fy_=(iy); \
+		if(vscale>0){ \
+			fx_=(fx_-voffx)/vscale; \
+			fy_=(fy_-voffy)/vscale; \
+			if(fx_<0)fx_=0; \
+			if(fy_<0)fy_=0; \
+			if(fx_>logicalw-1)fx_=logicalw-1; \
+			if(fy_>logicalh-1)fy_=logicalh-1; \
+		} \
+		(gx)=(int)fx_; \
+		(gy)=(int)fy_; \
+	}while(0)
+
 	while(engine){
 		// Tick engine
 		engine->EventHostTick();
@@ -958,34 +991,35 @@ void ViLE::RunEngine(EngineVN *engine){
 		while(engine && SDL_PollEvent(&event)){
 			if(event.type==SDL_MOUSEMOTION){
 				// Basic mousemove event
+				int gx,gy;
+				VILE_MAP_INPUT(event.motion.x,event.motion.y,gx,gy);
 				engine->EventHostMouseMove(
-						screenSurface,event.motion.x,
-						event.motion.y);
+							screenSurface,gx,gy);
 			}
 			else if(event.type==SDL_MOUSEBUTTONDOWN){
+				int gx,gy;
+				VILE_MAP_INPUT(event.button.x,event.button.y,gx,gy);
 				// Left mouse button
 				if(event.button.button==SDL_BUTTON_RIGHT){
 					engine->EventHostMouseRightDown(
-							screenSurface,event.motion.x,
-							event.motion.y);
+							screenSurface,gx,gy);
 				}
 				else{
 					engine->EventHostMouseLeftDown(
-							screenSurface,event.motion.x,
-							event.motion.y);
+							screenSurface,gx,gy);
 				}
 			}
 			else if(event.type==SDL_MOUSEBUTTONUP){
+				int gx,gy;
+				VILE_MAP_INPUT(event.button.x,event.button.y,gx,gy);
 				// Left mouse button
 				if(event.button.button==SDL_BUTTON_RIGHT){
 					engine->EventHostMouseRightUp(
-						screenSurface,event.motion.x,
-						event.motion.y);
+						screenSurface,gx,gy);
 				}
 				else{
 					engine->EventHostMouseLeftUp(
-							screenSurface,event.motion.x,
-							event.motion.y);
+							screenSurface,gx,gy);
 				}
 			}
 			else if(event.type==SDL_KEYDOWN){
@@ -1013,6 +1047,7 @@ void ViLE::RunEngine(EngineVN *engine){
 		// Purge deleted objects
 		Group::Purge();
 	}
+	#undef VILE_MAP_INPUT
 	//*/
 }
 
