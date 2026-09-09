@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 1.2.0: the library screen rewritten for Material 3 - a real top app
-     bar replaces the 2016 action bar, the empty state gets its own
-     centered layout, and the 2011 folder browser is replaced by the
-     system SAF picker (see GameLibrary / MainActivity). -->
+<!-- The library screen: a real top app
+     bar, an empty state with its own centered layout; games are picked
+     via the system SAF picker (see GameLibrary / MainActivity). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main_root"

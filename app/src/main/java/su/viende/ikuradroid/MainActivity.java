@@ -37,8 +37,7 @@ public class MainActivity extends AppCompatActivity
         protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
 
-                // 1.2.0: edge-to-edge on every supported version (the Android 15
-                // opt-out values-v35 was removed together with this change)
+                // Edge-to-edge on every supported version.
                 WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
                 setContentView(R.layout.main);
                 applyInsets();
@@ -75,7 +74,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         // ------------------------------------------------------------------
-        // Edge-to-edge insets (Material 3, 1.2.0)
+        // Edge-to-edge insets (Material 3)
         // ------------------------------------------------------------------
 
         private void applyInsets() {
@@ -247,7 +246,7 @@ public class MainActivity extends AppCompatActivity
         // SAF folder picking
         // ------------------------------------------------------------------
 
-        /** Launches the system folder picker (replaces the 2016 browser). */
+        /** Launches the system folder picker. */
         private void pickFolder() {
                 try {
                         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -273,7 +272,7 @@ public class MainActivity extends AppCompatActivity
                 // to takePersistableUriPermission throws IllegalArgument-
                 // Exception ("Requested flags 0x81, but only 0x3 are allowed",
                 // a fatal crash right after the user taps "Allow") - so the
-                // flags are masked down to the two accepted bits (1.4.0).
+                // flags are masked down to the two accepted bits.
                 int takeFlags = data.getFlags()
                                 & (Intent.FLAG_GRANT_READ_URI_PERMISSION
                                                 | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
@@ -318,7 +317,7 @@ public class MainActivity extends AppCompatActivity
                 return super.onOptionsItemSelected(item);
         }
 
-        // 1.2.0: returning from a finished SDLActivity must rescan the
+        // Returning from a finished SDLActivity must rescan the
         // library (a first launch may have just installed a game copy)
         @Override
         protected void onResume() {

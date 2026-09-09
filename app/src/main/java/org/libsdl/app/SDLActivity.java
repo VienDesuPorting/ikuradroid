@@ -42,7 +42,7 @@ public class SDLActivity extends Activity {
     public static boolean mExitCalledFromJava;
     public static boolean skip;
 
-    // 1.5.0: the in-game menu lives in exactly one dialog instance; the
+    // The in-game menu lives in exactly one dialog instance; the
     // top-down swipe gesture tracking state (see dispatchTouchEvent).
     private BottomSheetDialog mGameMenuSheet;
     private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted;
@@ -118,25 +118,25 @@ public class SDLActivity extends Activity {
         mSurface = new SDLSurface(getApplication());
         
         mJoystickHandler = new SDLJoystickHandler_API12();
-        // 1.3.0: the API < 12 null-handler branch is gone - minSdk 21.
+        // minSdk 21: this is the only joystick handler branch.
         
 
         
         mLayout = new FrameLayout(this);
         mLayout.addView(mSurface);
         setContentView(mLayout);
-        // 1.3.0: keep the screen bright with the window flag instead of the
-        // SCREEN_DIM_WAKE_LOCK - same effect, no WAKE_LOCK permission.
+        // Keep the screen bright with the window flag - the same effect as
+        // a wake lock, without the WAKE_LOCK permission.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
     
-    // 1.3.0: the in-game menu. BACK or MENU opens a Material 3 bottom
-    // sheet; each action maps to the virtual key the engine listens for
-    // (the F5/F6/F7/F8/F9 + CTRL mapping of the 2016 build is kept as is).
+    // The in-game menu. BACK, MENU or the top-down swipe opens a Material 3
+    // bottom sheet; each action maps to the virtual key the engine listens
+    // for (the F5/F6/F7/F8/F9 + CTRL mapping of the original build is kept
+    // as is).
     private void showGameMenu() {
-        // 1.5.0: never stack a second sheet over a live one (the 1.3.0
-        // "menu opened twice" report: each dialog was a fresh local
-        // instance, so two BACK-triggered sheets could pile up)
+        // Never stack a second sheet over a live one: the dialog is tracked
+        // as a field, so repeated triggers cannot pile up identical copies.
         if (mGameMenuSheet != null && mGameMenuSheet.isShowing()) {
             return;
         }
@@ -154,7 +154,7 @@ public class SDLActivity extends Activity {
         addMenuRow(sheet, items, R.drawable.ic_ingame_skip, R.string.menu_skip,
                 skip ? R.string.skip_on : R.string.skip_off,
                 () -> {
-                    // Same toggle the 2016 options menu had: hold/release CTRL.
+                    // Skip toggle: hold/release CTRL.
                     if (skip) {
                         onNativeKeyUp(KeyEvent.KEYCODE_CTRL_LEFT);
                     } else {
@@ -284,14 +284,11 @@ public class SDLActivity extends Activity {
     public boolean dispatchKeyEvent(KeyEvent event) {
         int keyCode = event.getKeyCode();
 
-        // 1.3.0: BACK and MENU open the Material 3 in-game menu; the event
-        // is consumed so the engine never sees it (the same contract the
-        // 2016 options menu had).
-        // 1.5.0: dispatchKeyEvent sees BOTH the ACTION_DOWN and the
-        // ACTION_UP of a single physical press - showing the sheet on every
-        // event stacked two identical dialogs (the 1.3.0 "the menu opened
-        // twice" report). Open it once, on the key release, the same way
-        // the platform onBackPressed fires.
+        // BACK and MENU open the Material 3 in-game menu; the event is
+        // consumed so the engine never sees it.
+        // NB: dispatchKeyEvent sees BOTH the ACTION_DOWN and the ACTION_UP
+        // of a single physical press - the sheet must show exactly once, on
+        // the key release, the same way the platform onBackPressed fires.
         if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_MENU) {
                 if (event.getAction() == KeyEvent.ACTION_UP) {
                     showGameMenu();
@@ -313,7 +310,7 @@ public class SDLActivity extends Activity {
     }
 
     // ------------------------------------------------------------------
-    // 1.5.0: top-down swipe opens the in-game menu.
+    // Top-down swipe opens the in-game menu.
     //
     // Rationale: gesture-nav devices have no BACK button at all, and a
     // permanent on-screen pause button would eat screen space and risk
@@ -603,7 +600,7 @@ public class SDLActivity extends Activity {
 
         @Override
         public void run() {
-            // 1.3.0: FrameLayout + margins replaces the deprecated
+            // FrameLayout + margins instead of the deprecated
             // AbsoluteLayout (identical x/y/w/h placement).
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     w, h + HEIGHT_PADDING);
@@ -1188,8 +1185,7 @@ class SDLInputConnection extends BaseInputConnection {
     }
 }
 
-/* 1.3.0: the null-handler stub for API < 12 is gone (minSdk 21); this is
-   the only joystick handler now. */
+/* The only joystick handler: minSdk 21 rules out the API < 12 stubs. */
 class SDLJoystickHandler_API12 {
   
     class SDLJoystick {

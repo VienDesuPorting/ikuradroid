@@ -14,8 +14,8 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.appbar.MaterialToolbar;
 
 /**
- * 1.2.0: "About" became a full screen (it was a dialog in 1.1.0-alpha).
- * Attribution of the ViLE engine (ViLE Team, GPLv3), the original anonymous
+ * The "About" full screen. Attribution of the ViLE engine (ViLE Team,
+ * GPLv3), the original anonymous
  * Android developer ("Ivan") and the revival team (VienDesu! Porting Team).
  * The version line is filled in from PackageManager at runtime.
  */

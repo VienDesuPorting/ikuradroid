@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 1.2.0: "About" as a full Material 3 screen (was a dialog in 1.1.0).
-     The content sections are identical to the old about_dialog.xml; the
-     version line is filled from PackageManager (AboutActivity). -->
+<!-- "About" as a full Material 3 screen.
+     The version line is filled from PackageManager (AboutActivity). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/about_root"

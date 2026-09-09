@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 1.3.0: one row of the in-game menu bottom sheet (icon + label, with an
+<!-- One row of the in-game menu bottom sheet (icon + label, with an
      optional status subtitle used by the Skip toggle). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
