@@ -7,18 +7,22 @@ import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.PopupWindow;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
@@ -308,24 +312,39 @@ public class MainActivity extends AppCompatActivity
                 if (item == null) {
                         return;
                 }
-                PopupMenu menu = new PopupMenu(this, anchor);
-                menu.getMenuInflater().inflate(R.menu.game_context, menu.getMenu());
-                menu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                        @Override
-                        public boolean onMenuItemClick(MenuItem menuItem) {
-                                int id = menuItem.getItemId();
-                                if (id == R.id.ctx_hide) {
-                                        hideGame(item);
-                                        return true;
-                                }
-                                if (id == R.id.ctx_delete) {
-                                        confirmDeleteGame(item);
-                                        return true;
-                                }
-                                return false;
-                        }
-                });
-                menu.show();
+                // Hand-rolled popup instead of the stock PopupMenu: the menu
+                // opens BELOW the tile on a compact rounded panel
+                // (game_context_popup.xml + bg_game_context.xml)
+                final View content = LayoutInflater.from(this)
+                                .inflate(R.layout.game_context_popup, null);
+                final PopupWindow popup = new PopupWindow(content,
+                                ViewGroup.LayoutParams.WRAP_CONTENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT, true);
+                // Transparent background keeps the rounded panel look while
+                // focusable=true dismisses on an outside tap or on Back
+                popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                popup.setElevation(getResources().getDisplayMetrics().density * 8f);
+                content.findViewById(R.id.ctx_hide_row).setOnClickListener(
+                                new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                                popup.dismiss();
+                                                hideGame(item);
+                                        }
+                                });
+                content.findViewById(R.id.ctx_delete_row).setOnClickListener(
+                                new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                                popup.dismiss();
+                                                confirmDeleteGame(item);
+                                        }
+                                });
+                // Clip the row ripples to the rounded outline
+                content.setClipToOutline(true);
+                // Below the card, not above; the window manager clamps the
+                // popup inside the screen when the tile sits on the last row
+                popup.showAsDropDown(anchor, 0, 0);
         }
 
         /** "Remove from list": files stay; re-adding the folder restores it. */
