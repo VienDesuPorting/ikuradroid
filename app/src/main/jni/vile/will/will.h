@@ -134,6 +134,12 @@ class EngineWill : public EngineVN {
 		Widget *overlay[3];			//!< Widget for showing characters
 		Textview *textview;			//!< Textview display
 		Selection *selection;		//!< Simple text choices
+
+		// Choice presentation hooks
+		//! Populates the text fallback menu (centered strips by default)
+		virtual void LayoutTextSelection(Stringlist *items);
+		//! Called whenever the choice UI is dismissed
+		virtual void OnSelectClosed();
 	public:
 		EngineWill(int Width,int Height);
 		~EngineWill();

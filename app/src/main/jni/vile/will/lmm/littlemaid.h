@@ -30,6 +30,8 @@
 
 class LittleMyMaid : public EngineWill {
 	private:
+		void LayoutTextSelection(Stringlist *items);
+		void OnSelectClosed();
 	public:
 		LittleMyMaid(uString Path);
 

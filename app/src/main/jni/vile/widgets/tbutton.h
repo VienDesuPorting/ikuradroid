@@ -31,6 +31,7 @@ class TextButton : public StateWidget {
 		VALIGN vertical;
 		uString caption;
 		int fontsize;
+	bool bfill; //!< Paint the legacy translucent backing strip
 		void autogenerate();
 	public:
 		TextButton(int X,int Y,uString Caption);
@@ -49,6 +50,7 @@ class TextButton : public StateWidget {
 		virtual void SetColorBackground(WIDGET_STATE State,Uint32 Color);
 		virtual void SetColorForeground(WIDGET_STATE State,Uint32 Color);
 		virtual void SetColorDefault();
+	void SetBackgroundFill(bool Enable);
 
 		// Overrides
 		virtual void ChangeState(WIDGET_STATE State);
