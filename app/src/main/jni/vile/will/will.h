@@ -46,6 +46,9 @@ class EngineWill : public EngineVN {
 
 		// Will stuff
 		Stringlist jumptable;		//!< Jumptable for selections
+		static const int WILL_MAX_CHOICES=16;//!< Route table capacity
+		Uint32 choiceroutes[WILL_MAX_CHOICES];//!< In-script route offset per choice
+		int choicecount;			//!< Valid entries in choiceroutes
 		SDL_Surface *prev_backgroudSurface;		//!<
 		SDL_Surface *backgroudSurface;
 		SDL_Surface *overlaySurfaces[3];
