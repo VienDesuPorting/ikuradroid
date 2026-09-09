@@ -659,8 +659,8 @@ bool EngineWill::EventGameProcess(){
         ///
         else if(opcode==0x70)		retval=OP70();
 		// Trap unknown codes
-		else if(opcode==0x28)		retval=OPXX(3);
-		else if(opcode==0x29)		retval=OPXX(4);
+		else if(opcode==0x28)		retval=OPXX(script_v2?2:3);
+		else if(opcode==0x29)		retval=OPXX(script_v2?2:4);
 		else if(opcode==0x30)		retval=OPXX(4);
 		else if(opcode==0x4E)		retval=OPXX(4);
 		else if(opcode==0x55)		retval=OPXX(1);
@@ -672,6 +672,11 @@ bool EngineWill::EventGameProcess(){
 		else if(opcode==0x89)		retval=OPXX(1);
 		else if(opcode==0x8A)		retval=OPXX(script_v2?2:1);
 		else if(opcode==0x8C)		retval=OPXX(3);
+		else if(opcode==0x16 && script_v2)	retval=OPXX(4);
+		else if(opcode==0x27 && script_v2)	retval=OPXX(2);
+		else if(opcode==0x9E && script_v2)	retval=OPXX(4);
+		else if((opcode==0x0D||opcode==0x11||opcode==0x12)&&script_v2)
+						retval=OPXXName(1);
 		else if(opcode==0x8E)		retval=OPXX(1);
 		else if(opcode==0xBC)		retval=OPXX(4);
 		else if(opcode==0xBD)		retval=OPXX(2);
@@ -848,7 +853,7 @@ bool EngineWill::OP06(){
  */
 bool EngineWill::OP0B(){
 	Uint16 ticks=GETWORD(script->buffer+script->index+0);
-	script->index+=2;
+	script->index+=script_v2?4:2;
 	//ticks_value=ticks*((1/25)*1000);
 	ticks_value=ticks;
 	ticks_stamp=SDL_GetTicks();
@@ -947,7 +952,7 @@ bool EngineWill::OP21(){
  */
 bool EngineWill::OP22(){
 	//Uint16 fadeout=GETWORD(script->buffer+script->index+1);
-	script->index+=4;
+	script->index+=script_v2?1:4;
 	StopMusic();
 	return false;
 }
@@ -957,7 +962,7 @@ bool EngineWill::OP22(){
 bool EngineWill::OP23(){
 	Uint8 channel=GETBYTE(script->buffer+script->index+0);
 	//Uint8 male=GETBYTE(script->buffer+script->index+4);
-	script->index+=7;
+	script->index+=script_v2?5:7;
 	aString text;
 	while(script->buffer[script->index]){
 		text+=script->buffer[script->index++];
@@ -989,7 +994,7 @@ bool EngineWill::OP25(){
  */
 bool EngineWill::OP26(){
 	Uint16 channel=GETWORD(script->buffer+script->index+0);
-	script->index+=2;
+	script->index+=script_v2?4:2;
 	StopSound(channel);
 	return false;
 }
@@ -1278,10 +1283,20 @@ bool EngineWill::OP74(){
  */
 bool EngineWill::OP4A(){
 	//Uint8 type=GETBYTE(script->buffer+script->index+0);
-	Uint16 time=GETWORD(script->buffer+script->index+1);
-	// CP scripts pack the transition as "4A <u16 time>" (3 bytes total);
-	// YumeMiru-era scripts carry one extra byte
-	script->index+=script_v2?3:4;
+	Uint16 time;
+	if(script_v2){
+		// CP/LMM scripts pack the transition as "4A <u16 time>"
+		// (3 bytes total); verified on MAINMENU.SCR of both games:
+		// the byte that used to be skipped here was OP50's opcode,
+		// which silently disabled table (GUI zone) loading
+		time=GETWORD(script->buffer+script->index+0);
+		script->index+=2;
+	}
+	else{
+		// YumeMiru-era scripts carry one extra byte
+		time=GETWORD(script->buffer+script->index+1);
+		script->index+=4;
+	}
 	LogVerbose("Transition time: %dmS",time);
 	SetTransit(time);
 	return true;
@@ -1668,6 +1683,20 @@ bool EngineWill::OPFF(){
  */
 bool EngineWill::OPXX(int Length){
 	script->index+=Length;
+	return false;
+}
+
+/*! Skip unknown opcode with a trailing name string; used for the
+ *  LMM speaker-label family (0x0D/0x11/0x12: <u8> <name\0>)
+ */
+bool EngineWill::OPXXName(int Length){
+	script->index+=Length;
+	while(script->index<script->length && script->buffer[script->index]){
+		script->index++;
+	}
+	if(script->index<script->length){
+		script->index++;
+	}
 	return false;
 }
 

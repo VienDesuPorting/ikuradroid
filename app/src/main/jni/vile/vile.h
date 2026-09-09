@@ -50,6 +50,7 @@
 #include "will/yume/yume.h"
 #include "will/princess/princess.h"
 #include "will/critical/critical.h"
+#include "will/lmm/littlemaid.h"
 #include "will/starry/starry.h"
 #endif
 #ifdef VILE_SUPPORT_TLOVE
@@ -86,6 +87,7 @@ class ViLE {
 		bool ProbePrincessWaltz(uString Path);
 		bool ProbeStarrySky(uString Path);
 		bool ProbeCriticalPoint(uString Path);
+		bool ProbeLittleMyMaid(uString Path);
 		bool ProbeTrueLove(uString Path);
 		bool ProbeKanaOkaeri(uString Path);
 		bool ProbeKana(uString Path);
