@@ -807,6 +807,14 @@ bool ViLE::ProbeCriticalPoint(uString Path){
             ProbeSize(Path+"Rio.arc",4445247));
 }
 
+bool ViLE::ProbeLittleMyMaid(uString Path){
+	// Check for key files (2005 Sweet Basil re-release edition)
+	LogVerbose("Probing for Little My Maid:");
+	return (ProbeResource(Path,"rio.arc") &&
+			ProbeResource(Path,"chip.arc") &&
+			ProbeSize(Path+"Rio.arc",9575745));
+}
+
 bool ViLE::ProbeTokimeki(uString Path){
 	// Check for key files
 	LogVerbose("Probing for Tokimeki Check-in!:");
@@ -1083,6 +1091,7 @@ EngineVN *ViLE::LoadEngine(uString Path){
 	else if(ProbeStarrySky(Path))			    engine=new StarrySky(Path);
 
 	else if(ProbeCriticalPoint(Path))			engine=new CriticalPoint(Path);
+	else if(ProbeLittleMyMaid(Path))			engine=new LittleMyMaid(Path);
 #endif
 #ifdef VILE_SUPPORT_TLOVE
 	else if(ProbeTrueLove(Path)){		     	engine=new Truelove(Path);}

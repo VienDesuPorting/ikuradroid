@@ -52,6 +52,7 @@ LOCAL_SRC_FILES := \
 	$(wildcard $(LOCAL_PATH)/widgets/*.cpp)\
 	$(wildcard $(LOCAL_PATH)/will/*.cpp)\
 	$(wildcard $(LOCAL_PATH)/will/critical/*.cpp)\
+	$(wildcard $(LOCAL_PATH)/will/lmm/*.cpp)\
 	$(wildcard $(LOCAL_PATH)/will/yume/*.cpp)\
 	$(wildcard $(LOCAL_PATH)/will/princess/*.cpp)\
 	$(wildcard $(LOCAL_PATH)/will/starry/*.cpp)\
