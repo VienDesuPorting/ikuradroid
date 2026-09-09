@@ -18,6 +18,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
@@ -64,6 +65,11 @@ public class MainActivity extends AppCompatActivity
                         @Override
                         public void onGameClick(RunItem item) {
                                 onGameClicked(item);
+                        }
+                }, new RunAdapter.OnGameLongClickListener() {
+                        @Override
+                        public void onGameLongClick(RunItem item, View anchor) {
+                                showGameContextMenu(item, anchor);
                         }
                 });
                 recyclerView.setAdapter(ra);
@@ -269,8 +275,120 @@ public class MainActivity extends AppCompatActivity
                 if (requestCode != REQUEST_PICK_FOLDER || path == null) {
                         return;
                 }
-                GameLibrary.setRootPath(this, path);
+                // Every pick adds another root; re-picking a folder also
+                // puts back the titles the user removed from the list
+                GameLibrary.addRootPath(this, path);
+                GameLibrary.unhideUnder(this, path);
                 rescanLibrary();
+                offerAddAnother(path);
+        }
+
+        /** After a pick: the "add one more folder" invitation. */
+        private void offerAddAnother(String path) {
+                String name = new File(path).getName();
+                new MaterialAlertDialogBuilder(this)
+                                .setTitle(R.string.library_added_title)
+                                .setMessage(getString(R.string.library_added_message, name))
+                                .setPositiveButton(R.string.library_add_more,
+                                                new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                                pickFolder();
+                                        }
+                                })
+                                .setNegativeButton(android.R.string.ok, null)
+                                .show();
+        }
+
+        // ------------------------------------------------------------------
+        // Long-press context menu (remove from list / delete from device)
+        // ------------------------------------------------------------------
+
+        private void showGameContextMenu(final RunItem item, View anchor) {
+                if (item == null) {
+                        return;
+                }
+                PopupMenu menu = new PopupMenu(this, anchor);
+                menu.getMenuInflater().inflate(R.menu.game_context, menu.getMenu());
+                menu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                        @Override
+                        public boolean onMenuItemClick(MenuItem menuItem) {
+                                int id = menuItem.getItemId();
+                                if (id == R.id.ctx_hide) {
+                                        hideGame(item);
+                                        return true;
+                                }
+                                if (id == R.id.ctx_delete) {
+                                        confirmDeleteGame(item);
+                                        return true;
+                                }
+                                return false;
+                        }
+                });
+                menu.show();
+        }
+
+        /** "Remove from list": files stay; re-adding the folder restores it. */
+        private void hideGame(RunItem item) {
+                GameLibrary.setHidden(this, item.getTitle(), true);
+                rescanLibrary();
+                Toast.makeText(this, R.string.ctx_hidden_toast, Toast.LENGTH_SHORT).show();
+        }
+
+        /** "Delete from device": destructive - ask before wiping the files. */
+        private void confirmDeleteGame(final RunItem item) {
+                new MaterialAlertDialogBuilder(this)
+                                .setTitle(R.string.ctx_delete_title)
+                                .setMessage(getString(R.string.ctx_delete_message, item.getTitle()))
+                                .setPositiveButton(R.string.ctx_delete_confirm,
+                                                new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                                deleteGame(item);
+                                        }
+                                })
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .show();
+        }
+
+        private void deleteGame(final RunItem item) {
+                ensureStorageAccess(new Runnable() {
+                        @Override
+                        public void run() {
+                                // Storage I/O stays off the UI thread; the scan
+                                // afterwards rebuilds the visible list
+                                new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                                final boolean deleted = deleteGameFiles(item);
+                                                runOnUiThread(new Runnable() {
+                                                        @Override
+                                                        public void run() {
+                                                                Toast.makeText(MainActivity.this,
+                                                                                deleted ? R.string.ctx_deleted_toast
+                                                                                                : R.string.ctx_delete_failed_toast,
+                                                                                Toast.LENGTH_LONG).show();
+                                                                rescanLibrary();
+                                                        }
+                                                });
+                                        }
+                                }).start();
+                        }
+                });
+        }
+
+        /** Deletes both copies of the game: the fs folder and the legacy copy. */
+        private static boolean deleteGameFiles(RunItem item) {
+                boolean ok = true;
+                String source = item.getSourcePath();
+                if (source != null) {
+                        ok &= GameLibrary.deleteRecursively(new File(source));
+                }
+                String installed = item.getInstalledPath();
+                if (installed != null) {
+                        ok &= GameLibrary.deleteRecursively(new File(installed));
+                }
+                return ok;
         }
 
         // ------------------------------------------------------------------
