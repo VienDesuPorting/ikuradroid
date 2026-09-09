@@ -46,13 +46,29 @@ LittleMyMaid::LittleMyMaid(uString Path) : EngineWill(640,480) {
  *  rows stretch across the window body for comfortable touch input.
  */
 void LittleMyMaid::LayoutTextSelection(Stringlist *items){
+	// Touch usability: the PC original stacks 22px rows with no gaps,
+	// which is fine for a mouse but unforgiving for a fingertip. Rows
+	// are spaced 36px apart with 28px hit areas (8px dead gap between
+	// items); menus of 4+ items fall back to tighter 28px rows to
+	// stay inside the dialog window
+	int count=0;
+	uString text;
+	for(;items->GetString(count,&text);count++);
+	int step=count>3?28:36;
+	int height=step-8;
 	selection->SetFontSize(Cfg::Font::default_size);
 	selection->SetAlignment(HA_LEFT,VA_CENTER);
 	selection->SetColors(0x58585880,0xFFFFFFFF,0x00000000,0xFFFFFFFF);
 	selection->SetBackgroundFill(false);
-	uString text;
+	// The dialog widget must own the window rectangle or touches
+	// never reach the items: EngineBase::GetWidgetAt() hit-tests the
+	// dialog itself (Widget::TestMouse) before DialogBase looks up
+	// the buttons. The window spans the top 145 pixels (winbase0)
+	selection->Move(0,0);
+	selection->Resize(640,145);
+	selection->SetSwallowMisses(true);
 	for(int i=0;items->GetString(i,&text);i++){
-		SDL_Rect area={167,26+i*22,368,22};
+		SDL_Rect area={167,26+i*step,368,height};
 		selection->SetText(text,area,i);
 	}
 	((LMMTextview*)textview)->PrintSelectTitle();

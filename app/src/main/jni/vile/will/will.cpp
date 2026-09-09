@@ -893,6 +893,13 @@ bool EngineWill::OP02(){
 /*! Default text fallback layout: centered translucent strips
  */
 void EngineWill::LayoutTextSelection(Stringlist *items){
+	// The dialog widget must own an onscreen rectangle or touches
+	// never reach the items: EngineBase::GetWidgetAt() hit-tests the
+	// dialog itself (Widget::TestMouse) before the embedded buttons
+	int w=NativeWidth()/3;
+	int h=NativeHeight()/3;
+	selection->Move((NativeWidth()-w)/2,(NativeHeight()-h)/2);
+	selection->Resize(w,h);
 	selection->SetFontSize(NativeHeight()/24);
 	selection->SetAlignment(HA_CENTER,VA_CENTER);
 	selection->SetColors(0x303030B0,0xFFFFFFFF,0x00000060,0xFFFFFFFF);
