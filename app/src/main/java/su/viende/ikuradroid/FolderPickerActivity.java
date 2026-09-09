@@ -30,10 +30,11 @@ import com.google.android.material.button.MaterialButton;
 /**
  * In-app folder browser that replaces the Storage Access Framework picker.
  *
- * Lists real directories under the primary shared storage; folders holding
- * the engine marker (vilevn.pck) are badged. The selected path is returned
- * to MainActivity, which stores it as the library root - the engine then
- * reads game files from these real paths directly.
+ * Lists real directories under the primary shared storage; folders
+ * matching an engine signature (GameLibrary.isGameFolder) are badged.
+ * The selected path is returned to MainActivity, which stores it as the
+ * library root - the engine then reads game files from these real paths
+ * directly.
  *
  * The toolbar home button navigates one level up; upward navigation stops
  * at the storage root. Selecting the currently browsed folder is always
@@ -210,7 +211,7 @@ public class FolderPickerActivity extends AppCompatActivity {
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             final File dir = dirs.get(position);
             holder.name.setText(dir.getName());
-            boolean game = new File(dir, GameLibrary.PCK_MARKER).isFile();
+            boolean game = GameLibrary.isGameFolder(dir);
             holder.badge.setVisibility(game ? View.VISIBLE : View.GONE);
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override

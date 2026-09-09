@@ -1,7 +1,8 @@
 package su.viende.ikuradroid;
 
 /**
- * One tile in the library grid - a folder containing vilevn.pck.
+ * One tile in the library grid - a folder the engine recognizes as a game
+ * (GameLibrary.isGameFolder).
  *
  * A game comes either from the library root on the real file system
  * (sourcePath), from the legacy app-private install area (installedPath),
