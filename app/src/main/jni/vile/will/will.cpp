@@ -35,6 +35,7 @@ EngineWill::EngineWill(int Width,int Height) : EngineVN(Width,Height){
 	table_mouseindex=0;
 	anim_data=0;
 	script=0;
+	choicecount=0;
 	ticks_value=0;
 	ticks_stamp=SDL_GetTicks();
 	state=WILLSTATE_NORMAL;
@@ -564,8 +565,17 @@ bool EngineWill::EventSave(int Index){
 
 void EngineWill::EventSelect(int Selection){
 	selection->SetVisible(false);
+	// Seek to the picked item's routing instruction; the regular
+	// opcode handlers then perform the jump/call/goto themselves
+	if(script && Selection>=0 && Selection<choicecount){
+		Jump(choiceroutes[Selection]);
+		return;
+	}
+	// Legacy fallback: name routing through the jumptable
 	uString name=jumptable.GetString(Selection);
-	LoadWillScript(name);
+	if(name.length()){
+		LoadWillScript(name);
+	}
 }
 
 void EngineWill::EventGameDialog(VN_DIALOGS Dialog){
@@ -727,63 +737,156 @@ bool EngineWill::OP01(){
 }
 
 /*! \brief Show selection
+ *
+ *  Choice grammar of the Russian releases (byte-verified):
+ *   v1 (Critical Point): 02 | u16 n | { text\0 route }*
+ *   v2 (Little My Maid): 02 | u16 n | { u16 param text\0 route }*
+ *  The route is a flow instruction (07 jump / 09 call with a cstring
+ *  scene name, 06 goto with a dword offset, 0A return). It is left in
+ *  the stream untouched: when the player picks an item, EventSelect
+ *  seeks to the route and the regular opcode handlers execute it.
  */
 bool EngineWill::OP02(){
 	script->save=script->index-1;
 	Uint16 n=GETWORD(script->buffer+script->index);
 	script->index+=2;
 
-	// Parse selection structure
-	SDL_Surface *normal=LoadMaskedImage("selwnd0");
-	SDL_Surface *hover=LoadMaskedImage("selwnd1");
-	int space=10;
-	int w=normal->w;
-	int h=normal->h;
-	int x=(NativeWidth()-w)/2;
-	int y=(NativeHeight()-(h*n+space*n))/2;
+	// Parse the choice block (bounds checked against broken scripts)
 	jumptable.Clear();
-	for(int i=0;i<n;i++){
-		// Extract id, text, unknown and target
-		//Uint16 id=GETWORD(script->buffer+script->index);
-		script->index+=2;
+	choicecount=0;
+	Stringlist items;
+	for(int i=0;i<n && script->index<script->length;i++){
+		if(script_v2){
+			// v2 items carry a leading u16 parameter
+			script->index+=2;
+		}
+
+		// Extract the caption
 		aString text;
-		while(script->buffer[script->index]){
+		while(script->index<script->length && script->buffer[script->index]){
 			text+=script->buffer[script->index++];
 		}
 		script->index++;
-		//Uint32 unknown=GETDWORD(script->buffer+script->index);
-		script->index+=4;
-		aString target;
-		while(script->buffer[script->index]){
-			target+=script->buffer[script->index++];
+
+		// Empty-caption stubs pad zeros before the routing instruction
+		int pad=0;
+		while(script->index<script->length &&
+				script->buffer[script->index]==0 && pad<4){
+			script->index++;
+			pad++;
 		}
-		script->index++;
 
-		// Add item to jumptable
-		jumptable.AddString(target);
+		// Measure the trailing routing instruction
+		if(script->index>=script->length){
+			LogError("OP02: truncated choice block");
+			break;
+		}
+		Uint8 op=script->buffer[script->index];
+		int opsize=0;
+		switch(op){
+			case 0x07:		// Jump scene: cstring operand
+			case 0x09:		// Call script: cstring operand
+				opsize=1;
+				while(script->index+opsize<script->length &&
+						script->buffer[script->index+opsize]){
+					opsize++;
+				}
+				opsize++;
+				break;
+			case 0x06:		// Goto offset: dword operand + zero pad
+				opsize=6;
+				break;
+			case 0x0A:		// Return: word operand
+				opsize=2;
+				break;
+			default:
+				LogError("OP02: unknown choice route 0x%02X",op);
+				break;
+		}
+		if(!opsize || script->index+opsize>script->length){
+			LogError("OP02: truncated choice route");
+			break;
+		}
 
-		// Add item to selection
-		SDL_Rect r={x,y,w,h};
-		SDL_Surface *s=EDL_CreateSurface(w,h);
-		SDL_Surface *u=EDL_CreateSurface(w,h);
-		EDL_BlitSurface(hover,0,s,0);
-		EDL_BlitSurface(normal,0,u,0);
-		EDL_BlendText(text,0xFFFFFFFF,s,0);
-		EDL_BlendText(text,0xFFFFFFFF,u,0);
-		selection->SetSurface(s,u,r,i);
-		SDL_FreeSurface(s);
-		SDL_FreeSurface(u);
-		y+=(h+space);
+		// Register the item and its route; display captions get
+		// trimmed since the scripts pad them with alignment spaces
+		while(text.length() && text[0]==' '){
+			text.erase(0,1);
+		}
+		while(text.length() && text[text.length()-1]==' '){
+			text.erase(text.length()-1);
+		}
+		if(choicecount<WILL_MAX_CHOICES){
+			choiceroutes[choicecount++]=script->index;
+			items.AddString(text);
+		}
+		script->index+=opsize;
 	}
-	if(normal){
-		SDL_FreeSurface(normal);
+
+	// Auto-routing stubs carry empty captions (byte-verified pattern);
+	// the original engine falls through their route without showing UI
+	bool visible=false;
+	for(int i=0;i<choicecount;i++){
+		if(items.GetString(i).length()){
+			visible=true;
+			break;
+		}
 	}
-	if(hover){
-		SDL_FreeSurface(hover);
+	if(!visible){
+		Jump(choiceroutes[0]);
+		return true;
 	}
-	selection->SetVisible(true);
-	state=WILLSTATE_CHOICE;
-	return true;
+
+	// Populate the selection widget
+	selection->Clear();
+	if(choicecount){
+		SDL_Surface *normal=LoadMaskedImage("selwnd0");
+		SDL_Surface *hover=LoadMaskedImage("selwnd1");
+		if(normal && hover){
+			// Graphical buttons (releases that ship selwnd graphics)
+			int space=10;
+			int w=normal->w;
+			int h=normal->h;
+			int x=(NativeWidth()-w)/2;
+			int y=(NativeHeight()-(h*choicecount+space*choicecount))/2;
+			for(int i=0;i<choicecount;i++){
+				uString text=items.GetString(i);
+				SDL_Rect r={x,y,w,h};
+				SDL_Surface *s=EDL_CreateSurface(w,h);
+				SDL_Surface *u=EDL_CreateSurface(w,h);
+				EDL_BlitSurface(hover,0,s,0);
+				EDL_BlitSurface(normal,0,u,0);
+				EDL_BlendText(text,0xFFFFFFFF,s,0);
+				EDL_BlendText(text,0xFFFFFFFF,u,0);
+				selection->SetSurface(s,u,r,i);
+				SDL_FreeSurface(s);
+				SDL_FreeSurface(u);
+				y+=(h+space);
+			}
+		}
+		else{
+			// Text menu fallback: the RU CP/LMM releases ship no
+			// selwnd graphics; draw translucent strips like the
+			// original menus instead of crashing on the NULL images
+			selection->SetFontSize(NativeHeight()/24);
+			selection->SetAlignment(HA_CENTER,VA_CENTER);
+			selection->SetColors(0x303030B0,0xFFFFFFFF,0x00000060,0xFFFFFFFF);
+			selection->SetText(&items);
+		}
+		if(normal){
+			SDL_FreeSurface(normal);
+		}
+		if(hover){
+			SDL_FreeSurface(hover);
+		}
+		selection->SetVisible(true);
+		state=WILLSTATE_CHOICE;
+		return true;
+	}
+
+	// Nothing parsed - keep the engine alive and log loudly
+	LogError("OP02: no choices parsed at 0x%X",script->save);
+	return false;
 }
 
 /*! Calculations

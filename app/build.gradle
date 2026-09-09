@@ -13,8 +13,8 @@ android {
         targetSdk 35
         // The only place the version is defined; the manifest carries no
         // version attributes of its own.
-        versionCode 14
-        versionName "1.9.1"
+        versionCode 15
+        versionName "1.9.2"
 
         externalNativeBuild {
             ndkBuild {
