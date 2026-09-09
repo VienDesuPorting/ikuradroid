@@ -7,16 +7,25 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * File-system game library.
  *
- * The user picks the library root once with the in-app folder browser
- * (FolderPickerActivity) after granting storage access; the absolute path
- * is persisted. The engine reads files with plain stdio, so game folders
- * are passed to it as real paths - nothing is copied.
+ * The user picks library roots with the in-app folder browser
+ * (FolderPickerActivity) after granting storage access; the absolute
+ * paths are persisted as a set - every pick adds another root, so games
+ * scattered across the shared storage all live in one library. The
+ * engine reads files with plain stdio, so game folders are passed to it
+ * as real paths - nothing is copied.
  *
- * Games are discovered in the root folder itself and one level below it;
+ * A title can also be hidden from the list ("remove from list" in the
+ * long-press menu). Hidden titles are remembered by name, and picking
+ * the folder that contains them again puts them back into the library.
+ *
+ * Games are discovered in each root folder itself and one level below it;
  * a folder counts as a game when its contents match one of the engine
  * signatures (GAME_SIGNATURES), so Ikura GDL titles and every other
  * supported engine appear side by side. Legacy copies from the SAF era
@@ -48,7 +57,9 @@ public final class GameLibrary {
     };
 
     private static final String PREFS_FILE = "library";
-    private static final String KEY_ROOT_PATH = "library_root";
+    private static final String KEY_ROOT_PATH = "library_root";      // pre-1.9.0 single root, migrated on read
+    private static final String KEY_ROOTS = "library_roots";         // StringSet of absolute paths
+    private static final String KEY_HIDDEN = "hidden_titles";        // StringSet of game folder names
     private static final String INSTALL_DIR = "games";
 
     private GameLibrary() {
@@ -58,20 +69,68 @@ public final class GameLibrary {
     // Persisted library root
     // ------------------------------------------------------------------
 
-    public static String getRootPath(Context context) {
+    /**
+     * All persisted library roots, in insertion order. The pre-1.9.0
+     * single-root setting is migrated into the set on first read.
+     */
+    public static LinkedHashSet<String> getRoots(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
-        return prefs.getString(KEY_ROOT_PATH, null);
+        LinkedHashSet<String> roots = new LinkedHashSet<>();
+        Set<String> stored = prefs.getStringSet(KEY_ROOTS, null);
+        if (stored != null) {
+            roots.addAll(stored);
+        } else {
+            String legacy = prefs.getString(KEY_ROOT_PATH, null);
+            if (legacy != null) {
+                roots.add(legacy);
+                prefs.edit().putStringSet(KEY_ROOTS, roots).remove(KEY_ROOT_PATH).apply();
+            }
+        }
+        return roots;
     }
 
-    public static void setRootPath(Context context, String rootPath) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
+    /** Adds another library root. Picking the same folder twice is a no-op. */
+    public static void addRootPath(Context context, String rootPath) {
         if (rootPath == null) {
-            editor.remove(KEY_ROOT_PATH);
-        } else {
-            editor.putString(KEY_ROOT_PATH, rootPath);
+            return;
         }
-        editor.apply();
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        LinkedHashSet<String> roots = getRoots(context);
+        roots.add(rootPath);
+        prefs.edit().putStringSet(KEY_ROOTS, roots).apply();
+    }
+
+    /**
+     * Restores titles hidden from the list when their folder comes back:
+     * un-hides the picked folder itself (when it is a game) plus every
+     * game folder one level below it - exactly the titles "re-adding this
+     * folder" would put back into the library.
+     */
+    public static void unhideUnder(Context context, String rootPath) {
+        if (rootPath == null) {
+            return;
+        }
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        Set<String> hidden = prefs.getStringSet(KEY_HIDDEN, null);
+        if (hidden == null || hidden.isEmpty()) {
+            return;
+        }
+        LinkedHashSet<String> restored = new LinkedHashSet<>(hidden);
+        File root = new File(rootPath);
+        if (isGameFolder(root)) {
+            restored.remove(root.getName());
+        }
+        File[] children = root.listFiles();
+        if (children != null) {
+            for (File dir : children) {
+                if (dir.isDirectory() && isGameFolder(dir)) {
+                    restored.remove(dir.getName());
+                }
+            }
+        }
+        if (restored.size() != hidden.size()) {
+            prefs.edit().putStringSet(KEY_HIDDEN, restored).apply();
+        }
     }
 
     /** Root of the legacy install area (game copies from the SAF era). */
@@ -88,34 +147,33 @@ public final class GameLibrary {
     // ------------------------------------------------------------------
 
     /**
-     * Builds the library list: games under the persisted root folder plus
-     * the legacy copies in the install area (merged by title, so the
-     * library still works when the root is missing or unreadable). Never
-     * returns null.
+     * Builds the library list: games under every persisted root folder
+     * plus the legacy copies in the install area (merged by title, so the
+     * library still works when roots are missing or unreadable). Titles
+     * hidden by the user are left out. Never returns null.
      */
     public static ArrayList<RunItem> scan(Context context) {
         ArrayList<RunItem> items = new ArrayList<>();
 
-        String rootPath = getRootPath(context);
-        if (rootPath != null) {
+        // A missing root (unmounted SD card, deleted folder) is kept in
+        // the set: dropping it here would lose the whole root on one
+        // transient failure, and an empty scan just shows the empty state.
+        for (String rootPath : getRoots(context)) {
             File root = new File(rootPath);
-            if (root.isDirectory()) {
-                // The root folder itself may be a game folder
-                if (isGameFolder(root)) {
-                    addFsGame(items, root);
-                }
-                File[] children = root.listFiles();
-                if (children != null) {
-                    for (File dir : children) {
-                        if (dir.isDirectory() && isGameFolder(dir)) {
-                            addFsGame(items, dir);
-                        }
+            if (!root.isDirectory()) {
+                continue;
+            }
+            // The root folder itself may be a game folder
+            if (isGameFolder(root)) {
+                addFsGame(items, root);
+            }
+            File[] children = root.listFiles();
+            if (children != null) {
+                for (File dir : children) {
+                    if (dir.isDirectory() && isGameFolder(dir)) {
+                        addFsGame(items, dir);
                     }
                 }
-            } else {
-                // The folder is gone (unmounted, deleted) - drop it so the
-                // empty state asks the user to pick the folder again
-                setRootPath(context, null);
             }
         }
 
@@ -139,6 +197,18 @@ public final class GameLibrary {
             }
         }
 
+        // Long-press "remove from list": hidden titles never reach the UI
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        Set<String> hidden = prefs.getStringSet(KEY_HIDDEN, null);
+        if (hidden != null && !hidden.isEmpty()) {
+            Iterator<RunItem> it = items.iterator();
+            while (it.hasNext()) {
+                if (hidden.contains(it.next().getTitle())) {
+                    it.remove();
+                }
+            }
+        }
+
         Collections.sort(items, new Comparator<RunItem>() {
             @Override
             public int compare(RunItem a, RunItem b) {
@@ -146,6 +216,43 @@ public final class GameLibrary {
             }
         });
         return items;
+    }
+
+    /**
+     * "Remove from list": the title disappears from the library while its
+     * files stay untouched on the storage. Picking the containing folder
+     * again (unhideUnder) puts the title back.
+     */
+    public static void setHidden(Context context, String title, boolean isHidden) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        LinkedHashSet<String> hidden = new LinkedHashSet<>();
+        Set<String> stored = prefs.getStringSet(KEY_HIDDEN, null);
+        if (stored != null) {
+            hidden.addAll(stored);
+        }
+        if (isHidden) {
+            hidden.add(title);
+        } else {
+            hidden.remove(title);
+        }
+        prefs.edit().putStringSet(KEY_HIDDEN, hidden).apply();
+    }
+
+    /**
+     * Deletes a directory tree. Used by the long-press "delete from
+     * device" action; fails soft - the caller reports leftovers.
+     */
+    public static boolean deleteRecursively(File dir) {
+        if (dir == null || !dir.exists()) {
+            return true;
+        }
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                deleteRecursively(child);
+            }
+        }
+        return dir.delete();
     }
 
     private static void addFsGame(ArrayList<RunItem> items, File dir) {

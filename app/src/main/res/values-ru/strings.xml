@@ -5,7 +5,8 @@
 
     <string name="app_name">IkuraDroid</string>
 
-    <!-- Внутриигровое меню. SDLActivity проецирует пункты на F5–F9 и CTRL движка. -->
+    <!-- Внутриигровое меню. SDLActivity проецирует пункты на F5–F8 и CTRL
+         движка; «Выйти» завершает игру с самой стороны приложения. -->
     <string name="ingame_menu">Меню игры</string>
     <string name="skip_on">Автопропуск включён</string>
     <string name="skip_off">Автопропуск выключен</string>
@@ -19,12 +20,25 @@
     <!-- Меню панели запуска -->
     <string name="menu_about">О приложении</string>
     <string name="menu_engines">Движки</string>
-    <string name="dir_change">Сменить папку новелл</string>
+    <string name="dir_change">Добавить папку с новеллой</string>
 
     <!-- Библиотека -->
     <string name="library_empty_title">Библиотека пуста</string>
-    <string name="library_empty_body">Выберите папку с вашими новеллами. Каждая игра лежит в своей подпапке с файлом vilevn.pck; можно выбрать и саму папку игры. Игра читается прямо из своей папки, сохранения остаются в хранилище приложения.</string>
+    <string name="library_empty_body">Выберите папку с вашими новеллами. Каждая игра лежит в своей подпапке с файлом vilevn.pck; можно выбрать и саму папку игры. Папки добавляются по одной, игры читаются прямо из своих папок, а сохранения остаются в хранилище приложения.</string>
     <string name="library_pick_folder">Выбрать папку</string>
+    <string name="library_added_title">Папка добавлена</string>
+    <string name="library_added_message">«%1$s» теперь в библиотеке. Добавить ещё одну папку?</string>
+    <string name="library_add_more">Добавить ещё</string>
+
+    <!-- Долгий тап на карточке тайтла -->
+    <string name="ctx_hide">Убрать из списка</string>
+    <string name="ctx_delete">Удалить с устройства</string>
+    <string name="ctx_delete_title">Удалить игру?</string>
+    <string name="ctx_delete_message">Папка «%1$s» и все её файлы будут безвозвратно удалены с устройства.</string>
+    <string name="ctx_delete_confirm">Удалить</string>
+    <string name="ctx_hidden_toast">Убрано из списка — файлы остались на месте. Чтобы вернуть, добавьте папку заново</string>
+    <string name="ctx_deleted_toast">Игра удалена</string>
+    <string name="ctx_delete_failed_toast">Некоторые файлы не удалось удалить</string>
 
     <!-- Собственный браузер папок (корень библиотеки в реальной ФС) -->
     <string name="picker_title">Выбор папки</string>

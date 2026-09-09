@@ -43,17 +43,17 @@ public class SDLActivity extends Activity {
     public static boolean skip;
 
     // The in-game menu lives in exactly one dialog instance; the
-    // top-down swipe gesture tracking state (see dispatchTouchEvent).
+    // bottom-up swipe gesture tracking state (see dispatchTouchEvent).
     private BottomSheetDialog mGameMenuSheet;
     private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted;
     private float mSwipeStartX, mSwipeStartY;
-    // The gesture starts inside a strip well below the status-bar area
-    // (the very top edge stays with the system) and must travel at least
-    // MENU_SWIPE_TRAVEL_DP down. All in dp: sensorLandscape windows are
-    // short, so a fraction of the height would be either too small or
-    // unreachable.
-    private static final float MENU_SWIPE_ZONE_TOP_DP = 96f;
-    private static final float MENU_SWIPE_ZONE_BOTTOM_DP = 168f;
+    // The gesture starts inside a strip just above the bottom edge and
+    // must travel at least MENU_SWIPE_TRAVEL_DP up. The strip sits 96 dp
+    // above the edge, clear of the system gesture-navigation zone. All in
+    // dp: sensorLandscape windows are short, so a fraction of the height
+    // would be either too small or unreachable.
+    private static final float MENU_SWIPE_ZONE_NEAR_DP = 96f;   // strip edge nearest to the bottom
+    private static final float MENU_SWIPE_ZONE_FAR_DP = 168f;   // strip edge farthest from the bottom
     private static final float MENU_SWIPE_TRAVEL_DP = 96f;
     // Main components
     protected static SDLActivity mSingleton;
@@ -133,10 +133,11 @@ public class SDLActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
     
-    // The in-game menu. BACK, MENU or the top-down swipe opens a Material 3
-    // bottom sheet; each action maps to the virtual key the engine listens
-    // for (the F5/F6/F7/F8/F9 + CTRL mapping of the original build is kept
-    // as is).
+    // The in-game menu. BACK, MENU or the bottom-up swipe opens a Material
+    // 3 bottom sheet; every engine item maps to the virtual key the engine
+    // listens for (the F5/F6/F7/F8 + CTRL mapping of the original build is
+    // kept as is) - except Quit, which tears the game down from the app
+    // side and never shows the engine's own "Exit game?" dialog.
     private void showGameMenu() {
         // Never stack a second sheet over a live one: the dialog is tracked
         // as a field, so repeated triggers cannot pile up identical copies.
@@ -168,12 +169,24 @@ public class SDLActivity extends Activity {
         addMenuRow(sheet, items, R.drawable.ic_ingame_settings, R.string.menu_settings, 0,
                 () -> onNativeKeyDown(KeyEvent.KEYCODE_F7));
         addMenuRow(sheet, items, R.drawable.ic_ingame_quit, R.string.menu_quit, 0,
-                () -> onNativeKeyDown(KeyEvent.KEYCODE_F9));
+                () -> quitGame());
 
         sheet.setOnDismissListener(d -> mGameMenuSheet = null);
         mGameMenuSheet = sheet;
         sheet.setContentView(root);
         sheet.show();
+    }
+
+    /**
+     * Quits straight from the app UI: finish() routes through onDestroy,
+     * which stops the SDL thread and tears the process down. The engine
+     * never sees the F9/VD_SHUTDOWN path, so its own "Exit game?" prompt
+     * (dialogs/stdhalt.cpp) is not invoked - one dialog less, and the
+     * exit now works identically for every engine, including the
+     * Will-family titles whose shutdown dialog is unreliable.
+     */
+    private void quitGame() {
+        finish();
     }
 
     private void addMenuRow(final BottomSheetDialog sheet, LinearLayout items,
@@ -313,7 +326,7 @@ public class SDLActivity extends Activity {
     }
 
     // ------------------------------------------------------------------
-    // Top-down swipe opens the in-game menu.
+    // Bottom-up swipe opens the in-game menu.
     //
     // Rationale: gesture-nav devices have no BACK button at all, and a
     // permanent on-screen pause button would eat screen space and risk
@@ -326,14 +339,21 @@ public class SDLActivity extends Activity {
     //  * a plain tap inside the strip is replayed to the engine as a
     //    clean DOWN+UP pair once the finger lifts (forwardTapToEngine),
     //    so clicks in that part of the game keep working;
-    //  * everything above the strip - the status bar and the
-    //    notification shade gesture zone - stays entirely with the
-    //    system: the strip starts at 96dp, so opening the menu never
-    //    fights the shade for the top edge.
+    //  * everything below the strip - the gesture-navigation zone of the
+    //    system - stays entirely with the system: the strip ends 96 dp
+    //    above the bottom edge, so opening the menu never fights the nav
+    //    gesture, and the notification shade at the top stays untouched
+    //    as well.
     // ------------------------------------------------------------------
 
     private float menuDp(float value) {
         return value * getResources().getDisplayMetrics().density;
+    }
+
+    /** Height of the window surface the strip is anchored against. */
+    private float contentBottom() {
+        View root = mLayout != null ? mLayout : getWindow().getDecorView();
+        return root.getHeight();
     }
 
     @Override
@@ -352,24 +372,26 @@ public class SDLActivity extends Activity {
         }
 
         if (!mSwipeTracking) {
-            if (action == MotionEvent.ACTION_DOWN
-                    && ev.getY() >= menuDp(MENU_SWIPE_ZONE_TOP_DP)
-                    && ev.getY() <= menuDp(MENU_SWIPE_ZONE_BOTTOM_DP)) {
-                mSwipeTracking = true;
-                mSwipeConsumed = false;
-                mSwipeAborted = false;
-                mSwipeStartX = ev.getX();
-                mSwipeStartY = ev.getY();
-                return true; // hold the stream until intent is clear
+            if (action == MotionEvent.ACTION_DOWN) {
+                float fromBottom = contentBottom() - ev.getY();
+                if (fromBottom >= menuDp(MENU_SWIPE_ZONE_NEAR_DP)
+                        && fromBottom <= menuDp(MENU_SWIPE_ZONE_FAR_DP)) {
+                    mSwipeTracking = true;
+                    mSwipeConsumed = false;
+                    mSwipeAborted = false;
+                    mSwipeStartX = ev.getX();
+                    mSwipeStartY = ev.getY();
+                    return true; // hold the stream until intent is clear
+                }
             }
         } else {
             switch (action) {
                 case MotionEvent.ACTION_MOVE:
                     if (!mSwipeConsumed && !mSwipeAborted) {
                         float dx = ev.getX() - mSwipeStartX;
-                        float dy = ev.getY() - mSwipeStartY;
-                        if (dy >= menuDp(MENU_SWIPE_TRAVEL_DP)
-                                && dy > 2f * Math.abs(dx)) {
+                        float dy = ev.getY() - mSwipeStartY; // negative = moving up
+                        if (-dy >= menuDp(MENU_SWIPE_TRAVEL_DP)
+                                && Math.abs(dy) > 2f * Math.abs(dx)) {
                             mSwipeConsumed = true;
                             showGameMenu();
                         }

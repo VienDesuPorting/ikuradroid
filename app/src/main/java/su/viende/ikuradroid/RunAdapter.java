@@ -17,7 +17,8 @@ import androidx.recyclerview.widget.RecyclerView;
  * Library grid adapter. Tiles bind a game title and its per-game
  * icon.png - read straight from the real game folder, with the legacy
  * install-area copy as a fallback; until then the placeholder is shown.
- * Clicks are delegated to the host (MainActivity launches the game).
+ * Clicks are delegated to the host (MainActivity launches the game),
+ * long clicks open the per-game context menu (remove/delete).
  */
 public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
 
@@ -26,8 +27,14 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
         void onGameClick(RunItem item);
     }
 
+    /** Long-click callback; {@code anchor} positions the context menu. */
+    public interface OnGameLongClickListener {
+        void onGameLongClick(RunItem item, View anchor);
+    }
+
     private final ArrayList<RunItem> mDataset = new ArrayList<>();
     private final OnGameClickListener mListener;
+    private final OnGameLongClickListener mLongListener;
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         public final TextView mTextView;
@@ -41,8 +48,9 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
         }
     }
 
-    public RunAdapter(OnGameClickListener listener) {
+    public RunAdapter(OnGameClickListener listener, OnGameLongClickListener longListener) {
         mListener = listener;
+        mLongListener = longListener;
     }
 
     public void swapArray(ArrayList<RunItem> dataset) {
@@ -88,6 +96,16 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
                 if (mListener != null) {
                     mListener.onGameClick(item);
                 }
+            }
+        });
+        holder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                if (mLongListener != null) {
+                    mLongListener.onGameLongClick(item, v);
+                    return true;
+                }
+                return false;
             }
         });
     }
