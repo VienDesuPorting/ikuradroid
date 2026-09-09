@@ -16,14 +16,36 @@ import java.util.Comparator;
  * is persisted. The engine reads files with plain stdio, so game folders
  * are passed to it as real paths - nothing is copied.
  *
- * Games are discovered in the root folder itself and one level below it.
- * Legacy copies from the SAF era (getExternalFilesDir(null)/games/<title>/)
- * keep working and are merged into the same list; saves always live in the
- * app-private area.
+ * Games are discovered in the root folder itself and one level below it;
+ * a folder counts as a game when its contents match one of the engine
+ * signatures (GAME_SIGNATURES), so Ikura GDL titles and every other
+ * supported engine appear side by side. Legacy copies from the SAF era
+ * (getExternalFilesDir(null)/games/<title>/) keep working and are merged
+ * into the same list; saves always live in the app-private area.
  */
 public final class GameLibrary {
 
     public static final String PCK_MARKER = "vilevn.pck";
+
+    // Engine signatures mirrored from the native probes (ViLE::Probe* in
+    // jni/vile/vile.cpp): a folder counts as a game when it contains all
+    // files of one row. Names are compared case-insensitively - game data
+    // comes from Windows installs where the on-disk case varies. The Will
+    // family shares one signature; the exact title is picked natively by
+    // archive size.
+    private static final String[][] GAME_SIGNATURES = {
+            {PCK_MARKER},                           // Ikura GDL (all titles)
+            {"rio.arc", "chip.arc"},                // Will: Critical Point, Princess Waltz, Starry Sky, Yume Miru Kusuri
+            {"scene00.bdt", "indexw.dat"},          // Crowd: Tokimeki Check-in!
+            {"scene00.bdt", "index.dat"},           // Crowd: XChange 1
+            {"xc3.sce"},                            // Crowd: XChange 3
+            {"data/images.pck", "data/data.pck"},   // JAST USA Memorial Collection
+            {"sg.dl1", "wv.dl1"},                   // C-Ware: DiviDead
+            {"eff", "mrs", "date"},                 // T-Love: True Love
+            {"eff", "mrs", "datg"},                 // T-Love: True Love (alt. data set)
+            {"mug0.dat", "mug0.lst"},               // Windy: Nocturnal Illusion
+            {"may0.dat", "may0.lst"},               // Windy: Mayclub
+    };
 
     private static final String PREFS_FILE = "library";
     private static final String KEY_ROOT_PATH = "library_root";
@@ -79,13 +101,13 @@ public final class GameLibrary {
             File root = new File(rootPath);
             if (root.isDirectory()) {
                 // The root folder itself may be a game folder
-                if (hasPck(root)) {
+                if (isGameFolder(root)) {
                     addFsGame(items, root);
                 }
                 File[] children = root.listFiles();
                 if (children != null) {
                     for (File dir : children) {
-                        if (dir.isDirectory() && hasPck(dir)) {
+                        if (dir.isDirectory() && isGameFolder(dir)) {
                             addFsGame(items, dir);
                         }
                     }
@@ -102,7 +124,7 @@ public final class GameLibrary {
         File[] installed = installRoot(context).listFiles();
         if (installed != null) {
             for (File dir : installed) {
-                if (!dir.isDirectory() || !new File(dir, PCK_MARKER).isFile()) {
+                if (!dir.isDirectory() || !isGameFolder(dir)) {
                     continue;
                 }
                 RunItem known = findByTitle(items, dir.getName());
@@ -150,7 +172,51 @@ public final class GameLibrary {
         return null;
     }
 
-    private static boolean hasPck(File dir) {
-        return new File(dir, PCK_MARKER).isFile();
+    /**
+     * True when the folder matches at least one engine signature. The
+     * check is deliberately looser than the native probes: a false
+     * positive only means a failed launch attempt, while a false negative
+     * would hide a working game from the library entirely.
+     */
+    public static boolean isGameFolder(File dir) {
+        if (dir == null || !dir.isDirectory()) {
+            return false;
+        }
+        for (String[] signature : GAME_SIGNATURES) {
+            boolean matched = true;
+            for (String marker : signature) {
+                if (!hasFile(dir, marker)) {
+                    matched = false;
+                    break;
+                }
+            }
+            if (matched) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Case-insensitive lookup of dir/relativePath ("sub/file" works). */
+    private static boolean hasFile(File dir, String relativePath) {
+        File current = dir;
+        for (String segment : relativePath.split("/")) {
+            File[] entries = current.listFiles();
+            if (entries == null) {
+                return false;
+            }
+            File match = null;
+            for (File entry : entries) {
+                if (entry.getName().equalsIgnoreCase(segment)) {
+                    match = entry;
+                    break;
+                }
+            }
+            if (match == null) {
+                return false;
+            }
+            current = match;
+        }
+        return current.isFile();
     }
 }
