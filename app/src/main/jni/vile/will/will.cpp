@@ -444,6 +444,8 @@ bool EngineWill::EventBackgroundMouseMove(int X,int Y){
 
 bool EngineWill::EventBackgroundMouseLeftDown(int X,int Y){
 	bool retval=false;
+	LogTest("Will GUI: left down at %d,%d (state=%d, table=%s)",
+	                X,Y,(int)state,table_data?"ok":"none");
 	if(state==WILLSTATE_GUI){
 		if(table_data && table_data->surface){
 			SDL_Surface *s=table_data->surface;

@@ -1007,6 +1007,10 @@ void ViLE::RunEngine(EngineVN *engine){
 			else if(event.type==SDL_MOUSEBUTTONDOWN){
 				int gx,gy;
 				VILE_MAP_INPUT(event.button.x,event.button.y,gx,gy);
+			LogTest("Host mouse down: window=(%d,%d) "
+			                "logical=(%d,%d) button=%d",
+			                event.button.x,event.button.y,
+			                gx,gy,event.button.button);
 				// Left mouse button
 				if(event.button.button==SDL_BUTTON_RIGHT){
 					engine->EventHostMouseRightDown(
@@ -1020,6 +1024,10 @@ void ViLE::RunEngine(EngineVN *engine){
 			else if(event.type==SDL_MOUSEBUTTONUP){
 				int gx,gy;
 				VILE_MAP_INPUT(event.button.x,event.button.y,gx,gy);
+			LogTest("Host mouse up: window=(%d,%d) "
+			                "logical=(%d,%d) button=%d",
+			                event.button.x,event.button.y,
+			                gx,gy,event.button.button);
 				// Left mouse button
 				if(event.button.button==SDL_BUTTON_RIGHT){
 					engine->EventHostMouseRightUp(
@@ -1029,6 +1037,42 @@ void ViLE::RunEngine(EngineVN *engine){
 					engine->EventHostMouseLeftUp(
 							screenSurface,gx,gy);
 				}
+			}
+			else if(event.type==SDL_FINGERMOTION){
+				// Touch events (tfinger is normalised 0..1 against the window)
+				int gx,gy;
+				VILE_MAP_INPUT(event.tfinger.x*winw,
+				                event.tfinger.y*winh,gx,gy);
+				engine->EventHostMouseMove(
+				                        screenSurface,gx,gy);
+			}
+			else if(event.type==SDL_FINGERDOWN){
+				// Android touches arrive here directly: SDL 2.0.3 used to
+				// synthesise a mouse stream from them, but that stream is
+				// what kept getting lost between the Java layer and this
+				// loop on some devices. Touch stays touch end to end now.
+				int gx,gy;
+				VILE_MAP_INPUT(event.tfinger.x*winw,
+				                event.tfinger.y*winh,gx,gy);
+				LogTest("Host finger down: norm=(%.3f,%.3f) "
+				                "-> logical=(%d,%d)",
+				                event.tfinger.x,
+				                event.tfinger.y,gx,gy);
+				engine->EventHostMouseMove(
+				                        screenSurface,gx,gy);
+				engine->EventHostMouseLeftDown(
+				                        screenSurface,gx,gy);
+			}
+			else if(event.type==SDL_FINGERUP){
+				int gx,gy;
+				VILE_MAP_INPUT(event.tfinger.x*winw,
+				                event.tfinger.y*winh,gx,gy);
+				LogTest("Host finger up: norm=(%.3f,%.3f) "
+				                "-> logical=(%d,%d)",
+				                event.tfinger.x,
+				                event.tfinger.y,gx,gy);
+				engine->EventHostMouseLeftUp(
+				                        screenSurface,gx,gy);
 			}
 			else if(event.type==SDL_KEYDOWN){
 				engine->EventHostKeyDown(event.key.keysym.sym);
