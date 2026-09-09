@@ -34,13 +34,26 @@ SDL_Surface **CWill::wipa(RWops *Object){
 		Object->Seek(0,SEEK_SET);
 		Object->Read(hdr,8);
 		unsigned int count=hdr[4]|(hdr[5]<<8);
-		//unsigned int bpp=hdr[6]|(hdr[7]<<8);
+		unsigned int bpp=hdr[6]|(hdr[7]<<8);
 		if(hdr[0]=='W' && hdr[1]=='I' && hdr[2]=='P' && hdr[3]=='F' && count){
+			LogVerbose("WIPF animation: %u frames at %u bpp",count,bpp);
 			retval=new SDL_Surface*[count+1];
 			for(unsigned int i=0;i<count;i++){
 				retval[i]=wip(Object,i);
 			}
 			retval[count]=0;
+			if(!retval[0]){
+				// The first frame is essential for all callers;
+				// reject the whole resource instead of crashing later
+				LogError("WIPF: frame 0 failed to decode, rejecting animation (%u frames)",count);
+				for(unsigned int i=0;i<count;i++){
+					if(retval[i]){
+						SDL_FreeSurface(retval[i]);
+					}
+				}
+				delete [] retval;
+				retval=0;
+			}
 		}
 	}
 	return retval;
@@ -63,6 +76,10 @@ SDL_Surface *CWill::wip(RWops *Object,int Index){
 			if(bpp==8){
 				palettesize=256*4;
 			}
+			else if(bpp!=24 && bpp!=32){
+				LogError("WIPF: unsupported bpp %u (frame %d)",bpp,Index);
+				return retval;
+			}
 			unsigned int indexpos=8;
 			unsigned int datapos=8+(count*24);
 			for(unsigned int i=0;i<count && Object->Read(hdr,24)==24;i++){
@@ -70,6 +87,16 @@ SDL_Surface *CWill::wip(RWops *Object,int Index){
 				unsigned int h=hdr[4]|(hdr[5]<<8)|(hdr[6]<<16)|(hdr[7]<<24);
 				unsigned int c=hdr[20]|(hdr[21]<<8)|(hdr[22]<<16)|(hdr[23]<<24);
 				unsigned int s=w*h*(bpp/8);
+
+				// Sanity check the frame header before allocating anything.
+				// Corrupt or repacked files used to overflow the LZ output
+				// buffer here and take the whole process down (SIGSEGV)
+				if(!w || !h || w>4096 || h>4096 || !c || c>Object->Size()){
+					LogError("WIPF: bogus frame header %ux%u, %u compressed bytes, file %u bytes (frame %d of %u, bpp %u)",
+							w,h,c,Object->Size(),Index,count,bpp);
+					break;
+				}
+				LogVerbose("WIPF frame %d/%u: %ux%u, %u bytes, bpp %u",Index,count,w,h,c,bpp);
 
 				// Reseek to datapos and roll indexes
 				int curpos=datapos;
@@ -107,7 +134,11 @@ SDL_Surface *CWill::wip(RWops *Object,int Index){
 					unsigned int out=0;
 					Uint32 EAX,ECX,EDI;
 					Uint8 AL,DI;
-					while(c>in){
+					// Every write to outbuffer is bounded by s=w*h*(bpp/8).
+					// A valid stream decodes to exactly s bytes; anything
+					// else means corrupt or repacked data and gets logged
+					// instead of overflowing the heap
+					while(c>in && out<s){
 						EAX=Temp1;
 						EAX=EAX>>1;
 						Temp1=EAX;
@@ -124,6 +155,11 @@ SDL_Surface *CWill::wip(RWops *Object,int Index){
 							SlidWindowIndex&=SlidWindowLength;
 						}
 						else{
+							// A match consumes two bytes of input
+							if((int)c-(int)in<2){
+								LogError("WIPF: truncated LZ stream (frame %d, in %u of %u)",Index,in,c);
+								break;
+							}
 							DI=inbuffer[in++];
 							AL=inbuffer[in++];
 							EDI=((DI<<8)|AL)>>4;
@@ -142,6 +178,10 @@ SDL_Surface *CWill::wip(RWops *Object,int Index){
 								}
 							}
 						}
+					}
+					if(out<s){
+						LogError("WIPF: decoded %u of %u bytes (frame %d, %u compressed) - archive or format mismatch",
+								out,s,Index,c);
 					}
 
 					// Convert planar stream to 32bit surface

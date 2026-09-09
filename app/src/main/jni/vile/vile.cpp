@@ -540,6 +540,17 @@ int main(int argc,char **argv){
 		textEDLfont = textEDLfont +"/";
 		textEDLfont = textEDLfont +Cfg::Font::default_face.c_str();
 		Cfg::Font::default_face = textEDLfont;
+
+		// Mirror engine logs to a file in the game directory.
+		// Truncated on every launch so a crashing run keeps its full log
+		Cfg::System::Logfile = Cfg::Path::cwd + "/vile_log.txt";
+		FILE *logf=fopen(Cfg::System::Logfile.c_str(),"wb");
+		if(logf){
+			fclose(logf);
+		}
+		else{
+			Cfg::System::Logfile="";
+		}
 #endif
 
 	    EDLfont=TTF_OpenFont(Cfg::Font::default_face.c_str(),Cfg::Font::default_size);
