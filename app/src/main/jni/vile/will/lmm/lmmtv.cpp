@@ -20,61 +20,28 @@ LMMTextview::LMMTextview(LittleMyMaid *Engine) : Textview(Engine) {
         SDL_Rect rect;
         header=0;
 
-        // Unlike Critical Point (winbase0.wip + winbase0.msk), LMM splits
-        // the dialog window into winbase0.wip (image) and winip0.msk (mask)
-	SDL_Surface **mask=Engine->EngineVN::LoadAnimation("winip0","msk");
-	SDL_Surface **winbase=Engine->EngineVN::LoadAnimation("winbase0","wip");
+        // winbase0.wip frame 0 carries the whole dialog chrome (points bar,
+        // translucent body, RECORD/OPEN/STATUS buttons) and winbase0.msk is
+        // its 8bpp transparency mask (body=128, chrome=255). LoadMaskedAnimation
+        // merges the two exactly like Critical Point does.
+        //
+        // NB: winip0.msk looks similar but is NOT an alpha mask - it is the
+        // mouse clickmap of the dialog window (pixel values are button zone
+        // ids 0/1/2/7). Merging it into the alpha channel used to make the
+        // whole dialog ~99% transparent, i.e. invisible while the text printer
+        // kept drawing straight onto the background.
+        SDL_Surface **winbase=Engine->LoadMaskedAnimation("winbase0");
 
-        // Merge the mask into the alpha channel of every frame
-        if(mask && winbase){
-                for(int i=0;mask[i] && winbase[i];i++){
-                        int w=mask[i]->w<winbase[i]->w?mask[i]->w:winbase[i]->w;
-                        int h=mask[i]->h<winbase[i]->h?mask[i]->h:winbase[i]->h;
-                        if(SDL_MUSTLOCK(mask[i])){
-                                if(SDL_LockSurface(mask[i])<0){
-                                        break;
-                                }
-                        }
-                        if(SDL_MUSTLOCK(winbase[i])){
-                                if(SDL_LockSurface(winbase[i])<0){
-                                        SDL_UnlockSurface(mask[i]);
-                                        break;
-                                }
-                        }
-                        for(int y=0;y<h;y++){
-                                Uint8 *srcp=static_cast<Uint8*>(mask[i]->pixels)+
-                                                (y*mask[i]->pitch);
-                                Uint8 *dstp=static_cast<Uint8*>(winbase[i]->pixels)+
-                                                (y*winbase[i]->pitch);
-                                for(int x=0;x<w;x++){
-                                        dstp[x*winbase[i]->format->BytesPerPixel+3]=
-                                                        srcp[x*mask[i]->format->BytesPerPixel];
-                                }
-                        }
-                        if(SDL_MUSTLOCK(mask[i])){
-                                SDL_UnlockSurface(mask[i]);
-                        }
-                        if(SDL_MUSTLOCK(winbase[i])){
-                                SDL_UnlockSurface(winbase[i]);
-                        }
-                }
-        }
-        if(mask){
-                for(int i=0;mask[i];i++){
-                        SDL_FreeSurface(mask[i]);
-                }
-                delete [] mask;
-        }
-
-        // Position the dialog window over the background frame
+        // The WIPF header stores the on-screen position of every frame; for
+        // the LMM build the background frame sits at (0,0) covering the top
+        // 145 pixels of the screen - matching the PC original where the
+        // dialog window is docked under the top screen edge
         if(winbase){
-                int ypos=0;
                 for(int i=0;winbase[i];i++){
                         if(Engine->GetImagePosition("winbase0",i,&rect)){
                                 if(i==LMMTV_BACKGROUND){
-                                        ypos=Engine->NativeHeight()-rect.h;
-                                        SetTextPosition(50,60,540,100);
-                                        MoveDialog(rect.x+40,ypos);
+                                        SetTextPosition(18,28,505,100);
+                                        MoveDialog(rect.x,rect.y);
                                         Resize(rect.w,rect.h);
                                         Set(winbase[i]);
                                 }
