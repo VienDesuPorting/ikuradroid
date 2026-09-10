@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "su.viende.ikuradroid"
-        minSdk 21
+        minSdk 24
         targetSdk 35
         // The only place the version is defined; the manifest carries no
         // version attributes of its own.
@@ -32,11 +32,16 @@ android {
 
     signingConfigs {
         release {
-            // Credentials live in gradle.properties; CI uses the same file.
-            storeFile rootProject.file(project.property('IKURA_STORE_FILE'))
-            storePassword project.property('IKURA_STORE_PASSWORD')
-            keyAlias project.property('IKURA_KEY_ALIAS')
-            keyPassword project.property('IKURA_KEY_PASSWORD')
+            // Optional release signing: set IKURA_STORE_FILE, IKURA_STORE_PASSWORD,
+            // IKURA_KEY_ALIAS, IKURA_KEY_PASSWORD in ~/.gradle/gradle.properties
+            // (or configure signing in Android Studio). No credentials ship with
+            // the repository; without them the release build uses the debug key.
+            if (project.hasProperty('IKURA_STORE_FILE')) {
+                storeFile rootProject.file(project.property('IKURA_STORE_FILE'))
+                storePassword project.property('IKURA_STORE_PASSWORD')
+                keyAlias project.property('IKURA_KEY_ALIAS')
+                keyPassword project.property('IKURA_KEY_PASSWORD')
+            }
         }
     }
 
@@ -44,7 +49,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            signingConfig project.hasProperty('IKURA_STORE_FILE') ? signingConfigs.release : signingConfigs.debug
         }
     }
 
