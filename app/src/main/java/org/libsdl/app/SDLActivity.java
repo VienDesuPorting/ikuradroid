@@ -48,11 +48,13 @@ public class SDLActivity extends Activity {
     private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted;
     private float mSwipeStartX, mSwipeStartY;
     // The gesture starts inside a strip just above the bottom edge and
-    // must travel at least MENU_SWIPE_TRAVEL_DP up. The strip sits 96 dp
-    // above the edge, clear of the system gesture-navigation zone. All in
-    // dp: sensorLandscape windows are short, so a fraction of the height
-    // would be either too small or unreachable.
-    private static final float MENU_SWIPE_ZONE_NEAR_DP = 96f;   // strip edge nearest to the bottom
+    // must travel at least MENU_SWIPE_TRAVEL_DP up. The strip reaches down
+    // to 40 dp above the edge - low enough for a natural "swipe up from
+    // the bottom" motion, yet clear of the ~24 dp pill zone the system
+    // reserves for gesture navigation. All in dp: sensorLandscape windows
+    // are short, so a fraction of the height would be either too small or
+    // unreachable.
+    private static final float MENU_SWIPE_ZONE_NEAR_DP = 40f;   // strip edge nearest to the bottom
     private static final float MENU_SWIPE_ZONE_FAR_DP = 168f;   // strip edge farthest from the bottom
     private static final float MENU_SWIPE_TRAVEL_DP = 96f;
     // Main components
@@ -77,7 +79,7 @@ public class SDLActivity extends Activity {
         System.loadLibrary("mikmod"); 
         System.loadLibrary("smpeg2"); 
         System.loadLibrary("SDL2_mixer"); 
-        System.loadLibrary("vile");   
+        System.loadLibrary("ikuradroid");   
         System.loadLibrary("sdl_main");
     }
     
@@ -340,10 +342,10 @@ public class SDLActivity extends Activity {
     //    clean DOWN+UP pair once the finger lifts (forwardTapToEngine),
     //    so clicks in that part of the game keep working;
     //  * everything below the strip - the gesture-navigation zone of the
-    //    system - stays entirely with the system: the strip ends 96 dp
-    //    above the bottom edge, so opening the menu never fights the nav
-    //    gesture, and the notification shade at the top stays untouched
-    //    as well.
+    //    system - stays entirely with the system: the strip ends 40 dp
+    //    above the bottom edge (the nav pill zone is ~24 dp), so opening
+    //    the menu never fights the nav gesture, and the notification
+    //    shade at the top stays untouched as well.
     // ------------------------------------------------------------------
 
     private float menuDp(float value) {
@@ -366,7 +368,7 @@ public class SDLActivity extends Activity {
         // whether the swipe strip claims them.
         if (action == MotionEvent.ACTION_DOWN
                 || action == MotionEvent.ACTION_UP) {
-            Log.i("vile", "dispatchTouch: action=" + action
+            Log.i("ikuradroid", "dispatchTouch: action=" + action
                     + " x=" + (int) ev.getX() + " y=" + (int) ev.getY()
                     + " tracking=" + mSwipeTracking);
         }
@@ -391,7 +393,7 @@ public class SDLActivity extends Activity {
                         float dx = ev.getX() - mSwipeStartX;
                         float dy = ev.getY() - mSwipeStartY; // negative = moving up
                         if (-dy >= menuDp(MENU_SWIPE_TRAVEL_DP)
-                                && Math.abs(dy) > 2f * Math.abs(dx)) {
+                                && Math.abs(dy) > 1.5f * Math.abs(dx)) {
                             mSwipeConsumed = true;
                             showGameMenu();
                         }
@@ -786,7 +788,7 @@ class SDLMain implements Runnable {
     @Override
     public void run() {
         // Runs SDL_main()
-           Log.i("vile", "nativeInit in " +SDLActivity.gCurrentDirectoryPath);
+           Log.i("ikuradroid", "nativeInit in " +SDLActivity.gCurrentDirectoryPath);
         SDLActivity.nativeInit(SDLActivity.gCurrentDirectoryPath,SDLActivity.gCurrentSavePath);
      
         //Log.v("SDL", "SDL thread terminated");
@@ -1020,7 +1022,7 @@ class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
             case MotionEvent.ACTION_DOWN:
                 // Diagnostics: proves the tap reached SDLSurface and was
                 // forwarded into the native SDL queue.
-                Log.i("vile", "SDLSurface touch: action=" + action
+                Log.i("ikuradroid", "SDLSurface touch: action=" + action
                         + " x=" + (event.getX(0) / mWidth)
                         + " y=" + (event.getY(0) / mHeight));
                 // Primary pointer up/down, the index is always zero
