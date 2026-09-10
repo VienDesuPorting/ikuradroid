@@ -615,20 +615,17 @@ int main(int argc,char **argv){
 
 			game->Error(title,text);
 		}
-		else if(!EDL_ReadableFile(Cfg::Path::resource)){
-			// Could not load internal resources
-			uString title="No valid game resources";
-			uString text;
-			text+="ViLE needs some common resources in order to display ";
-			text+="internal graphics. Please place vilevn.pck in the working ";
-			text+="directory, or specify an archive from the commandline ";
-			text+="\r\n";
-			text+="\r\n";
-			text+="Current resource file:\r\n    ";
-			text+=Cfg::Path::resource;
-			game->Error(title,text);
-		}
 		else{
+			if(EDL_ReadableFile(Cfg::Path::resource)){
+				// An external vilevn.pck still overrides the embedded copy
+				LogVerbose("Widget graphics: %s",Cfg::Path::resource.c_str());
+			}
+			else{
+				// Widget graphics ship inside the binary; games no longer
+				// need to carry a vilevn.pck in their folder
+				LogVerbose("No vilevn.pck - using the embedded widget "
+						"graphics pack");
+			}
 			// Autodetect size if with or height is invalid
 			if(!Cfg::Display::Width || !Cfg::Display::Height){
 				Cfg::Display::Width=engine->NativeWidth();
