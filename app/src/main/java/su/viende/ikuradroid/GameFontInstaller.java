@@ -34,7 +34,7 @@ public final class GameFontInstaller {
      * engine falls back to its own error path (no text, as before).
      *
      * @param gameDirPath absolute path of the game folder (must contain the
-     *                    game files; vilevn.pck lives here too)
+     *                    game files)
      */
     public static void ensureFont(Context context, String gameDirPath) {
         if (context == null || gameDirPath == null || gameDirPath.length() == 0)

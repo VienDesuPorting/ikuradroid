@@ -14,6 +14,7 @@
  */
 
 #include "media.h"
+#include "vilepack.h"
 
 Resources *Media::resman=0;
 
@@ -36,7 +37,14 @@ void Media::Close(){
 RWops *Media::GetResource(uString Name){
 	if(!resman){
 		resman=new Resources();
-		resman->AddResource(new ArchiveViLE(Cfg::Path::resource));
+		if(EDL_ReadableFile(Cfg::Path::resource)){
+			resman->AddResource(new ArchiveViLE(Cfg::Path::resource));
+		}
+		else{
+			// Widget graphics ship inside the binary; games no longer
+			// need to carry an external vilevn.pck
+			resman->AddResource(new ArchiveViLE(VILE_PACK_DATA,VILE_PACK_SIZE));
+		}
 	}
 	return resman->GetResource(Name);
 }
@@ -48,7 +56,14 @@ RWops *Media::GetResource(uString Name){
 SDL_Surface *Media::GetImage(uString Name){
 	if(!resman){
 		resman=new Resources();
-		resman->AddResource(new ArchiveViLE(Cfg::Path::resource));
+		if(EDL_ReadableFile(Cfg::Path::resource)){
+			resman->AddResource(new ArchiveViLE(Cfg::Path::resource));
+		}
+		else{
+			// Widget graphics ship inside the binary; games no longer
+			// need to carry an external vilevn.pck
+			resman->AddResource(new ArchiveViLE(VILE_PACK_DATA,VILE_PACK_SIZE));
+		}
 	}
 	return resman->GetImage(Name);
 }
@@ -60,7 +75,14 @@ SDL_Surface *Media::GetImage(uString Name){
 SDL_Surface **Media::GetAnimation(uString Name){
 	if(!resman){
 		resman=new Resources();
-		resman->AddResource(new ArchiveViLE(Cfg::Path::resource));
+		if(EDL_ReadableFile(Cfg::Path::resource)){
+			resman->AddResource(new ArchiveViLE(Cfg::Path::resource));
+		}
+		else{
+			// Widget graphics ship inside the binary; games no longer
+			// need to carry an external vilevn.pck
+			resman->AddResource(new ArchiveViLE(VILE_PACK_DATA,VILE_PACK_SIZE));
+		}
 	}
 	return resman->GetAnimation(Name);
 }

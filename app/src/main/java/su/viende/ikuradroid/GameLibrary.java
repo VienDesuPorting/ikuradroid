@@ -34,8 +34,6 @@ import java.util.Set;
  */
 public final class GameLibrary {
 
-    public static final String PCK_MARKER = "vilevn.pck";
-
     // Engine signatures mirrored from the native probes (ViLE::Probe* in
     // jni/vile/vile.cpp): a folder counts as a game when it contains all
     // files of one row. Names are compared case-insensitively - game data
@@ -43,8 +41,9 @@ public final class GameLibrary {
     // family shares one signature; the exact title is picked natively by
     // archive size.
     private static final String[][] GAME_SIGNATURES = {
-            {PCK_MARKER},                           // Ikura GDL (all titles)
-            {"rio.arc", "chip.arc"},                // Will: Critical Point, Princess Waltz, Starry Sky, Yume Miru Kusuri
+            {"ggd", "isf"},                         // Ikura GDL (classic data set)
+            {"drssnr", "drsgrp"},                   // Ikura GDL (DRS data set)
+            {"rio.arc", "chip.arc"},                // Will: Critical Point, Princess Waltz, Starry Sky, Yume Miru Kusuri, Little My Maid
             {"scene00.bdt", "indexw.dat"},          // Crowd: Tokimeki Check-in!
             {"scene00.bdt", "index.dat"},           // Crowd: XChange 1
             {"xc3.sce"},                            // Crowd: XChange 3
