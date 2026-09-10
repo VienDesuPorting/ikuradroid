@@ -9,6 +9,11 @@
 class ArchiveViLE : public ArchiveBase {
 	public:
 		ArchiveViLE(uString Path);
+		ArchiveViLE(const unsigned char *Data,int Size);
+		virtual RWops *GetResource(uString Name);
+	private:
+		void IndexPack(const unsigned char *Data,int Size);
+		const unsigned char *memdata;
 };
 
 #endif
