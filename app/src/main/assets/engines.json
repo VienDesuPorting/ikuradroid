@@ -18,12 +18,13 @@
     },
     {
       "name": "Will",
-      "tested": false,
+      "tested": true,
       "titles": [
-        { "name": "Critical Point", "tested": false },
+        { "name": "Critical Point", "tested": true },
         { "name": "Princess Waltz", "tested": false },
         { "name": "Starry Sky", "tested": false },
-        { "name": "Yume Miru Kusuri", "tested": false }
+        { "name": "Yume Miru Kusuri", "tested": false },
+        { "name": "Little My Maid", "tested": true }
       ]
     },
     {
