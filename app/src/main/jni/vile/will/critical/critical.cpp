@@ -21,6 +21,10 @@ CriticalPoint::CriticalPoint(uString Path) : EngineWill(640,480) {
 	// ("4A 1A 00", "21 01 <bgm>", "25 <u32> <se>", "8A 01 00")
 	script_v2=true;
 
+	// CP event graphics (EV###.WIP) are two-layer WIPFs: frame 0 is
+	// a black chroma base, frame 1 the actual scene at its own hint
+	compose_background=true;
+
 	// Add resources
 	AddBGM(new ArchiveWillARC(Path+"Bgm.arc"));
 	AddVoices(new ArchiveWillARC(Path+"Voice.arc"));
@@ -53,6 +57,29 @@ const uString CriticalPoint::NativeID(){
 
 const uString CriticalPoint::NativeName(){
 	return "Critical Point";
+}
+
+/*! PC choice layout, pixel-measured against the PC original: the
+ *  captions print inside the dialog chrome, centered on the text
+ *  area (x=40..570), 24px apart starting at y=28, plain white
+ *  without backing plates. Touch handling follows the LMM scheme:
+ *  the selection owns the chrome rectangle, missed presses are
+ *  swallowed and every row doubles as a full-width hit area so
+ *  there are no dead gaps between items
+ */
+void CriticalPoint::LayoutTextSelection(Stringlist *items){
+	selection->SetFontSize(Cfg::Font::default_size);
+	selection->SetAlignment(HA_CENTER,VA_CENTER);
+	selection->SetColors(0x58585880,0xFFFFFFFF,0x00000000,0xFFFFFFFF);
+	selection->SetBackgroundFill(false);
+	selection->Move(0,0);
+	selection->Resize(616,152);
+	selection->SetSwallowMisses(true);
+	uString text;
+	for(int i=0;items->GetString(i,&text);i++){
+		SDL_Rect area={40,28+i*24,530,24};
+		selection->SetText(text,area,i);
+	}
 }
 
 

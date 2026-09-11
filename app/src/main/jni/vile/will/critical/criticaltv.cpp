@@ -37,18 +37,18 @@ CriticalTextview::CriticalTextview(CriticalPoint *Engine) : Textview(Engine) {
 
 
 				if(i==CRITICALTV_BACKGROUND){
-					// PC reference geometry: the dialog docks right
-					// below the top screen bar (game y=20), it does
-					// NOT sit at the bottom like most VNs. Trust the
-					// WIPF frame position when it lands in the
-					// plausible top strip; fall back to the measured
-					// PC geometry otherwise (frame y=0 would cover
-					// the CRITICAL POINT bar)
+					// PC reference geometry, pixel-fitted against the
+					// PC screenshot (diff 4.1 at (0,0) vs 12.9/17.5 at
+					// the older guesses): the chrome docks at (0,0) and
+					// spans the top 616x152 pixels. Its header window
+					// is translucent on purpose - full screen
+					// backgrounds show through it - so the WIPF frame
+					// hint is trusted verbatim
 					int boxx=(rect.x>=0 && rect.x<100)?rect.x:0;
-					int boxy=(rect.y>0 && rect.y<100)?rect.y:20;
-					int textx=12;
-					int texty=14;
-					int textw=(rect.w>24 && rect.w-24<590)?rect.w-24:590;
+					int boxy=(rect.y>=0 && rect.y<100)?rect.y:0;
+					int textx=40;	// measured left text edge
+					int texty=34;	// measured top of line 1
+					int textw=562;	// right edge 602 as before
 					int texth=112;
 					SetTextPosition(textx,texty,textw,texth);
 					MoveDialog(boxx,boxy);

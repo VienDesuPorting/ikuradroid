@@ -20,6 +20,9 @@ LittleMyMaid::LittleMyMaid(uString Path) : EngineWill(640,480) {
 	// LMM scripts use the CP-era grammar: short argument blocks for
 	// OP4A/OP21/OP22/OP25/OP26/OP0B/OP23 plus the LMM trap lengths
 	script_v2=true;
+	// LMM-only trap: OP02 choice items carry a leading u16 parameter
+	// (byte-verified; CP items go straight to the caption)
+	choice_params=true;
 
 	// Add resources (ARC-8, same container family as Critical Point)
 	AddBGM(new ArchiveWillARC(Path+"Bgm.arc"));
