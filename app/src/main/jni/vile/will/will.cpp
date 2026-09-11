@@ -14,6 +14,7 @@
  */
 
 #include "will.h"
+#include "../res/converters/cwill.h"
 
 EngineWill::EngineWill(int Width,int Height) : EngineVN(Width,Height){
 	// Set defaults
@@ -40,6 +41,8 @@ EngineWill::EngineWill(int Width,int Height) : EngineVN(Width,Height){
 	ticks_stamp=SDL_GetTicks();
 	state=WILLSTATE_NORMAL;
 	script_v2=false;	// YumeMiru-era grammar; CriticalPoint enables the shorter CP blocks
+	choice_params=false;	// OP02 items: leading u16 parameter exists in LMM only
+	compose_background=false;	// layered WIPF backgrounds: Critical Point EV graphics only
 
 	// Load gui interface
 	int owidth=Width/3;
@@ -760,8 +763,9 @@ bool EngineWill::OP02(){
 	choicecount=0;
 	Stringlist items;
 	for(int i=0;i<n && script->index<script->length;i++){
-		if(script_v2){
-			// v2 items carry a leading u16 parameter
+		if(choice_params){
+			// LMM items carry a leading u16 parameter; the
+			// CP grammar goes straight to the caption
 			script->index+=2;
 		}
 
@@ -1253,6 +1257,54 @@ bool EngineWill::OP45(){
 	return false;
 }
 
+/*! \brief Loads a background, composing layered WIPF graphics
+ *
+ *  Critical Point stores its event scenes (EV###.WIP) as two-layer
+ *  WIPFs: frame 0 is a 640x480 black chroma base and frame 1 carries
+ *  the actual scene with its own position hint. CWill::wip() decodes
+ *  frame 0 only, which rendered every event scene as a black screen.
+ *  With compose_background set, the scene layer is blitted over the
+ *  base using the frame hints (pixel-verified against the PC
+ *  original). Single-frame resources and games without the flag are
+ *  unaffected.
+ */
+SDL_Surface *EngineWill::LoadComposedBackground(uString Name){
+	SDL_Surface *base=LoadImage(Name);
+	if(!base || !compose_background){
+		return base;
+	}
+
+	// Inspect the WIPF index: composition requires a second frame
+	// whose rectangle fits entirely inside the base frame
+	RWops *blob=LoadOther(Name,"wip");
+	if(blob){
+		Uint8 hdr[24];
+		blob->Seek(0,SEEK_SET);
+		if(blob->Read(hdr,8)==8 && hdr[0]=='W' && hdr[1]=='I' &&
+				hdr[2]=='P' && hdr[3]=='F'){
+			unsigned int count=hdr[4]|(hdr[5]<<8);
+			if(count>1 && blob->Seek(32,SEEK_SET)>=0 &&
+					blob->Read(hdr,24)==24){
+				int w=hdr[0]|(hdr[1]<<8)|(hdr[2]<<16)|(hdr[3]<<24);
+				int h=hdr[4]|(hdr[5]<<8)|(hdr[6]<<16)|(hdr[7]<<24);
+				int x=hdr[8]|(hdr[9]<<8)|(hdr[10]<<16)|(hdr[11]<<24);
+				int y=hdr[12]|(hdr[13]<<8)|(hdr[14]<<16)|(hdr[15]<<24);
+				if(w>0 && h>0 && x>=0 && y>=0 &&
+							x+w<=base->w && y+h<=base->h){
+					SDL_Surface *scene=CWill::wip(blob,1);
+					if(scene){
+						SDL_Rect r={x,y,scene->w,scene->h};
+						EDL_BlitSurface(scene,0,base,&r);
+						SDL_FreeSurface(scene);
+					}
+				}
+			}
+		}
+		delete blob;
+	}
+	return base;
+}
+
 /*! Load background
  */
 bool EngineWill::OP46(){
@@ -1265,7 +1317,7 @@ bool EngineWill::OP46(){
 		text+=script->buffer[script->index++];
 	}
 	script->index++;
-	SDL_Surface *image=LoadImage(text);
+	SDL_Surface *image=LoadComposedBackground(text);
 	LogVerbose("LoadImage%s",text.c_str());
 	if(image){
 		SDL_Rect r={x,y,image->w,image->h};

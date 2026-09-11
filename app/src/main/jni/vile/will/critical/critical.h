@@ -19,6 +19,7 @@ class CriticalPoint : public EngineWill {
 		// Overrides
 		virtual const uString NativeID();
 		virtual const uString NativeName();
+		virtual void LayoutTextSelection(Stringlist *items);
 };
 
 #endif

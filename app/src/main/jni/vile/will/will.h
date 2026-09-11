@@ -71,6 +71,17 @@ class EngineWill : public EngineVN {
 		//! (OP4A=3B, OP21=2B, OP25=5B, OP8A=3B); set by the game subclass
 		bool script_v2;
 
+		//! OP02 choice items carry a leading u16 parameter.
+		//! Byte-verified LMM-only trap (CP items go straight to
+		//! the caption); set by the game subclass
+		bool choice_params;
+
+		//! Multi-frame WIPF backgrounds are composed from their
+		//! layer frames (frame 0 chroma base + frame 1 scene).
+		//! Critical Point stores its event graphics this way;
+		//! set by the game subclass
+		bool compose_background;
+
 	private:
 
 		// Opcode handlers
@@ -107,6 +118,7 @@ class EngineWill : public EngineVN {
 		bool OP61();				//!< Play video
 		bool OPB6();				//!< Text ..
 		bool OPFF();				//!< EOF
+		SDL_Surface *LoadComposedBackground(uString Name);//!< Background load, layered WIPF frames composed
 		bool OP46();				//!< Set background image
 		bool OP47();				//!< Set background color
 		bool OP48();				//!< Display character image
