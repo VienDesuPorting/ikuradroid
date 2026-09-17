@@ -61,7 +61,9 @@ const uString CriticalPoint::NativeName(){
 
 /*! PC choice layout, pixel-measured against the PC original (hover
  *  screenshot registered against the calm one): rows are the
- *  590x24 strips at (15,30+i*24) and captions print centered in
+ *  590-wide strips at (15,30+i*32) - the PC packs them 24 px
+ *  tall, the Android build spaces them to 32 px so a thumb can
+ *  hit a row reliably - and captions print centered in
  *  them, plain white without backing plates. Hovered rows are
  *  highlighted exactly as the PC original does: the strip is
  *  RGB-inverted, so the dark chrome turns into a light bar and
@@ -77,11 +79,16 @@ void CriticalPoint::LayoutTextSelection(Stringlist *items){
 	selection->SetHoverInvert(true);
 	selection->SetBackgroundFill(false);
 	selection->Move(0,0);
-	selection->Resize(616,152);
+	// Touch layout: the strips keep the PC width and left
+	// offset, but rows are 32 px tall and packed 32 px apart
+	// instead of the PC's 24 - a thumb needs a bigger target
+	// than a mouse cursor. The widget grows with the row count,
+	// so the centered block stays balanced for any choice count.
+	selection->Resize(616,30+items->GetCount()*32+2);
 	selection->SetSwallowMisses(true);
 	uString text;
 	for(int i=0;items->GetString(i,&text);i++){
-		SDL_Rect area={15,30+i*24,590,24};
+		SDL_Rect area={15,30+i*32,590,32};
 		selection->SetText(text,area,i);
 	}
 }
