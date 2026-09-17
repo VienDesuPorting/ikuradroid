@@ -200,6 +200,7 @@ bool StdSave::FocusLeave(Widget *Object){
 }
 
 bool StdSave::InputOk(Widget *Object){
+	LOGCAT("vile input: StdSave InputOk object=%p exit=%p",(void*)Object,(void*)w_exit);
 	bool retval=false;
 	if(Object==w_exit){
 		// Close dialog
