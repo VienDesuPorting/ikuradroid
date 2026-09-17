@@ -3,7 +3,8 @@
 #
 # Original legacy build: 2015-2016, gnustl_static / armeabi-v7a
 #
-SDL_JAVA_PACKAGE_PATH := su_viende_ikuradroid
-SDL_TRACKBALL_KEYUP_DELAY := 1
+# SDL_JAVA_PACKAGE_PATH / SDL_TRACKBALL_KEYUP_DELAY were 2.0.3-era
+# build knobs of the embedded SDL; SDL 2.30.x resolves the Java glue
+# classes (org/libsdl/app/*) internally and needs neither.
 
 include $(call all-subdir-makefiles)

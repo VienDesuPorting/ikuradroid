@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2014 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,93 +20,67 @@
 */
 #include "../../SDL_internal.h"
 
-#if SDL_VIDEO_DRIVER_ANDROID
+#ifdef SDL_VIDEO_DRIVER_ANDROID
 
 #include <android/log.h>
 
+#include "SDL_hints.h"
 #include "SDL_events.h"
+#include "SDL_androidtouch.h"
 #include "../../events/SDL_mouse_c.h"
 #include "../../events/SDL_touch_c.h"
-#include "SDL_log.h"
-
-#include "SDL_androidtouch.h"
-
 #include "../../core/android/SDL_android.h"
 
 #define ACTION_DOWN 0
-#define ACTION_UP 1
+#define ACTION_UP   1
 #define ACTION_MOVE 2
-#define ACTION_CANCEL 3
-#define ACTION_OUTSIDE 4
+/* #define ACTION_CANCEL 3 */
+/* #define ACTION_OUTSIDE 4 */
 #define ACTION_POINTER_DOWN 5
-#define ACTION_POINTER_UP 6
+#define ACTION_POINTER_UP   6
 
 void Android_InitTouch(void)
 {
-    int i;
-    int* ids;
-    int number = Android_JNI_GetTouchDeviceIds(&ids);
-    if (0 < number) {
-        for (i = 0; i < number; ++i) {
-            SDL_AddTouch((SDL_TouchID) ids[i], ""); /* no error handling */
-        }
-        SDL_free(ids);
-    }
+    /* Add all touch devices */
+    Android_JNI_InitTouch();
 }
 
-void Android_OnTouch(int touch_device_id_in, int pointer_finger_id_in, int action, float x, float y, float p)
+void Android_QuitTouch(void)
+{
+}
+
+void Android_OnTouch(SDL_Window *window, int touch_device_id_in, int pointer_finger_id_in, int action, float x, float y, float p)
 {
     SDL_TouchID touchDeviceId = 0;
     SDL_FingerID fingerId = 0;
 
-    if (!Android_Window) {
+    if (!window) {
         return;
     }
 
     touchDeviceId = (SDL_TouchID)touch_device_id_in;
-    if (SDL_AddTouch(touchDeviceId, "") < 0) {
+    if (SDL_AddTouch(touchDeviceId, SDL_TOUCH_DEVICE_DIRECT, "") < 0) {
         SDL_Log("error: can't add touch %s, %d", __FILE__, __LINE__);
     }
 
     fingerId = (SDL_FingerID)pointer_finger_id_in;
-    if (action == ACTION_DOWN || action == ACTION_UP) {
-        /* Diagnostics: proves touches reach the native SDL layer */
-        SDL_Log("Android touch: action=%d x=%.3f y=%.3f",
-                action, x, y);
-    }
     switch (action) {
-        case ACTION_DOWN:
-            /* Primary pointer down */
-            /* SDL 2.0.3 used to synthesise mouse events here
-             * (SDL_SendMouseMotion + SDL_SendMouseButton). The
-             * synthesised stream never reached the Vile host loop on
-             * some devices, which left every Will GUI dead on touch.
-             * The host now consumes finger events directly, so touch
-             * stays touch and mouse stays mouse. */
-            SDL_SendTouch(touchDeviceId, fingerId, SDL_TRUE, x, y, p);
-            break;
+    case ACTION_DOWN:
+    case ACTION_POINTER_DOWN:
+        SDL_SendTouch(touchDeviceId, fingerId, window, SDL_TRUE, x, y, p);
+        break;
 
-        case ACTION_POINTER_DOWN:
-            /* Non primary pointer down */
-            SDL_SendTouch(touchDeviceId, fingerId, SDL_TRUE, x, y, p);
-            break;
-            
-        case ACTION_MOVE:
-            SDL_SendTouchMotion(touchDeviceId, fingerId, x, y, p);
-            break;
-            
-        case ACTION_UP:
-            /* Primary pointer up */
-            SDL_SendTouch(touchDeviceId, fingerId, SDL_FALSE, x, y, p);
-            break;
+    case ACTION_MOVE:
+        SDL_SendTouchMotion(touchDeviceId, fingerId, window, x, y, p);
+        break;
 
-        case ACTION_POINTER_UP:
-            /* Non primary pointer up */
-            SDL_SendTouch(touchDeviceId, fingerId, SDL_FALSE, x, y, p);
-            break;
-            
-        default:
-            break;
+    case ACTION_UP:
+    case ACTION_POINTER_UP:
+        SDL_SendTouch(touchDeviceId, fingerId, window, SDL_FALSE, x, y, p);
+        break;
+
+    default:
+        break;
     }
 }
 

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2014 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,15 +20,15 @@
 */
 #include "../../SDL_internal.h"
 
-/* TODO, WinRT: include copyright info in SDL_winrtpaths.cpp
-   TODO, WinRT: remove the need to compile this with C++/CX (/ZW) extensions, and if possible, without C++ at all
-*/
+/* TODO, WinRT: remove the need to compile this with C++/CX (/ZW) extensions, and if possible, without C++ at all
+ */
 
 #ifdef __WINRT__
 
 extern "C" {
 #include "SDL_filesystem.h"
 #include "SDL_error.h"
+#include "SDL_hints.h"
 #include "SDL_stdinc.h"
 #include "SDL_system.h"
 #include "../../core/windows/SDL_windows.h"
@@ -44,46 +44,55 @@ extern "C" const wchar_t *
 SDL_WinRTGetFSPathUNICODE(SDL_WinRT_Path pathType)
 {
     switch (pathType) {
-        case SDL_WINRT_PATH_INSTALLED_LOCATION:
-        {
-            static wstring path;
-            if (path.empty()) {
+    case SDL_WINRT_PATH_INSTALLED_LOCATION:
+    {
+        static wstring path;
+        if (path.empty()) {
+#if defined(NTDDI_WIN10_19H1) && (NTDDI_VERSION >= NTDDI_WIN10_19H1) && (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP) /* Only PC supports mods */
+            /* Windows 1903 supports mods, via the EffectiveLocation API */
+            if (Windows::Foundation::Metadata::ApiInformation::IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8, 0)) {
+                path = Windows::ApplicationModel::Package::Current->EffectiveLocation->Path->Data();
+            } else {
                 path = Windows::ApplicationModel::Package::Current->InstalledLocation->Path->Data();
             }
-            return path.c_str();
+#else
+            path = Windows::ApplicationModel::Package::Current->InstalledLocation->Path->Data();
+#endif
         }
+        return path.c_str();
+    }
 
-        case SDL_WINRT_PATH_LOCAL_FOLDER:
-        {
-            static wstring path;
-            if (path.empty()) {
-                path = ApplicationData::Current->LocalFolder->Path->Data();
-            }
-            return path.c_str();
+    case SDL_WINRT_PATH_LOCAL_FOLDER:
+    {
+        static wstring path;
+        if (path.empty()) {
+            path = ApplicationData::Current->LocalFolder->Path->Data();
         }
+        return path.c_str();
+    }
 
-#if WINAPI_FAMILY != WINAPI_FAMILY_PHONE_APP
-        case SDL_WINRT_PATH_ROAMING_FOLDER:
-        {
-            static wstring path;
-            if (path.empty()) {
-                path = ApplicationData::Current->RoamingFolder->Path->Data();
-            }
-            return path.c_str();
+#if !SDL_WINAPI_FAMILY_PHONE || (NTDDI_VERSION > NTDDI_WIN8)
+    case SDL_WINRT_PATH_ROAMING_FOLDER:
+    {
+        static wstring path;
+        if (path.empty()) {
+            path = ApplicationData::Current->RoamingFolder->Path->Data();
         }
+        return path.c_str();
+    }
 
-        case SDL_WINRT_PATH_TEMP_FOLDER:
-        {
-            static wstring path;
-            if (path.empty()) {
-                path = ApplicationData::Current->TemporaryFolder->Path->Data();
-            }
-            return path.c_str();
+    case SDL_WINRT_PATH_TEMP_FOLDER:
+    {
+        static wstring path;
+        if (path.empty()) {
+            path = ApplicationData::Current->TemporaryFolder->Path->Data();
         }
+        return path.c_str();
+    }
 #endif
 
-        default:
-            break;
+    default:
+        break;
     }
 
     SDL_Unsupported();
@@ -101,12 +110,12 @@ SDL_WinRTGetFSPathUTF8(SDL_WinRT_Path pathType)
         return searchResult->second.c_str();
     }
 
-    const wchar_t * ucs2Path = SDL_WinRTGetFSPathUNICODE(pathType);
+    const wchar_t *ucs2Path = SDL_WinRTGetFSPathUNICODE(pathType);
     if (!ucs2Path) {
         return NULL;
     }
 
-    char * utf8Path = WIN_StringToUTF8(ucs2Path);
+    char *utf8Path = WIN_StringToUTF8(ucs2Path);
     utf8Paths[pathType] = utf8Path;
     SDL_free(utf8Path);
     return utf8Paths[pathType].c_str();
@@ -115,9 +124,9 @@ SDL_WinRTGetFSPathUTF8(SDL_WinRT_Path pathType)
 extern "C" char *
 SDL_GetBasePath(void)
 {
-    const char * srcPath = SDL_WinRTGetFSPathUTF8(SDL_WINRT_PATH_INSTALLED_LOCATION);
+    const char *srcPath = SDL_WinRTGetFSPathUTF8(SDL_WINRT_PATH_INSTALLED_LOCATION);
     size_t destPathLen;
-    char * destPath = NULL;
+    char *destPath = NULL;
 
     if (!srcPath) {
         SDL_SetError("Couldn't locate our basepath: %s", SDL_GetError());
@@ -125,7 +134,7 @@ SDL_GetBasePath(void)
     }
 
     destPathLen = SDL_strlen(srcPath) + 2;
-    destPath = (char *) SDL_malloc(destPathLen);
+    destPath = (char *)SDL_malloc(destPathLen);
     if (!destPath) {
         SDL_OutOfMemory();
         return NULL;
@@ -144,31 +153,90 @@ SDL_GetPrefPath(const char *org, const char *app)
      * without violating Microsoft's app-store requirements.
      */
 
-#if WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
-    /* A 'Roaming' folder is not available in Windows Phone 8, however a 'Local' folder is. */
-    const char * srcPath = SDL_WinRTGetFSPathUTF8(SDL_WINRT_PATH_LOCAL_FOLDER);
-#else
-    /* A 'Roaming' folder is available on Windows 8 and 8.1.  Use that. */
-    const char * srcPath = SDL_WinRTGetFSPathUTF8(SDL_WINRT_PATH_ROAMING_FOLDER);
-#endif
+    const WCHAR *srcPath = NULL;
+    WCHAR path[MAX_PATH];
+    char *retval = NULL;
+    WCHAR *worg = NULL;
+    WCHAR *wapp = NULL;
+    size_t new_wpath_len = 0;
+    BOOL api_result = FALSE;
 
-    size_t destPathLen;
-    char * destPath = NULL;
+    if (!app) {
+        SDL_InvalidParamError("app");
+        return NULL;
+    }
+    if (!org) {
+        org = "";
+    }
 
+    srcPath = SDL_WinRTGetFSPathUNICODE(SDL_WINRT_PATH_LOCAL_FOLDER);
     if (!srcPath) {
-        SDL_SetError("Couldn't locate our basepath: %s", SDL_GetError());
+        SDL_SetError("Unable to find a source path");
         return NULL;
     }
 
-    destPathLen = SDL_strlen(srcPath) + SDL_strlen(org) + SDL_strlen(app) + 4;
-    destPath = (char *) SDL_malloc(destPathLen);
-    if (!destPath) {
+    if (SDL_wcslen(srcPath) >= MAX_PATH) {
+        SDL_SetError("Path too long.");
+        return NULL;
+    }
+    SDL_wcslcpy(path, srcPath, SDL_arraysize(path));
+
+    worg = WIN_UTF8ToString(org);
+    if (!worg) {
         SDL_OutOfMemory();
         return NULL;
     }
 
-    SDL_snprintf(destPath, destPathLen, "%s\\%s\\%s\\", srcPath, org, app);
-    return destPath;
+    wapp = WIN_UTF8ToString(app);
+    if (!wapp) {
+        SDL_free(worg);
+        SDL_OutOfMemory();
+        return NULL;
+    }
+
+    new_wpath_len = SDL_wcslen(worg) + SDL_wcslen(wapp) + SDL_wcslen(path) + 3;
+
+    if ((new_wpath_len + 1) > MAX_PATH) {
+        SDL_free(worg);
+        SDL_free(wapp);
+        SDL_SetError("Path too long.");
+        return NULL;
+    }
+
+    if (*worg) {
+        SDL_wcslcat(path, L"\\", new_wpath_len + 1);
+        SDL_wcslcat(path, worg, new_wpath_len + 1);
+        SDL_free(worg);
+    }
+
+    api_result = CreateDirectoryW(path, NULL);
+    if (api_result == FALSE) {
+        if (GetLastError() != ERROR_ALREADY_EXISTS) {
+            SDL_free(wapp);
+            WIN_SetError("Couldn't create a prefpath.");
+            return NULL;
+        }
+    }
+
+    SDL_wcslcat(path, L"\\", new_wpath_len + 1);
+    SDL_wcslcat(path, wapp, new_wpath_len + 1);
+    SDL_free(wapp);
+
+    api_result = CreateDirectoryW(path, NULL);
+    if (api_result == FALSE) {
+        if (GetLastError() != ERROR_ALREADY_EXISTS) {
+            WIN_SetError("Couldn't create a prefpath.");
+            return NULL;
+        }
+    }
+
+    SDL_wcslcat(path, L"\\", new_wpath_len + 1);
+
+    retval = WIN_StringToUTF8(path);
+
+    return retval;
 }
 
 #endif /* __WINRT__ */
+
+/* vi: set ts=4 sw=4 expandtab: */

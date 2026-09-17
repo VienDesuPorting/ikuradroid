@@ -16,6 +16,14 @@
 
 class Cfg {
 	public:
+		/* Restores the pristine defaults of every static field
+		 * below. The engine process now survives a game exit
+		 * (the activity stack stays alive), so a second launch
+		 * runs main() again in the very same process - without
+		 * this reset it would inherit the display size, paths
+		 * and other values the previous session had written. */
+		static void Reset();
+
 		// Settings for the physical display
 		class Display {
 			public:
