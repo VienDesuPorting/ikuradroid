@@ -1099,7 +1099,19 @@ void ViLE::RunEngine(EngineVN *engine){
 				engine->EventHostKeyUp(event.key.keysym.sym);
 			}
 			else if(event.type==SDL_QUIT){
-				if(engine->GetShutdown()){
+#ifdef __ANDROID__
+				// Android has no window close button: a QUIT is
+				// always the app UI (the M3 menu quit) or the
+				// system asking for a straight exit, so take it
+				// without the desktop-style "Exit game?" prompt.
+				// The prompt still exists for the games' own menu
+				// exits: StdHalt confirms first, then pushes this
+				// very QUIT with the shutdown flag already set.
+				bool exit_confirmed=true;
+#else
+				bool exit_confirmed=engine->GetShutdown();
+#endif
+				if(exit_confirmed){
 					// Shut down engine and break out of loop
 					engine->EventSaveSystem();
 					delete engine;

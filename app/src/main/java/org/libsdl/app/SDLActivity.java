@@ -468,7 +468,12 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         setContentView(mLayout);
 
-        setWindowStyle(false);
+        // IkuraDroid: the game runs immersive - hide the status
+        // and navigation bars. The old 2.0.3 glue got this for
+        // free from the theme's windowFullscreen; the stock glue
+        // explicitly requests a visible system UI here, which
+        // overrides the theme.
+        setWindowStyle(true);
 
         getWindow().getDecorView().setOnSystemUiVisibilityChangeListener(this);
 
@@ -563,7 +568,16 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
      * Will-family titles whose shutdown dialog is unreliable.
      */
     private void quitGame() {
-        finish();
+        // Ask the running engine to exit instead of finish()ing
+        // from here. The SDL thread is alive while the menu
+        // shows, so the QUIT lands in a running pump: the engine
+        // saves and main() returns, and SDLMain then finishes the
+        // activity through the normal path. finish() from here
+        // would run the pause sequence first, and onDestroy would
+        // then join a thread that is asleep on the resume
+        // semaphore - the UI thread hangs and the library screen
+        // comes up deaf to touches.
+        nativeSendQuit();
     }
 
     private void addMenuRow(final BottomSheetDialog sheet, LinearLayout items,
@@ -808,6 +822,12 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         mHasFocus = hasFocus;
         if (hasFocus) {
+           // IkuraDroid: reapply the immersive style on every
+           // focus gain - recents, home and dialogs strip the
+           // system UI flags, and the stock glue only set them
+           // once at startup.
+           setWindowStyle(true);
+
            mNextNativeState = NativeState.RESUMED;
            SDLActivity.getMotionListener().reclaimRelativeMouseModeIfNeeded();
 
@@ -879,6 +899,14 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
             // Send Quit event to "SDLThread" thread
             SDLActivity.nativeSendQuit();
+
+            // A paused pump sleeps on Android_ResumeSem and never
+            // looks at the event queue, so a QUIT alone cannot
+            // wake it up. Signal the resume semaphore as well;
+            // the order is deliberate - QUIT goes first, so the
+            // wake path sees SDL_HasEvent(SDL_QUIT) and skips the
+            // EGL context restore against the dying surface.
+            SDLActivity.nativeResume();
 
             // Wait for "SDLThread" thread to end
             try {
