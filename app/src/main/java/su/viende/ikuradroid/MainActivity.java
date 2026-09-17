@@ -14,6 +14,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -342,9 +343,61 @@ public class MainActivity extends AppCompatActivity
                                 });
                 // Clip the row ripples to the rounded outline
                 content.setClipToOutline(true);
-                // Below the card, not above; the window manager clamps the
-                // popup inside the screen when the tile sits on the last row
-                popup.showAsDropDown(anchor, 0, 0);
+
+                // Anchor the panel to the tile, never to the screen edge.
+                // showAsDropDown lets the window manager clamp the popup
+                // into the (edge-to-edge) display frame, which parks it on
+                // the navbar whenever the tile sits on the last grid row.
+                // The placement is computed against the safe area instead:
+                // right below the card when it fits there, otherwise
+                // flipped above the card - attached to the tile either way.
+                content.measure(View.MeasureSpec.UNSPECIFIED,
+                                View.MeasureSpec.UNSPECIFIED);
+                final int popupWidth = content.getMeasuredWidth();
+                final int popupHeight = content.getMeasuredHeight();
+                final int[] anchorPos = new int[2];
+                anchor.getLocationOnScreen(anchorPos);
+                final int anchorLeft = anchorPos[0];
+                final int anchorTop = anchorPos[1];
+                final int anchorBottom = anchorPos[1] + anchor.getHeight();
+                // The root view is padded by the system-bar insets
+                // (applyInsets), so its padded bounds are the safe area:
+                // the panel must stay inside them, clear of the navbar.
+                final View root = findViewById(R.id.main_root);
+                int safeLeft = anchorLeft;
+                int safeTop = anchorTop;
+                int safeRight = anchorLeft + anchor.getWidth();
+                int safeBottom = anchorBottom;
+                if (root != null) {
+                        final int[] rootPos = new int[2];
+                        root.getLocationOnScreen(rootPos);
+                        safeLeft = rootPos[0];
+                        safeTop = rootPos[1];
+                        safeRight = rootPos[0] + root.getWidth();
+                        safeBottom = rootPos[1] + root.getHeight()
+                                        - root.getPaddingBottom();
+                }
+                int x = anchorLeft;
+                if (x + popupWidth > safeRight) {
+                        // Last column: keep the panel inside the safe frame
+                        x = safeRight - popupWidth;
+                }
+                if (x < safeLeft) {
+                        x = safeLeft;
+                }
+                int y;
+                if (anchorBottom + popupHeight <= safeBottom) {
+                        // The designed spot: right below the card
+                        y = anchorBottom;
+                } else {
+                        // No room under the tile (last row): flip above
+                        // the card, still attached to it
+                        y = anchorTop - popupHeight;
+                        if (y < safeTop) {
+                                y = safeTop;
+                        }
+                }
+                popup.showAtLocation(anchor, Gravity.NO_GRAVITY, x, y);
         }
 
         /** "Remove from list": files stay; re-adding the folder restores it. */

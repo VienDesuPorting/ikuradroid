@@ -65,3 +65,57 @@ Uint32 Cfg::Color::DialogTopic=0x000000FF;
 Uint32 Cfg::Color::WidgetBackground=0x00000000;
 Uint32 Cfg::Color::WidgetFont=0x404040FF;
 
+
+/* Re-asserts the very same values as the static initializers above.
+ * Keep the two blocks in sync: main() calls this before touching any
+ * configuration, so a second engine session inside the same process
+ * starts from the factory defaults instead of the leftovers of the
+ * previous run (autodetected resolution, font paths, ...). */
+void Cfg::Reset(){
+	// Preferred video settings
+	Cfg::Display::Width=640;
+	Cfg::Display::Height=480;
+	Cfg::Display::Depth=32;
+	Cfg::Display::Flags=0;
+
+	// Audio settings
+	Cfg::Audio::Frequency=44100;
+	Cfg::Audio::Buffersize=4096;
+	Cfg::Audio::Buffercount=6;
+	Cfg::Audio::Channels=2;
+	Cfg::Audio::CDROM=-1;
+	Cfg::Audio::Enabled=true;
+	Cfg::Audio::Soundfont="GeneralUser GS FluidSynth v1.43.sf2";
+
+	// Video configuration
+	Cfg::Video::Overlay=true;
+	Cfg::Video::Framecount=6;
+	Cfg::Video::Enabled=true;
+
+	// Default system settings
+	Cfg::System::Logfile="";
+	Cfg::System::Keyfile="";
+	Cfg::System::Logcolor=false;
+	Cfg::System::Verbose=true;
+	Cfg::System::Mainmenu=true;
+	Cfg::System::Framerate=25;
+
+	// Default paths (Defaults from build enviroment)
+	Cfg::Path::cwd=VILE_PATH_CWD;
+	Cfg::Path::game=VILE_PATH_GAME;
+	Cfg::Path::save=VILE_PATH_SAVE;
+	Cfg::Path::config=VILE_PATH_CFG;
+	Cfg::Path::resource=VILE_PATH_RES;
+
+	// Default font configuration
+	Cfg::Font::default_face="default.ttf";
+	Cfg::Font::default_size=18;
+	Cfg::Font::default_style=0;
+
+	// Default color scheme
+	Cfg::Color::DialogBackground=0xFFFFFFC0;
+	Cfg::Color::DialogHeader=0xA00000FF;
+	Cfg::Color::DialogTopic=0x000000FF;
+	Cfg::Color::WidgetBackground=0x00000000;
+	Cfg::Color::WidgetFont=0x404040FF;
+}

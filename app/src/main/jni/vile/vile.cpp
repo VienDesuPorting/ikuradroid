@@ -27,6 +27,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 int main(int argc,char **argv){
 
 
+	// The process survives a game exit on Android (the activity
+	// stack stays alive), so main() may run again in the same
+	// process: drop everything the previous session wrote into
+	// the static configuration before reading it.
+	Cfg::Reset();
+
 	// Preload game object and set default values
 	Uint32 systemflags=SDL_INIT_VIDEO|SDL_INIT_AUDIO;
 	ViLE *game=new ViLE();
