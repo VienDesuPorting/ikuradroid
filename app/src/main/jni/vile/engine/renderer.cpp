@@ -30,7 +30,23 @@ void Renderer::UpdateResolution()
 {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
     SDL_RenderSetLogicalSize(EDLRenderer, width, height);
+#ifndef __ANDROID__
+    // Desktop: shrink/grow the OS window to the game resolution.
+    //
+    // On Android this call must not run. The SDL 2.30 driver
+    // already forces the window to the full display surface at
+    // creation, and shrinking it to the game resolution makes SDL
+    // recompute the logical-size viewport as 1:1 (output size read
+    // back as the shrunken window->w/h while the real EGL surface
+    // stays screen-sized) - the game picture ends up parked in the
+    // bottom-left corner of the GL framebuffer (GL origin is
+    // bottom-left). The 2.0.3-era build got away with this call
+    // only because its Android window was permanently flagged
+    // fullscreen, which made SDL_SetWindowSize a no-op there.
+    // Scaling to the physical screen is done by
+    // SDL_RenderSetLogicalSize above (letterboxed, aspect kept).
     SDL_SetWindowSize(window, width, height);
+#endif
     printf( "game_width %d game_height %d\n", width, height );
 }
 
