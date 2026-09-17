@@ -86,20 +86,27 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     public static boolean skip;
 
     // The in-game menu lives in exactly one dialog instance; the
-    // bottom-up swipe gesture tracking state (see dispatchTouchEvent).
+    // full-screen swipe gesture tracking state (see dispatchTouchEvent).
     private BottomSheetDialog mGameMenuSheet;
-    private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted;
+    private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted, mSwipePassed;
     private float mSwipeStartX, mSwipeStartY;
-    // The gesture starts inside a strip just above the bottom edge and
-    // must travel at least MENU_SWIPE_TRAVEL_DP up. The strip reaches
-    // down to 40 dp above the edge - low enough for a natural "swipe up
-    // from the bottom" motion, yet clear of the ~24 dp pill zone the
-    // system reserves for gesture navigation. All in dp: sensorLandscape
-    // windows are short, so a fraction of the height would be either too
-    // small or unreachable.
-    private static final float MENU_SWIPE_ZONE_NEAR_DP = 40f;   // strip edge nearest to the bottom
-    private static final float MENU_SWIPE_ZONE_FAR_DP = 168f;   // strip edge farthest from the bottom
-    private static final float MENU_SWIPE_TRAVEL_DP = 96f;
+    // The menu swipe may start anywhere on the screen - not, as before,
+    // inside a narrow strip above the bottom edge. Only the system's own
+    // edge zones stay untouched: the bottom MENU_SWIPE_EDGE_DP belong to
+    // the gesture-nav pill, the top ones to the notification shade. The
+    // touch is captured at ACTION_DOWN (the engine must not see it: a
+    // background down advances the text, so a leaked swipe start would
+    // skip a line) and released as soon as the finger proves it is not a
+    // menu swipe: within MENU_SWIPE_SLOP_DP it is replayed as one clean
+    // tap once the finger lifts; past the slop in any non-upward
+    // direction the stream is handed back to the surface from the
+    // current position, so drag-hover keeps working. Only an upward run
+    // of at least MENU_SWIPE_TRAVEL_DP (and predominantly vertical)
+    // opens the menu. All in dp: sensorLandscape windows are short, so
+    // a fraction of the height would be either too small or unreachable.
+    private static final float MENU_SWIPE_EDGE_DP = 40f;    // nav pill / shade margins
+    private static final float MENU_SWIPE_TRAVEL_DP = 96f;  // confirmed swipe distance
+    private static final float MENU_SWIPE_SLOP_DP = 14f;    // tap-vs-drag decision
     // ------------------------------------------------------------------
 /*
     // Display InputType.SOURCE/CLASS of events and devices
@@ -652,19 +659,31 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         // Diagnostics: the Will engines used to receive no clicks at all
         // even though the view hierarchy consumed the events - this log
         // shows whether the activity dispatch layer sees the taps and
-        // whether the swipe strip claims them.
+        // whether the swipe tracker claims them.
         if (action == MotionEvent.ACTION_DOWN
                 || action == MotionEvent.ACTION_UP) {
             Log.i("ikuradroid", "dispatchTouch: action=" + action
                     + " x=" + (int) ev.getX() + " y=" + (int) ev.getY()
-                    + " tracking=" + mSwipeTracking);
+                    + " tracking=" + mSwipeTracking
+                    + " passed=" + mSwipePassed);
+        }
+
+        // A stream that was handed back mid-gesture keeps flowing through
+        // the normal view path until the finger lifts.
+        if (mSwipePassed) {
+            if (action == MotionEvent.ACTION_UP
+                    || action == MotionEvent.ACTION_CANCEL) {
+                mSwipePassed = false;
+            }
+            return super.dispatchTouchEvent(ev);
         }
 
         if (!mSwipeTracking) {
             if (action == MotionEvent.ACTION_DOWN) {
                 float fromBottom = contentBottom() - ev.getY();
-                if (fromBottom >= menuDp(MENU_SWIPE_ZONE_NEAR_DP)
-                        && fromBottom <= menuDp(MENU_SWIPE_ZONE_FAR_DP)) {
+                boolean nearEdge = fromBottom < menuDp(MENU_SWIPE_EDGE_DP)
+                        || ev.getY() < menuDp(MENU_SWIPE_EDGE_DP);
+                if (!nearEdge) {
                     mSwipeTracking = true;
                     mSwipeConsumed = false;
                     mSwipeAborted = false;
@@ -678,12 +697,25 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 case MotionEvent.ACTION_MOVE:
                     if (!mSwipeConsumed && !mSwipeAborted) {
                         float dx = ev.getX() - mSwipeStartX;
-                        float dy = ev.getY() - mSwipeStartY; // negative = moving up
-                        if (-dy >= menuDp(MENU_SWIPE_TRAVEL_DP)
-                                && Math.abs(dy) > 1.5f * Math.abs(dx)) {
+                        float dy = ev.getY() - mSwipeStartY; // negative = up
+                        float travel = (float) Math.sqrt(dx * dx + dy * dy);
+                        boolean upward = -dy > 0
+                                && Math.abs(dy) > 1.5f * Math.abs(dx);
+                        if (upward && -dy >= menuDp(MENU_SWIPE_TRAVEL_DP)) {
                             mSwipeConsumed = true;
                             showGameMenu();
+                        } else if (travel >= menuDp(MENU_SWIPE_SLOP_DP)
+                                && !upward) {
+                            // Proven not a menu swipe: replay the touch from
+                            // its current position and hand the rest of the
+                            // stream back, so drag-hover keeps working.
+                            mSwipeAborted = true;
+                            mSwipePassed = true;
+                            replayTouchToEngine(ev);
                         }
+                    }
+                    if (mSwipePassed) {
+                        return super.dispatchTouchEvent(ev);
                     }
                     return true;
 
@@ -698,7 +730,15 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                     mSwipeTracking = false;
                     if (action == MotionEvent.ACTION_UP
                             && !mSwipeConsumed && !mSwipeAborted) {
-                        forwardTapToEngine(ev);
+                        float dx = ev.getX() - mSwipeStartX;
+                        float dy = ev.getY() - mSwipeStartY;
+                        float travel = (float) Math.sqrt(dx * dx + dy * dy);
+                        if (travel < menuDp(MENU_SWIPE_SLOP_DP)) {
+                            forwardTapToEngine(ev);
+                        }
+                        // Short fizzled upward runs are dropped on purpose:
+                        // replaying them as taps would click wherever the
+                        // finger happened to start.
                     }
                     return true;
             }
@@ -708,7 +748,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         return super.dispatchTouchEvent(ev);
     }
 
-    /** Replays a captured top-strip tap as one clean engine click. */
+    /** Replays a captured tap as one clean engine click. */
     private void forwardTapToEngine(MotionEvent ev) {
         // SDLSurface.mWidth/mHeight are instance fields in the 2.30 glue
         if (mSurface == null || mSurface.mWidth <= 0f || mSurface.mHeight <= 0f) {
@@ -726,6 +766,30 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 MotionEvent.ACTION_DOWN, x, y, p);
         onNativeTouch(ev.getDeviceId(), ev.getPointerId(0),
                 MotionEvent.ACTION_UP, x, y, p);
+    }
+
+    /**
+     * Replays a captured stream as a live touch starting at the current
+     * position: used when a gesture that was held back turns out to be an
+     * ordinary drag rather than the menu swipe. Only the DOWN is injected
+     * here - the remaining MOVE/UP events of the same gesture flow through
+     * the normal view path (see the mSwipePassed branch above), so the
+     * engine sees one continuous, well-formed touch stream.
+     */
+    private void replayTouchToEngine(MotionEvent ev) {
+        if (mSurface == null || mSurface.mWidth <= 0f || mSurface.mHeight <= 0f) {
+            return;
+        }
+        // Parity with SDLSurface.onTouch: any game touch cancels auto-skip
+        if (skip) {
+            onNativeKeyUp(KeyEvent.KEYCODE_CTRL_LEFT);
+            skip = false;
+        }
+        float x = ev.getX() / mSurface.mWidth;
+        float y = ev.getY() / mSurface.mHeight;
+        float p = ev.getPressure();
+        onNativeTouch(ev.getDeviceId(), ev.getPointerId(0),
+                MotionEvent.ACTION_DOWN, x, y, p);
     }
 
     // Events

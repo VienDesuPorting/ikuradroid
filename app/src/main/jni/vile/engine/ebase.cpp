@@ -591,6 +591,7 @@ void EngineBase::EventHostMouseLeftDown(SDL_Surface *Screen,int X,int Y){
 	else{
 		// Pass event to widgets
 		Widget *wptr=GetWidgetAt(X,Y);
+		LOGCAT("vile input: left down (%d,%d) hit=%p",X,Y,(void*)wptr);
 		if(!wptr || !wptr->MouseLeftDown(X,Y)){
 			EventBackgroundMouseLeftDown(X,Y);
 		}
