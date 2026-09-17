@@ -3,7 +3,7 @@
 # bundled with the Android build, into a local prefix, for parity testing.
 #
 # Versions mirror app/src/main/jni/ of IkuraDroid:
-#   SDL2 2.0.3, SDL2_image 2.0.0, SDL2_ttf 2.0.14, SDL2_mixer 2.0.0,
+#   SDL2 2.30.12, SDL2_image 2.0.0, SDL2_ttf 2.0.14, SDL2_mixer 2.0.0,
 #   SDL2_gfx — taken from the bundled app/src/main/jni/sdl_gfx sources.
 #
 # This file is part of IkuraDroid.
@@ -44,24 +44,18 @@ fetch() { # fetch NAME URL EXPECTED_SIZE
     _have=$(stat -c%s "$_f" 2>/dev/null || echo 0)
     [ "$_have" = "$_s" ] && { echo ">> $_n already complete"; return 0; }
     echo ">> fetching $_n ($_have/$_s, try $_try)"
-    (cd "$SRC" && curl -sS -C - --max-time 240 -O "$_u") || true
+    (cd "$SRC" && curl -sSL -C - --max-time 240 -O "$_u") || true
     _try=$((_try+1))
   done
   _have=$(stat -c%s "$_f" 2>/dev/null || echo 0)
   [ "$_have" = "$_s" ] || { echo "ERROR: $_n incomplete ($_have/$_s)"; exit 1; }
 }
 
-# --- SDL2 2.0.3 -----------------------------------------------------------
-fetch SDL2-2.0.3.tar.gz https://www.libsdl.org/release/SDL2-2.0.3.tar.gz 3871267
-[ -d "$SRC/SDL2-2.0.3" ] || tar xzf "$SRC/SDL2-2.0.3.tar.gz" -C "$SRC"
-# Local patch (upstream fixed in 2.0.4): SDL_evdev.c uses KDGKBTYPE outside
-# SDL_INPUT_LINUXKD but includes <linux/kd.h> only inside it.
-if ! grep -q "VienDesu PC-build patch" "$SRC/SDL2-2.0.3/src/core/linux/SDL_evdev.c"; then
-  sed -i 's|#include <linux/input.h>|#include <linux/input.h>\n/* VienDesu PC-build patch: kd.h is needed unconditionally (KDGKBTYPE) */\n#include <linux/kd.h>|' \
-      "$SRC/SDL2-2.0.3/src/core/linux/SDL_evdev.c"
-fi
-mkdir -p "$SRC/SDL2-2.0.3/build"
-cd "$SRC/SDL2-2.0.3/build"
+# --- SDL2 2.30.12 (same version as the embedded Android copy) -------------
+fetch SDL2-2.30.12.tar.gz https://github.com/libsdl-org/SDL/releases/download/release-2.30.12/SDL2-2.30.12.tar.gz 7588596
+[ -d "$SRC/SDL2-2.30.12" ] || tar xzf "$SRC/SDL2-2.30.12.tar.gz" -C "$SRC"
+mkdir -p "$SRC/SDL2-2.30.12/build"
+cd "$SRC/SDL2-2.30.12/build"
 [ -f Makefile ] || ../configure --prefix="$USR" --disable-shared --enable-static \
     --disable-wayland-shared --disable-x11-shared
 make -j"$JOBS"; make install
