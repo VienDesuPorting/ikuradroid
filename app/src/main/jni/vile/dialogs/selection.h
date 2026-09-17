@@ -17,6 +17,7 @@ class Selection : public DialogBase {
 		int fontsize;
 	bool bfill; //!< Backing strips behind text items
 	bool swallow; //!< Ignore presses that miss every item
+	bool hinvert; //!< Invert the hovered row instead of a fill (CP)
 	public:
 		Selection(EngineVN *Engine);
 		~Selection();
@@ -38,6 +39,7 @@ class Selection : public DialogBase {
 				Uint32 BGUColor,Uint32 FGUColor);
 	void SetBackgroundFill(bool Enable);
 	void SetSwallowMisses(bool Enable);
+	void SetHoverInvert(bool Enable);
 
 		// Hook into user input
 		bool MouseLeftDown(int X,int Y);

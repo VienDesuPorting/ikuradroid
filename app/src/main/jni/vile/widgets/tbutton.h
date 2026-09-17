@@ -32,6 +32,7 @@ class TextButton : public StateWidget {
 		uString caption;
 		int fontsize;
 	bool bfill; //!< Paint the legacy translucent backing strip
+	bool hinvert; //!< WS_HOVER inverts the composed row (PC choice strip)
 		void autogenerate();
 	public:
 		TextButton(int X,int Y,uString Caption);
@@ -50,6 +51,8 @@ class TextButton : public StateWidget {
 		virtual void SetColorBackground(WIDGET_STATE State,Uint32 Color);
 		virtual void SetColorForeground(WIDGET_STATE State,Uint32 Color);
 		virtual void SetColorDefault();
+		void SetHoverInvert(bool Enable);
+		virtual void Render();
 	void SetBackgroundFill(bool Enable);
 
 		// Overrides

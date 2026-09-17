@@ -59,25 +59,29 @@ const uString CriticalPoint::NativeName(){
 	return "Critical Point";
 }
 
-/*! PC choice layout, pixel-measured against the PC original: the
- *  captions print inside the dialog chrome, centered on the text
- *  area (x=40..570), 24px apart starting at y=28, plain white
- *  without backing plates. Touch handling follows the LMM scheme:
- *  the selection owns the chrome rectangle, missed presses are
- *  swallowed and every row doubles as a full-width hit area so
- *  there are no dead gaps between items
+/*! PC choice layout, pixel-measured against the PC original (hover
+ *  screenshot registered against the calm one): rows are the
+ *  590x24 strips at (15,30+i*24) and captions print centered in
+ *  them, plain white without backing plates. Hovered rows are
+ *  highlighted exactly as the PC original does: the strip is
+ *  RGB-inverted, so the dark chrome turns into a light bar and
+ *  the white caption turns black. Touch handling follows the LMM
+ *  scheme: the selection owns the chrome rectangle, missed
+ *  presses are swallowed and every row doubles as a full-width
+ *  hit area so there are no dead gaps between items
  */
 void CriticalPoint::LayoutTextSelection(Stringlist *items){
 	selection->SetFontSize(Cfg::Font::default_size);
 	selection->SetAlignment(HA_CENTER,VA_CENTER);
 	selection->SetColors(0x58585880,0xFFFFFFFF,0x00000000,0xFFFFFFFF);
+	selection->SetHoverInvert(true);
 	selection->SetBackgroundFill(false);
 	selection->Move(0,0);
 	selection->Resize(616,152);
 	selection->SetSwallowMisses(true);
 	uString text;
 	for(int i=0;items->GetString(i,&text);i++){
-		SDL_Rect area={40,28+i*24,530,24};
+		SDL_Rect area={15,30+i*24,590,24};
 		selection->SetText(text,area,i);
 	}
 }

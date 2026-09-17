@@ -26,6 +26,7 @@ Selection::Selection(EngineVN *Engine) : DialogBase(Engine,false){
 	fontsize=18;
 	bfill=true;
 	swallow=false;
+	hinvert=false;
 }
 
 Selection::~Selection(){
@@ -71,6 +72,16 @@ void Selection::SetBackgroundFill(bool Enable){
  */
 void Selection::SetSwallowMisses(bool Enable){
 	swallow=Enable;
+}
+
+/*! \brief Enables the PC-style inverted hover strip for all items
+ *
+ *  Critical Point highlights the hovered choice by inverting the
+ *  composed row instead of drawing a translucent fill. Forwarded
+ *  to every text item created afterwards.
+ */
+void Selection::SetHoverInvert(bool Enable){
+	hinvert=Enable;
 }
 
 /*! \brief Routes a press to the item under the cursor
@@ -139,6 +150,7 @@ void Selection::SetText(uString Caption,SDL_Rect Area,int ID){
 		button->SetFontSize(fontsize);
 	button->SetAlignment(halign,valign);
 	button->SetBackgroundFill(bfill);
+	button->SetHoverInvert(hinvert);
 	button->SetTag(ID);
 		AddWidget(button);
 	}
@@ -181,6 +193,7 @@ void Selection::SetText(Stringlist *Captions){
 				button->SetFontSize(fontsize);
 	button->SetAlignment(halign,valign);
 	button->SetBackgroundFill(bfill);
+	button->SetHoverInvert(hinvert);
 	button->SetTag(GetWidgetCount());
 				AddWidget(button);
 			}
