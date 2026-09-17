@@ -1101,3 +1101,152 @@ void EDL_SetAlpha(SDL_Surface *src, SDL_Rect *srcrect,Uint8 Alpha){
 	}
 }
 
+// ----- PC-style hover invert (CP choice highlight) -----
+/*! The PC originals highlight the hovered choice row by inverting the
+ *  composed strip (raster DSTINVERT): the dark dialog window turns into
+ *  a light bar and the white caption turns black. SDL 2.0.3 offers no
+ *  blend mode that can express 255-dst, so the queued rectangles are
+ *  read back after the widget pass, inverted in software and copied
+ *  back over the composed frame.
+ */
+static SDL_Rect invert_queue[8];
+static int invert_count=0;
+static int invert_flip=-1; //!< Readback orientation: -1 unknown, 0 upright, 1 flipped
+
+/*! \brief Detects once whether target readback arrives vertically flipped
+ *
+ *  Some backends (GLES2 of SDL 2.0.3) store render targets bottom-up,
+ *  which flips SDL_RenderReadPixels output. A tiny probe pattern is
+ *  rendered into an offscreen target and inspected once per session.
+ */
+static bool DetectReadbackFlip(){
+	bool flipped=false;
+	if(EDLRenderer){
+		SDL_Texture *probe=SDL_CreateTexture(EDLRenderer,
+				SDL_PIXELFORMAT_ABGR8888,
+				SDL_TEXTUREACCESS_TARGET,8,8);
+		if(probe){
+			SDL_Texture *previous=SDL_GetRenderTarget(EDLRenderer);
+			if(SDL_SetRenderTarget(EDLRenderer,probe)==0){
+				SDL_SetRenderDrawColor(EDLRenderer,0,0,0,255);
+				SDL_RenderClear(EDLRenderer);
+				boxRGBA(EDLRenderer,1,1,2,2,255,255,255,255);
+				Uint32 pixels[64];
+				if(SDL_RenderReadPixels(EDLRenderer,NULL,
+							SDL_PIXELFORMAT_ABGR8888,
+							pixels,8*sizeof(Uint32))==0){
+					int first=-1;
+					for(int y=0;y<8 && first<0;y++){
+						for(int x=0;x<8;x++){
+							if(pixels[y*8+x]==0xFFFFFFFF){
+								first=y;
+								break;
+							}
+						}
+					}
+					// The white probe was drawn at logical rows 1-2
+					flipped=(first>=5);
+				}
+			}
+			SDL_SetRenderTarget(EDLRenderer,previous);
+			SDL_DestroyTexture(probe);
+		}
+	}
+	return flipped;
+}
+
+void EDL_QueueHoverInvert(SDL_Rect Rect){
+	if(invert_count<8){
+		invert_queue[invert_count++]=Rect;
+	}
+}
+
+void EDL_FlushHoverInverts(void){
+	if(!invert_count){
+		return;
+	}
+	if(!EDLRenderer){
+		invert_count=0;
+		return;
+	}
+	if(invert_flip<0){
+		invert_flip=DetectReadbackFlip()?1:0;
+	}
+	for(int index=0;index<invert_count;index++){
+		SDL_Rect rect=invert_queue[index];
+
+		// Clip against the current target viewport
+		SDL_Rect viewport={0,0,0,0};
+		SDL_RenderGetViewport(EDLRenderer,&viewport);
+		SDL_Rect out;
+		if(SDL_IntersectRect(&rect,&viewport,&out)!=SDL_TRUE){
+			continue;
+		}
+		SDL_Surface *tmp=SDL_CreateRGBSurface(SDL_SWSURFACE,
+				out.w,out.h,32,
+				0x000000FF,0x0000FF00,0x00FF0000,0xFF000000);
+		if(!tmp){
+			continue;
+		}
+		if(SDL_RenderReadPixels(EDLRenderer,&out,
+					SDL_PIXELFORMAT_ABGR8888,
+					tmp->pixels,tmp->pitch)==0){
+			if(invert_flip){
+				// Bottom-up storage: undo the flip before reuploading
+				int bytes=tmp->pitch;
+				char *row=(char*)malloc(bytes);
+				if(row){
+					char *lines=(char*)tmp->pixels;
+					for(int a=0,b=out.h-1;a<b;a++,b--){
+						memcpy(row,lines+a*bytes,bytes);
+						memcpy(lines+a*bytes,lines+b*bytes,bytes);
+						memcpy(lines+b*bytes,row,bytes);
+					}
+					free(row);
+				}
+			}
+
+			// Invert the RGB channels, preserve alpha
+			if(SDL_MUSTLOCK(tmp)){
+				SDL_LockSurface(tmp);
+			}
+			for(int y=0;y<out.h;y++){
+				Uint32 *pixels=(Uint32*)((char*)tmp->pixels+y*tmp->pitch);
+				for(int x=0;x<out.w;x++){
+					Uint8 r,g,b,a;
+					SDL_GetRGBA(pixels[x],tmp->format,&r,&g,&b,&a);
+					pixels[x]=SDL_MapRGBA(tmp->format,
+							255-r,255-g,255-b,a);
+				}
+			}
+			if(SDL_MUSTLOCK(tmp)){
+				SDL_UnlockSurface(tmp);
+			}
+
+			// Copy the inverted strip back over the composed frame
+			SDL_Texture *patch=SDL_CreateTexture(EDLRenderer,
+					SDL_PIXELFORMAT_ABGR8888,
+					SDL_TEXTUREACCESS_STREAMING,
+					out.w,out.h);
+			if(patch){
+				void *pixels;
+				int pitch;
+				if(SDL_LockTexture(patch,NULL,&pixels,&pitch)==0){
+					char *dst=(char*)pixels;
+					char *src=(char*)tmp->pixels;
+					for(int y=0;y<out.h;y++){
+						memcpy(dst+y*pitch,src+y*tmp->pitch,
+								out.w*4);
+					}
+					SDL_UnlockTexture(patch);
+					SDL_SetTextureBlendMode(patch,
+							SDL_BLENDMODE_NONE);
+					SDL_RenderCopy(EDLRenderer,patch,NULL,&out);
+				}
+				SDL_DestroyTexture(patch);
+			}
+		}
+		SDL_FreeSurface(tmp);
+	}
+	invert_count=0;
+}

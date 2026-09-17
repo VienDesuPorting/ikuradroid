@@ -32,6 +32,10 @@ extern EDLTexture *EDLrendererTex;
 extern EDLTexture *EDL_CreateTexture(int Width,int Height);
 extern void EDL_SetBox(SDL_Surface *src, int x, int y, int w, int h, Uint8 R, Uint8 G, Uint8 B, Uint8 A);
 
+// ----- PC-style hover invert (queued, flushed after the widget pass) -----
+extern void EDL_QueueHoverInvert(SDL_Rect Rect);
+extern void EDL_FlushHoverInverts(void);
+
 extern void EDL_BlendSurface(
 		SDL_Surface *src, SDL_Rect *srcrect,
 		SDL_Surface *dst, SDL_Rect *dstrect);

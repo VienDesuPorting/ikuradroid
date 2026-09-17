@@ -107,6 +107,9 @@ void Renderer::Render(int Top){
 		gptr=gptr->PrevPtr;
 	}
 
+	// PC-style hover strips invert the composed frame
+	EDL_FlushHoverInverts();
+
 }
 /*! \brief Updates graphics
  *  \param Surface Surface to render to

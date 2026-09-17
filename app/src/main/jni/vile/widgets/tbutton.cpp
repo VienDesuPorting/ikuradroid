@@ -23,7 +23,6 @@
 TextButton::TextButton(int X,int Y,uString Caption)
 		: StateWidget(X,Y,0,0) {
 	int w,h;
-
 	EDL_SizeText(Caption,Cfg::Font::default_size,&w,&h);
 	Resize(w*1.25,h*1.25);
 	fhittable=true;
@@ -31,6 +30,7 @@ TextButton::TextButton(int X,int Y,uString Caption)
 	vertical=VA_CENTER;
 	fontsize=Cfg::Font::default_size;
 	bfill=true;
+	hinvert=false;
 	caption=Caption;
 	SetColorDefault();
 
@@ -44,6 +44,7 @@ TextButton::TextButton(int X,int Y,int Width,int Height,uString Caption)
 	vertical=VA_CENTER;
 	fontsize=Cfg::Font::default_size;
 	bfill=true;
+	hinvert=false;
 	caption=Caption;
 	SetColorDefault();
 	autogenerate();
@@ -56,6 +57,7 @@ TextButton::TextButton(SDL_Rect Dst,uString Caption)
 	vertical=VA_CENTER;
 	fontsize=Cfg::Font::default_size;
 	bfill=true;
+	hinvert=false;
 	caption=Caption;
 	SetColorDefault();
 	autogenerate();
@@ -66,6 +68,7 @@ TextButton::TextButton(SDL_Rect Dst) : StateWidget(Dst) {
 	horizontal=HA_CENTER;
 	vertical=VA_CENTER;
 	bfill=true;
+	hinvert=false;
 	SetColorDefault();
 }
 
@@ -74,6 +77,7 @@ TextButton::TextButton() : StateWidget() {
 	horizontal=HA_CENTER;
 	vertical=VA_CENTER;
 	bfill=true;
+	hinvert=false;
 	SetColorDefault();
 }
 
@@ -89,6 +93,19 @@ void TextButton::SetBackgroundFill(bool Enable){
 	bfill=Enable;
 	autogenerate();
 }
+/*! \brief Enables the PC-style inverted highlight strip
+ *
+ *  CP-era Will games highlight the hovered choice by inverting the
+ *  composed row (dark window to a light bar, white caption to black)
+ *  instead of painting a translucent fill. The hovered rectangle is
+ *  queued during rendering and inverted by EDL_FlushHoverInverts()
+ *  after the whole widget pass has composed the frame.
+ */
+void TextButton::SetHoverInvert(bool Enable){
+	hinvert=Enable;
+	autogenerate();
+}
+
 
 /*! \brief Autoaligns the text in the widget
  *  \param Horizontal Horizontal alignment
@@ -190,6 +207,7 @@ void TextButton::Resize(int Width,int Height){
 
 void TextButton::autogenerate(){
 	if(state<WIDGET_STATE_SIZE){
+		WIDGET_STATE es=(hinvert && state==WS_HOVER)?WS_NORMAL:state;
 
 		// Assert a size
 		if(pos.w==0 || pos.h==0){
@@ -199,7 +217,7 @@ void TextButton::autogenerate(){
 			}
 		}
 		// Create graphics
-		SDL_Surface *txt=EDL_CreateText(caption,colorfg[state],pos.w,fontsize);
+		SDL_Surface *txt=EDL_CreateText(caption,colorfg[es],pos.w,fontsize);
 		if(txt){
 			SDL_Rect td={0,0,txt->w,txt->h};
 			if(horizontal==HA_CENTER){
@@ -215,11 +233,11 @@ void TextButton::autogenerate(){
 				td.y=pos.h-txt->h;
 			}
 			SDL_Surface *surface=EDL_CreateSurface(pos.w,pos.h);
-			if(colorbg[state]&0xFF){
-				Uint8 r=(colorbg[state]>>24)&0xFF;
-				Uint8 g=(colorbg[state]>>16)&0xFF;
-				Uint8 b=(colorbg[state]>>8)&0xFF;
-				Uint8 a=colorbg[state]&0xFF;
+			if(colorbg[es]&0xFF){
+				Uint8 r=(colorbg[es]>>24)&0xFF;
+				Uint8 g=(colorbg[es]>>16)&0xFF;
+				Uint8 b=(colorbg[es]>>8)&0xFF;
+				Uint8 a=colorbg[es]&0xFF;
 				EDL_SetBox(surface,0,0,pos.w,pos.h,r,g,b,a);
 
 				EDL_BlendSurface(txt,0,surface,&td);
@@ -240,3 +258,16 @@ void TextButton::autogenerate(){
 	}
 }
 
+/*! \brief Draws the button and queues the hover strip inversion
+ *
+ *  The inversion must happen after every underlying widget (scene,
+ *  dialog chrome, captions) has been painted, so the rectangle is
+ *  queued here and executed by the renderer at the end of the
+ *  widget pass.
+ */
+void TextButton::Render(){
+	Widget::Render();
+	if(hinvert && state==WS_HOVER && GetVisible()){
+		EDL_QueueHoverInvert(pos);
+	}
+}
