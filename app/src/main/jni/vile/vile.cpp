@@ -33,6 +33,21 @@ int main(int argc,char **argv){
 	// the static configuration before reading it.
 	Cfg::Reset();
 
+#ifdef __ANDROID__
+	// Touch stays touch end to end (the FINGER* handlers in the
+	// event loop below are the canonical input path). SDL also
+	// synthesises a mouse stream from touch input; on 2.0.3 that
+	// stream kept getting lost between the Java layer and this
+	// loop, but under 2.30 it arrives reliably - and the
+	// renderer's event watch hands it over already remapped into
+	// logical coordinates, so the loop's own window->logical
+	// mapping would process it a second time and fire stray
+	// clicks in the top-left corner on every tap. Disable the
+	// synthesis; real mice keep working through the MOUSE*
+	// handlers on desktop.
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+#endif
+
 	// Preload game object and set default values
 	Uint32 systemflags=SDL_INIT_VIDEO|SDL_INIT_AUDIO;
 	ViLE *game=new ViLE();
