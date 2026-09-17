@@ -17,6 +17,18 @@
 #include "common/edl_texture.h"
 #include <SDL.h>
 
+#ifdef __ANDROID__
+#include <android/log.h>
+// Logcat breadcrumbs (adb logcat -s ikuradroid): the file log
+// only starts after the video is up, so a relaunch failing inside
+// SDL/video init would otherwise die silently. One line per
+// main() milestone.
+#define VILE_STAGE(...) __android_log_print(ANDROID_LOG_INFO, \
+        "ikuradroid", __VA_ARGS__)
+#else
+#define VILE_STAGE(...) do{}while(0)
+#endif
+
 #ifdef VILE_ARCH_MICROSOFT
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
@@ -32,6 +44,11 @@ int main(int argc,char **argv){
 	// process: drop everything the previous session wrote into
 	// the static configuration before reading it.
 	Cfg::Reset();
+	// Same hygiene for the directory enumerator: a probe interrupted
+	// by an exit must not feed a stale DIR* into this session's
+	// first probe (it would make one detection fail spuriously).
+	EDL_GetFileReset();
+	VILE_STAGE("main: enter, config reset");
 
 #ifdef __ANDROID__
 	// Touch stays touch end to end (the FINGER* handlers in the
@@ -535,13 +552,16 @@ int main(int argc,char **argv){
 	if(!game->InitSystem(systemflags)){
 
 		LogError("Failed to initialize external libraries");
+		VILE_STAGE("main: InitSystem failed");
 		retval=ERROR_INITSYSTEM;
 	}
 	else if(!dryrun && !game->InitVideo()){
 		LogError("Failed to initialize video driver");
+		VILE_STAGE("main: InitVideo failed");
 		retval=ERROR_INITVIDEO;
 	}
 	else{
+		VILE_STAGE("main: SDL and video are up");
 		// Set default caption
 		uString caption=
 			uString(PACKAGE_STRING)+
@@ -598,6 +618,7 @@ int main(int argc,char **argv){
 
 		EngineVN *engine=game->LoadEngine(Cfg::Path::game);
 		LogVerbose("\tssssssssssss");
+		VILE_STAGE("main: engine probe %s", engine ? "ok" : "failed");
 
 		if(!engine){
 			LogError("Failed to load game resources");
@@ -659,7 +680,9 @@ int main(int argc,char **argv){
 
 			// Execute the game
 			LogVerbose("Executing game: %s",engine->NativeName().c_str());
+			VILE_STAGE("main: RunEngine enter");
 			game->RunEngine(engine);
+			VILE_STAGE("main: RunEngine done");
 		}
 	}
 
@@ -668,6 +691,7 @@ int main(int argc,char **argv){
 		game->Quit();
 		delete game;
 	}
+	VILE_STAGE("main: exit, retval=%d", retval);
 	return retval;
 }
 
@@ -1239,6 +1263,15 @@ bool ViLE::InitVideo(){
     if( window == NULL )
     {
         printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
+    }
+    else if( EDLRenderer == NULL )
+    {
+        // A dead renderer used to leave the engine running "blind":
+        // the loop kept going with every draw call failing silently,
+        // which shows up as an eternal black screen. Treat it as a
+        // video failure so the session exits cleanly instead.
+        printf( "Renderer could not be created! SDL_Error: %s\n", SDL_GetError() );
+        VILE_STAGE("InitVideo: renderer creation failed");
     }
 	else
     {

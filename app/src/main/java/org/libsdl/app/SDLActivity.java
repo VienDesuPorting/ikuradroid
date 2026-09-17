@@ -892,6 +892,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         if (SDLActivity.mBrokenLibraries) {
            super.onDestroy();
+           // IkuraDroid: see the process note at the bottom of
+           // this method - a cached broken state must not poison
+           // the next launch either.
+           android.os.Process.killProcess(android.os.Process.myPid());
            return;
         }
 
@@ -919,6 +923,19 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         SDLActivity.nativeQuit();
 
         super.onDestroy();
+
+        // IkuraDroid: the engine lives in the dedicated ":game"
+        // process (see AndroidManifest). Ending the session takes
+        // only the engine with it - the library runs in the default
+        // process and stays fully interactive. Killing the process
+        // here also gives the next title launch a virgin state: the
+        // engine library was never built for a second session inside
+        // one process (leftover EGL context, SDL statics and engine
+        // globals turn it into a dead black screen), and this
+        // restores the fresh-process guarantee the 1.x build's
+        // System.exit() used to provide, without its library-wide
+        // blast radius.
+        android.os.Process.killProcess(android.os.Process.myPid());
     }
 
     @Override

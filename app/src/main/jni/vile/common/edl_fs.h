@@ -48,6 +48,7 @@ extern bool EDL_CreateDirectory(uString Path);
 extern bool EDL_DeleteDirectory(uString Path);
 extern bool EDL_DeleteFile(uString Path);
 extern bool EDL_GetFile(uString Pathname,uString *Filename);
+extern void EDL_GetFileReset(void);
 extern uString EDL_CreateTemporary();
 extern uString EDL_Realname(uString Filename);
 extern Stringlist EDL_Expandname(uString Filename);
