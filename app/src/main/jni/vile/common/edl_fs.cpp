@@ -301,11 +301,20 @@ uString EDL_StripPath(uString Path){
  *  pathname will render a new file file until all files has been
  *  enumerated. Subsequent calls after a failed call will start over.
  */
+// Enumeration state of EDL_GetFile, hoisted to file scope so that
+// a stream left open by an interrupted session can be dropped
+// before the next engine run probes the same folder (see
+// EDL_GetFileReset, called from main()).
+static uString curpath="";
+#ifdef VILE_ARCH_MICROSOFT
+static HANDLE finddir=INVALID_HANDLE_VALUE;
+#else
+static DIR *finddir=0;
+#endif
+
 bool EDL_GetFile(uString Pathname,uString *Filename){
 	bool retval=false;
-	static uString curpath="";
 #ifdef VILE_ARCH_MICROSOFT
-	static HANDLE finddir=INVALID_HANDLE_VALUE;
 	if(finddir==INVALID_HANDLE_VALUE || Pathname!=curpath){
 		// Find first file
 		curpath=Pathname;
@@ -333,7 +342,6 @@ bool EDL_GetFile(uString Pathname,uString *Filename){
 		}
 	}
 #else
-	static DIR *finddir=0;
 	if(finddir==NULL || Pathname!=curpath){
 		if(finddir!=NULL){
 			closedir(finddir);
@@ -354,6 +362,29 @@ bool EDL_GetFile(uString Pathname,uString *Filename){
 	}
 #endif
 	return retval;
+}
+
+/*! \brief Drops any interrupted EDL_GetFile enumeration
+ *
+ *  The enumerator keeps its iteration state in statics; a session
+ *  that exits mid-probe used to leak that state into the next
+ *  engine run, whose first probe then hit a stale handle and
+ *  failed spuriously. main() resets it alongside the
+ *  configuration (Cfg::Reset).
+ */
+void EDL_GetFileReset(void){
+	curpath="";
+#ifdef VILE_ARCH_MICROSOFT
+	if(finddir!=INVALID_HANDLE_VALUE){
+		FindClose(finddir);
+		finddir=INVALID_HANDLE_VALUE;
+	}
+#else
+	if(finddir!=NULL){
+		closedir(finddir);
+		finddir=0;
+	}
+#endif
 }
 
 /*! \brief Tests wether a given file is readable

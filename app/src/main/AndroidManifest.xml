@@ -65,9 +65,18 @@
         <!-- M3 fullscreen theme so the in-game bottom sheet
              matches the app. The only landscape screen: library and
              all other app screens are locked to portrait, so a game
-             exit cannot leave the library sideways. -->
+             exit cannot leave the library sideways.
+
+             ":game" process: the engine library was never built for
+             a second session inside one process - leftover EGL,
+             SDL and engine static state turns a relaunch into a
+             dead black screen. Isolating the engine lets the exit
+             kill only the game process (the 1.x System.exit
+             guarantee, but without taking the library down), so
+             every title starts from a virgin process state. -->
         <activity android:name="org.libsdl.app.SDLActivity"
             android:label="@string/app_name"
+            android:process=":game"
             android:screenOrientation="sensorLandscape"
             android:theme="@style/SDLTheme"
             android:configChanges="orientation|keyboardHidden|screenSize">
