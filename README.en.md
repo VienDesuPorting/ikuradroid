@@ -119,7 +119,7 @@ The core directories and files (`jni/vile/`, `vile.cpp`) still keep the old ViLE
 - **"Ivan"** — the original Android port (2015–2016)
 - **VienDesu! Porting Team** — current IkuraDroid development
 - SDL 2.30.12, SDL_gfx / SDL_image / SDL_mixer / SDL_ttf, libmikmod, SMPEG2, libwebp, HQ2x (MaxSt), utf8cpp
-- the Will engine was ported from [VNMV](https://code.google.com/archive/p/vnvm) with the author's permission
+- the Will engine was ported from [VNMV](https://github.com/soywiz-archive/vnvm) with the author's permission
 
 ## Links
 
