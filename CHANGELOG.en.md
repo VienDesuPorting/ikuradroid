@@ -2,10 +2,10 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
-## 1.9.9 — 2026-09-18
+## 2.0.0 — 2026-09-18
 
+- New app icon: portrait art on the adaptive background layer — the launcher mask crops it on its own, keeping the face inside the safe zone. PNGs for Android 7.x and older were regenerated up to xxxhdpi; the salmon-roe silhouette remains as the themed icon on Android 13+.
 - The launcher toolbar menu now matches the tile context menu style: a "More options" button opens the same rounded panel with the Engines, Add game folder and About rows. The stock text-only overflow list is gone.
-- Fixed the dead `Exit` button in the save/load dialogs: in landscape the game fills the screen height, so a button hugging the bottom edge landed inside the system gesture-navigation band, where touches never reach the app. On Android the button now sits above that band; on desktop it stays in the corner.
 
 ## 1.9.8 — 2026-09-17
 
