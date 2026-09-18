@@ -36,14 +36,6 @@
             </intent-filter>
         </activity>
 
-        <!-- The About screen -->
-        <activity android:name=".AboutActivity"
-            android:label="@string/menu_about"
-            android:screenOrientation="portrait"
-            android:parentActivityName=".MainActivity"
-            android:exported="false">
-        </activity>
-
         <!-- Engines and supported titles -->
         <activity android:name=".EnginesActivity"
             android:label="@string/menu_engines"

@@ -1006,32 +1006,42 @@ void ViLE::RunEngine(EngineVN *engine){
 	// window coordinates (screenSurface is NULL, so GetRelativeX/Y pass
 	// them through untouched). Map window coordinates into the engine's
 	// logical (native) space right here, mirroring the renderer's math.
-	int logicalw=0,logicalh=0;
-	SDL_RenderGetLogicalSize(EDLRenderer,&logicalw,&logicalh);
-	int winw=0,winh=0;
-	SDL_GetWindowSize(window,&winw,&winh);
-	float vscale=0,voffx=0,voffy=0;
-	if(logicalw>=1 && logicalh>=1 && winw>0 && winh>0){
-		float sx=winw/logicalw;
-		float sy=winh/logicalh;
-		vscale=(sx<sy)?sx:sy;
-		voffx=(winw-logicalw*vscale)/2;
-		voffy=(winh-logicalh*vscale)/2;
-	}
-
-	// Transform a window coordinate into a logical one
+	// The scale/offset are recomputed for every single event instead of
+	// being captured once: a window or logical-viewport change after the
+	// capture (surface resize, recreated renderer, a second session) used
+	// to leave the input mapped with stale numbers.
 	#define VILE_MAP_INPUT(ix,iy,gx,gy) do{ \
+		int logicalw_=0,logicalh_=0,winw_=0,winh_=0; \
+		SDL_RenderGetLogicalSize(EDLRenderer,&logicalw_,&logicalh_); \
+		SDL_GetWindowSize(window,&winw_,&winh_); \
+		float vscale_=0,voffx_=0,voffy_=0; \
+		if(logicalw_>=1 && logicalh_>=1 && winw_>0 && winh_>0){ \
+		float sx_=(float)winw_/logicalw_; \
+		float sy_=(float)winh_/logicalh_; \
+		vscale_=(sx_<sy_)?sx_:sy_; \
+		voffx_=((float)winw_-logicalw_*vscale_)/2.f; \
+		voffy_=((float)winh_-logicalh_*vscale_)/2.f; \
+		} \
 		float fx_=(ix),fy_=(iy); \
-		if(vscale>0){ \
-			fx_=(fx_-voffx)/vscale; \
-			fy_=(fy_-voffy)/vscale; \
-			if(fx_<0)fx_=0; \
-			if(fy_<0)fy_=0; \
-			if(fx_>logicalw-1)fx_=logicalw-1; \
-			if(fy_>logicalh-1)fy_=logicalh-1; \
+		if(vscale_>0){ \
+		fx_=(fx_-voffx_)/vscale_; \
+		fy_=(fy_-voffy_)/vscale_; \
+		if(fx_<0)fx_=0; \
+		if(fy_<0)fy_=0; \
+		if(fx_>logicalw_-1)fx_=logicalw_-1; \
+		if(fy_>logicalh_-1)fy_=logicalh_-1; \
 		} \
 		(gx)=(int)fx_; \
 		(gy)=(int)fy_; \
+	}while(0)
+
+	// Finger events arrive normalised against the window; the window
+	// size is taken live right here as well, so no captured state is
+	// involved anywhere in the touch path
+	#define VILE_MAP_INPUT_FINGER(nx,ny,gx,gy) do{ \
+		int winfw_=0,winfh_=0; \
+		SDL_GetWindowSize(window,&winfw_,&winfh_); \
+		VILE_MAP_INPUT((nx)*winfw_,(ny)*winfh_,gx,gy); \
 	}while(0)
 
 	while(engine){
@@ -1083,8 +1093,8 @@ void ViLE::RunEngine(EngineVN *engine){
 			else if(event.type==SDL_FINGERMOTION){
 				// Touch events (tfinger is normalised 0..1 against the window)
 				int gx,gy;
-				VILE_MAP_INPUT(event.tfinger.x*winw,
-				                event.tfinger.y*winh,gx,gy);
+				VILE_MAP_INPUT_FINGER(event.tfinger.x,
+				                event.tfinger.y,gx,gy);
 				engine->EventHostMouseMove(
 				                        screenSurface,gx,gy);
 			}
@@ -1094,12 +1104,9 @@ void ViLE::RunEngine(EngineVN *engine){
 				// what kept getting lost between the Java layer and this
 				// loop on some devices. Touch stays touch end to end now.
 				int gx,gy;
-				VILE_MAP_INPUT(event.tfinger.x*winw,
-				                event.tfinger.y*winh,gx,gy);
-				LogTest("Host finger down: norm=(%.3f,%.3f) "
-				                "-> logical=(%d,%d)",
-				                event.tfinger.x,
+				VILE_MAP_INPUT_FINGER(event.tfinger.x,
 				                event.tfinger.y,gx,gy);
+				LOGCAT("vile input: finger down norm=(%.3f,%.3f) logical=(%d,%d)",event.tfinger.x,event.tfinger.y,gx,gy);
 				engine->EventHostMouseMove(
 				                        screenSurface,gx,gy);
 				engine->EventHostMouseLeftDown(
@@ -1107,12 +1114,9 @@ void ViLE::RunEngine(EngineVN *engine){
 			}
 			else if(event.type==SDL_FINGERUP){
 				int gx,gy;
-				VILE_MAP_INPUT(event.tfinger.x*winw,
-				                event.tfinger.y*winh,gx,gy);
-				LogTest("Host finger up: norm=(%.3f,%.3f) "
-				                "-> logical=(%d,%d)",
-				                event.tfinger.x,
+				VILE_MAP_INPUT_FINGER(event.tfinger.x,
 				                event.tfinger.y,gx,gy);
+				LOGCAT("vile input: finger up norm=(%.3f,%.3f) logical=(%d,%d)",event.tfinger.x,event.tfinger.y,gx,gy);
 				engine->EventHostMouseLeftUp(
 				                        screenSurface,gx,gy);
 			}

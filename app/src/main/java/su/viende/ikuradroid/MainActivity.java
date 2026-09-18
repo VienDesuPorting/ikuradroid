@@ -21,6 +21,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -400,6 +401,66 @@ public class MainActivity extends AppCompatActivity
                 popup.showAtLocation(anchor, Gravity.NO_GRAVITY, x, y);
         }
 
+        // ------------------------------------------------------------------
+        // About modal: the same rounded-panel look as the tile context
+        // menu (about_popup.xml + bg_game_context.xml), centered on a dim
+        // backdrop. Tap outside or Back dismisses; the panel itself
+        // consumes its own taps so they do not fall through to the dim.
+        // ------------------------------------------------------------------
+        private void showAboutPopup() {
+                final View content = LayoutInflater.from(this)
+                                .inflate(R.layout.about_popup, null);
+                final PopupWindow popup = new PopupWindow(content,
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT, true);
+                // Transparent background keeps the rounded panel look while
+                // focusable=true dismisses on an outside tap or on Back
+                popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+                TextView version = (TextView) content.findViewById(R.id.about_version);
+                String verName;
+                try {
+                        verName = getPackageManager()
+                                        .getPackageInfo(getPackageName(), 0).versionName;
+                } catch (Exception e) {
+                        verName = "?";
+                }
+                version.setText(getString(R.string.app_name) + " " + verName);
+
+                // Keep the panel inside the window on short screens: the
+                // scroll view absorbs the overflow once the measured panel
+                // would cover more than 82% of the popup height.
+                final View panel = content.findViewById(R.id.about_panel);
+                final View scroll = content.findViewById(R.id.about_scroll);
+                content.post(new Runnable() {
+                        @Override
+                        public void run() {
+                                int maxH = (int) (content.getHeight() * 0.82f);
+                                if (panel.getHeight() > maxH && scroll.getHeight() > 0) {
+                                        scroll.getLayoutParams().height = Math.max(0,
+                                                        maxH - (panel.getHeight()
+                                                                        - scroll.getHeight()));
+                                        scroll.requestLayout();
+                                }
+                        }
+                });
+
+                content.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                                popup.dismiss();
+                        }
+                });
+                panel.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                                // Consume: panel taps must not reach the dim backdrop
+                        }
+                });
+                popup.showAtLocation(findViewById(R.id.main_root),
+                                Gravity.CENTER, 0, 0);
+        }
+
         /** "Remove from list": files stay; re-adding the folder restores it. */
         private void hideGame(RunItem item) {
                 GameLibrary.setHidden(this, item.getTitle(), true);
@@ -481,7 +542,7 @@ public class MainActivity extends AppCompatActivity
                         return true;
                 }
                 if (id == R.id.menu_about) {
-                        startActivity(new Intent(this, AboutActivity.class));
+                        showAboutPopup();
                         return true;
                 }
                 if (id == R.id.dir_change) {
