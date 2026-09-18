@@ -90,26 +90,24 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private BottomSheetDialog mGameMenuSheet;
     private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted, mSwipePassed;
     private float mSwipeStartX, mSwipeStartY;
-    // The vertical gestures may start anywhere on the screen - not, as
-    // before, inside a narrow strip above the bottom edge. Only the
-    // bottom MENU_SWIPE_EDGE_DP stay with the system: that band is the
-    // gesture-navigation pill. The top band is captured too - the cancel
-    // swipe naturally starts at the top edge - and coexists with the
-    // notification shade: if the system claims the pull, the stream ends
-    // in ACTION_CANCEL and the tracker drops it without any action. The
-    // touch is captured at ACTION_DOWN (the engine must not see it: a
-    // background down advances the text, so a leaked swipe start would
-    // skip a line) and released as soon as the finger proves it is not a
-    // vertical gesture: within MENU_SWIPE_SLOP_DP it is replayed as one
-    // clean tap once the finger lifts; past the slop in a non-vertical
-    // direction the stream is handed back to the surface from the
-    // current position, so drag-hover keeps working. An upward run of at
-    // least MENU_SWIPE_TRAVEL_DP (and predominantly vertical) opens the
-    // menu; a downward run of the same length cancels like the Escape
-    // key of the PC original (sendGameCancel). All in dp: sensorLandscape
+    // The vertical gestures may start anywhere on the screen, edges
+    // included. The system keeps its own narrow bands - the gesture-nav
+    // pill at the bottom edge and the notification shade behind the top
+    // one - and simply never delivers touches that start there; if the
+    // system claims a pull midway, the stream ends in ACTION_CANCEL and
+    // the tracker drops it without any action. The touch is captured at
+    // ACTION_DOWN (the engine must not see it: a background down
+    // advances the text, so a leaked swipe start would skip a line) and
+    // released as soon as the finger proves it is not a vertical
+    // gesture: within MENU_SWIPE_SLOP_DP it is replayed as one clean tap
+    // once the finger lifts; past the slop in a non-vertical direction
+    // the stream is handed back to the surface from the current
+    // position, so drag-hover keeps working. An upward run of at least
+    // MENU_SWIPE_TRAVEL_DP (and predominantly vertical) opens the menu;
+    // a downward run of the same length cancels like the Escape key of
+    // the PC original (sendGameCancel). All in dp: sensorLandscape
     // windows are short, so a fraction of the height would be either
     // too small or unreachable.
-    private static final float MENU_SWIPE_EDGE_DP = 40f;    // nav pill margin
     private static final float MENU_SWIPE_TRAVEL_DP = 96f;  // confirmed swipe distance
     private static final float MENU_SWIPE_SLOP_DP = 14f;    // tap-vs-drag decision
     // ------------------------------------------------------------------
@@ -649,21 +647,14 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     //    (replayTouchToEngine), so drag-hover keeps working; vertical
     //    runs that never reach the travel threshold are dropped on
     //    purpose;
-    //  * the bottom 40 dp margin stays entirely with the system (the
-    //    gesture-nav pill); the top edge is captured, so the cancel
-    //    swipe starts where the finger naturally lands - if the system
-    //    claims the pull for the notification shade, ACTION_CANCEL
-    //    drops the tracker without any action;
+    //  * every edge is captured: the gesture-nav pill at the bottom and
+    //    the notification shade at the top keep their own narrow bands,
+    //    and those touches either never reach the app or end in
+    //    ACTION_CANCEL, which drops the tracker without any action;
     // ------------------------------------------------------------------
 
     private float menuDp(float value) {
         return value * getResources().getDisplayMetrics().density;
-    }
-
-    /** Height of the window surface the strip is anchored against. */
-    private float contentBottom() {
-        View root = mLayout != null ? mLayout : getWindow().getDecorView();
-        return root.getHeight();
     }
 
     @Override
@@ -694,20 +685,15 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         if (!mSwipeTracking) {
             if (action == MotionEvent.ACTION_DOWN) {
-                // Only the bottom band is off limits: it is the
-                // gesture-nav pill. The top edge is captured on
-                // purpose - the cancel swipe starts there (see the
-                // comment block above).
-                float fromBottom = contentBottom() - ev.getY();
-                boolean nearNavPill = fromBottom < menuDp(MENU_SWIPE_EDGE_DP);
-                if (!nearNavPill) {
-                    mSwipeTracking = true;
-                    mSwipeConsumed = false;
-                    mSwipeAborted = false;
-                    mSwipeStartX = ev.getX();
-                    mSwipeStartY = ev.getY();
-                    return true; // hold the stream until intent is clear
-                }
+                // Capture from anywhere, edges included (see the comment
+                // block above): the system zones keep their own touches,
+                // everything else is a potential gesture.
+                mSwipeTracking = true;
+                mSwipeConsumed = false;
+                mSwipeAborted = false;
+                mSwipeStartX = ev.getX();
+                mSwipeStartY = ev.getY();
+                return true; // hold the stream until intent is clear
             }
         } else {
             switch (action) {
