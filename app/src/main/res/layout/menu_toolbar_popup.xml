@@ -1,0 +1,122 @@
+<?xml version="1" encoding="utf-8"?>
+<!--
+  Toolbar menu, opened by the "more" button in the app bar. The same
+  visual language as the library tile context menu
+  (game_context_popup.xml + bg_game_context.xml): compact 40 dp rows on
+  a 16 dp rounded panel, colors follow the M3/Material You palette.
+  Shown by MainActivity.showToolbarMenu() anchored below the app bar.
+
+  This file is part of IkuraDroid.
+  Copyright (C) 2026 VienDesu! Porting Team
+
+  IkuraDroid is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_game_context">
+
+    <!-- Engines / titles status screen -->
+    <LinearLayout
+        android:id="@+id/menu_engines_row"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="20dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_menu_engines"
+            app:tint="?attr/colorOnSurfaceVariant"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="@string/menu_engines"
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnSurface"/>
+
+    </LinearLayout>
+
+    <!-- Pick another library root folder -->
+    <LinearLayout
+        android:id="@+id/menu_folder_row"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="20dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_menu_folder"
+            app:tint="?attr/colorOnSurfaceVariant"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="@string/dir_change"
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnSurface"/>
+
+    </LinearLayout>
+
+    <!-- About modal (the same rounded-panel look) -->
+    <LinearLayout
+        android:id="@+id/menu_about_row"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="20dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_menu_info"
+            app:tint="?attr/colorOnSurfaceVariant"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="@string/menu_about"
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnSurface"/>
+
+    </LinearLayout>
+
+</LinearLayout>

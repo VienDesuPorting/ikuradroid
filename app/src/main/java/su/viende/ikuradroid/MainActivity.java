@@ -16,8 +16,6 @@ import android.os.Environment;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupWindow;
@@ -63,6 +61,19 @@ public class MainActivity extends AppCompatActivity
                         // Branding of the 2026 revival; the original visual_android VK
                         // public is an independent project (see README / Provenance).
                         getSupportActionBar().setSubtitle("VienDesu! Porting Team");
+                }
+
+                // The app-bar menu is a hand-rolled popup in the tile
+                // context menu style; the stock overflow looked alien next
+                // to it (and carried no icons)
+                View moreButton = findViewById(R.id.menu_more);
+                if (moreButton != null) {
+                        moreButton.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                        showToolbarMenu(v);
+                                }
+                        });
                 }
 
                 final RecyclerView recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
@@ -525,31 +536,86 @@ public class MainActivity extends AppCompatActivity
         }
 
         // ------------------------------------------------------------------
-        // Menu
+        // Toolbar menu: the same compact rounded panel as the tile context
+        // menu (menu_toolbar_popup.xml + bg_game_context.xml), anchored
+        // below the app bar and right-aligned to the "more" button
         // ------------------------------------------------------------------
 
-        @Override
-        public boolean onCreateOptionsMenu(Menu menu) {
-                getMenuInflater().inflate(R.menu.main, menu);
-                return super.onCreateOptionsMenu(menu);
-        }
+        private void showToolbarMenu(View anchor) {
+                final View content = LayoutInflater.from(this)
+                                .inflate(R.layout.menu_toolbar_popup, null);
+                final PopupWindow popup = new PopupWindow(content,
+                                ViewGroup.LayoutParams.WRAP_CONTENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT, true);
+                // Transparent background keeps the rounded panel look while
+                // focusable=true dismisses on an outside tap or on Back
+                popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                popup.setElevation(getResources().getDisplayMetrics().density * 8f);
 
-        @Override
-        public boolean onOptionsItemSelected(MenuItem item) {
-                int id = item.getItemId();
-                if (id == R.id.menu_engines) {
-                        startActivity(new Intent(this, EnginesActivity.class));
-                        return true;
+                content.findViewById(R.id.menu_engines_row).setOnClickListener(
+                                new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                                popup.dismiss();
+                                                startActivity(new Intent(MainActivity.this,
+                                                                EnginesActivity.class));
+                                        }
+                                });
+                content.findViewById(R.id.menu_folder_row).setOnClickListener(
+                                new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                                popup.dismiss();
+                                                pickFolder();
+                                        }
+                                });
+                content.findViewById(R.id.menu_about_row).setOnClickListener(
+                                new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                                popup.dismiss();
+                                                showAboutPopup();
+                                        }
+                                });
+                // Clip the row ripples to the rounded outline
+                content.setClipToOutline(true);
+
+                // Right-align the panel under the anchor, clamped into the
+                // safe area (the root view is padded by the system-bar
+                // insets, so its padded bounds are the safe frame)
+                content.measure(View.MeasureSpec.UNSPECIFIED,
+                                View.MeasureSpec.UNSPECIFIED);
+                final int popupWidth = content.getMeasuredWidth();
+                final int popupHeight = content.getMeasuredHeight();
+                final int[] anchorPos = new int[2];
+                anchor.getLocationOnScreen(anchorPos);
+                final int anchorRight = anchorPos[0] + anchor.getWidth();
+                final int anchorBottom = anchorPos[1] + anchor.getHeight();
+                final View root = findViewById(R.id.main_root);
+                int safeLeft = anchorRight - popupWidth;
+                int safeRight = anchorRight;
+                int safeBottom = anchorBottom + popupHeight;
+                if (root != null) {
+                        final int[] rootPos = new int[2];
+                        root.getLocationOnScreen(rootPos);
+                        safeLeft = rootPos[0];
+                        safeRight = rootPos[0] + root.getWidth();
+                        safeBottom = rootPos[1] + root.getHeight()
+                                        - root.getPaddingBottom();
                 }
-                if (id == R.id.menu_about) {
-                        showAboutPopup();
-                        return true;
+                int x = anchorRight - popupWidth;
+                if (x < safeLeft) {
+                        x = safeLeft;
                 }
-                if (id == R.id.dir_change) {
-                        pickFolder();
-                        return true;
+                if (x + popupWidth > safeRight) {
+                        x = safeRight - popupWidth;
                 }
-                return super.onOptionsItemSelected(item);
+                int y = anchorBottom;
+                if (y + popupHeight > safeBottom) {
+                        // No room below the app bar: flip above it
+                        y = anchorPos[1] - popupHeight;
+                }
+                popup.showAtLocation(anchor, Gravity.NO_GRAVITY, x, y);
         }
 
         // Returning from the storage settings screen or from a finished
