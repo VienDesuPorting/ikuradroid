@@ -68,7 +68,7 @@
     <string name="about_people_header">People</string>
     <string name="about_people">«Ivan» - anonymous and original developer of the Android implementation of ViLE (2015-2016).\n\nRevival and maintenance - VienDesu! Porting Team (2026).</string>
     <string name="about_thirdparty_header">Third-party components</string>
-    <string name="about_thirdparty">SDL 2.0.3, SDL_image, SDL_mixer, SDL_ttf, SDL_gfx, libmikmod, smpeg2, libwebp; HQx filters © MaxSt (LGPL 2.1+); utf8cpp © Nemanja Trifunovic; Will engine ported from VNMV © soywiz.</string>
+    <string name="about_thirdparty">SDL 2.30.12, SDL_image, SDL_mixer, SDL_ttf, SDL_gfx, libmikmod, smpeg2, libwebp; HQx filters © MaxSt (LGPL 2.1+); utf8cpp © Nemanja Trifunovic; Will engine ported from VNMV © soywiz.</string>
     <string name="about_links_header">Links</string>
     <string name="about_links">https://sourceforge.net/projects/vilevn/\nhttps://vk.ru/topic-69564393_33447386\nTelegram - VienDesu! Porting Team: https://t.me/visual_novels_for_android</string>
 </resources>
