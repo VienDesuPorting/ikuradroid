@@ -90,20 +90,23 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private BottomSheetDialog mGameMenuSheet;
     private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted, mSwipePassed;
     private float mSwipeStartX, mSwipeStartY;
-    // The menu swipe may start anywhere on the screen - not, as before,
-    // inside a narrow strip above the bottom edge. Only the system's own
-    // edge zones stay untouched: the bottom MENU_SWIPE_EDGE_DP belong to
-    // the gesture-nav pill, the top ones to the notification shade. The
-    // touch is captured at ACTION_DOWN (the engine must not see it: a
-    // background down advances the text, so a leaked swipe start would
-    // skip a line) and released as soon as the finger proves it is not a
-    // menu swipe: within MENU_SWIPE_SLOP_DP it is replayed as one clean
-    // tap once the finger lifts; past the slop in any non-upward
-    // direction the stream is handed back to the surface from the
-    // current position, so drag-hover keeps working. Only an upward run
-    // of at least MENU_SWIPE_TRAVEL_DP (and predominantly vertical)
-    // opens the menu. All in dp: sensorLandscape windows are short, so
-    // a fraction of the height would be either too small or unreachable.
+    // The vertical gestures may start anywhere on the screen - not, as
+    // before, inside a narrow strip above the bottom edge. Only the
+    // system's own edge zones stay untouched: the bottom
+    // MENU_SWIPE_EDGE_DP belong to the gesture-nav pill, the top ones
+    // to the notification shade. The touch is captured at ACTION_DOWN
+    // (the engine must not see it: a background down advances the text,
+    // so a leaked swipe start would skip a line) and released as soon
+    // as the finger proves it is not a vertical gesture: within
+    // MENU_SWIPE_SLOP_DP it is replayed as one clean tap once the finger
+    // lifts; past the slop in a non-vertical direction the stream is
+    // handed back to the surface from the current position, so
+    // drag-hover keeps working. An upward run of at least
+    // MENU_SWIPE_TRAVEL_DP (and predominantly vertical) opens the menu;
+    // a downward run of the same length cancels like the Escape key of
+    // the PC original (sendGameCancel). All in dp: sensorLandscape
+    // windows are short, so a fraction of the height would be either
+    // too small or unreachable.
     private static final float MENU_SWIPE_EDGE_DP = 40f;    // nav pill / shade margins
     private static final float MENU_SWIPE_TRAVEL_DP = 96f;  // confirmed swipe distance
     private static final float MENU_SWIPE_SLOP_DP = 14f;    // tap-vs-drag decision
@@ -622,24 +625,31 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     }
 
     // ------------------------------------------------------------------
-    // Bottom-up swipe opens the in-game menu.
+    // Vertical gestures.
+    //
+    // The bottom-up swipe opens the in-game menu; the top-down swipe
+    // cancels like the Escape key / right click of the PC original.
     //
     // Rationale: gesture-nav devices have no BACK button at all, and a
     // permanent on-screen pause button would eat screen space and risk
-    // mis-taps while the player is rapidly advancing text. The swipe is
-    // invisible and never collides with engine input:
+    // mis-taps while the player is rapidly advancing text. The games
+    // themselves draw windows that only close on Escape or the right
+    // mouse button - input the touch screen has no equivalent for. Both
+    // swipes are invisible and never collide with engine input:
     //
-    //  * a gesture starting inside the strip is captured at ACTION_DOWN
-    //    - the engine sees NOTHING if it turns out to be a swipe (the
-    //    whole stream is consumed);
-    //  * a plain tap inside the strip is replayed to the engine as a
-    //    clean DOWN+UP pair once the finger lifts (forwardTapToEngine),
-    //    so clicks in that part of the game keep working;
-    //  * everything below the strip - the gesture-navigation zone of the
-    //    system - stays entirely with the system: the strip ends 40 dp
-    //    above the bottom edge (the nav pill zone is ~24 dp), so opening
-    //    the menu never fights the nav gesture, and the notification
-    //    shade at the top stays untouched as well.
+    //  * a gesture starting anywhere is captured at ACTION_DOWN - the
+    //    engine sees NOTHING if it turns out to be a swipe (the whole
+    //    stream is consumed);
+    //  * a plain tap is replayed to the engine as a clean DOWN+UP pair
+    //    once the finger lifts (forwardTapToEngine), so clicks anywhere
+    //    in the game keep working;
+    //  * a horizontal drag is handed back live from the slop point
+    //    (replayTouchToEngine), so drag-hover keeps working; vertical
+    //    runs that never reach the travel threshold are dropped on
+    //    purpose;
+    //  * the outer 40 dp margins stay entirely with the system: the
+    //    bottom band is the gesture-navigation zone (the nav pill is
+    //    ~24 dp), the top band is the notification shade.
     // ------------------------------------------------------------------
 
     private float menuDp(float value) {
@@ -701,14 +711,24 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                         float travel = (float) Math.sqrt(dx * dx + dy * dy);
                         boolean upward = -dy > 0
                                 && Math.abs(dy) > 1.5f * Math.abs(dx);
+                        boolean downward = dy > 0
+                                && Math.abs(dy) > 1.5f * Math.abs(dx);
                         if (upward && -dy >= menuDp(MENU_SWIPE_TRAVEL_DP)) {
                             mSwipeConsumed = true;
                             showGameMenu();
+                        } else if (downward
+                                && dy >= menuDp(MENU_SWIPE_TRAVEL_DP)) {
+                            // Confirmed top-down swipe: the touch
+                            // counterpart of the PC original's Escape /
+                            // right click (see sendGameCancel).
+                            mSwipeConsumed = true;
+                            sendGameCancel();
                         } else if (travel >= menuDp(MENU_SWIPE_SLOP_DP)
-                                && !upward) {
-                            // Proven not a menu swipe: replay the touch from
-                            // its current position and hand the rest of the
-                            // stream back, so drag-hover keeps working.
+                                && !upward && !downward) {
+                            // Proven not a vertical gesture: replay the
+                            // touch from its current position and hand the
+                            // rest of the stream back, so drag-hover keeps
+                            // working.
                             mSwipeAborted = true;
                             mSwipePassed = true;
                             replayTouchToEngine(ev);
@@ -736,9 +756,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                         if (travel < menuDp(MENU_SWIPE_SLOP_DP)) {
                             forwardTapToEngine(ev);
                         }
-                        // Short fizzled upward runs are dropped on purpose:
-                        // replaying them as taps would click wherever the
-                        // finger happened to start.
+                        // Short fizzled vertical runs are dropped on
+                        // purpose: replaying them as taps would click
+                        // wherever the finger happened to start.
                     }
                     return true;
             }
@@ -790,6 +810,20 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         float p = ev.getPressure();
         onNativeTouch(ev.getDeviceId(), ev.getPointerId(0),
                 MotionEvent.ACTION_DOWN, x, y, p);
+    }
+
+    /**
+     * Top-down swipe = the cancel key. The PC originals close their
+     * script-drawn windows with Escape or the right mouse button, and
+     * inside the engine both reduce to the same cancel signal; ESC is
+     * sent literally as a KEYCODE_ESCAPE keydown+keyup pair, so both
+     * the dialog cancel path and the scripts polling for the right
+     * click behave exactly like on the PC. The key is released
+     * immediately - nothing in the engine needs it held.
+     */
+    private void sendGameCancel() {
+        onNativeKeyDown(KeyEvent.KEYCODE_ESCAPE);
+        onNativeKeyUp(KeyEvent.KEYCODE_ESCAPE);
     }
 
     // Events
