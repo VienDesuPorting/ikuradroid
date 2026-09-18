@@ -119,7 +119,7 @@ Gradle Wrapper 8.10.2 уже лежит в репозитории, отдель�
 - **«Иван»** — оригинальный Android-порт (2015–2016)
 - **VienDesu! Porting Team** — текущая разработка IkuraDroid
 - SDL 2.30.12, SDL_gfx / SDL_image / SDL_mixer / SDL_ttf, libmikmod, SMPEG2, libwebp, HQ2x (MaxSt), utf8cpp
-- движок Will перенесён из [VNMV](https://code.google.com/archive/p/vnvm) с разрешения автора
+- движок Will перенесён из [VNMV](https://github.com/soywiz-archive/vnvm) с разрешения автора
 
 ## Ссылки
 
