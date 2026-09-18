@@ -19,7 +19,21 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="@string/app_name" />
+            app:title="@string/app_name">
+
+            <!-- Hand-rolled menu trigger instead of the stock overflow:
+                 the popup itself is the tile-context-style rounded panel
+                 (menu_toolbar_popup.xml). -->
+            <ImageButton
+                android:id="@+id/menu_more"
+                android:layout_width="48dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="end"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/menu_more"
+                android:src="@drawable/ic_menu_more" />
+
+        </com.google.android.material.appbar.MaterialToolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
 

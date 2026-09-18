@@ -18,6 +18,7 @@
     <string name="menu_quit">Выйти</string>
 
     <!-- Меню панели запуска -->
+    <string name="menu_more">Ещё</string>
     <string name="menu_about">О приложении</string>
     <string name="menu_engines">Движки</string>
     <string name="dir_change">Добавить папку с новеллой</string>
