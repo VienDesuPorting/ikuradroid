@@ -33,7 +33,17 @@ StdSave::StdSave(EngineVN *Engine) : DialogBase(Engine,true){
 	AddWidget(w_title);
 
 	// the exit button
+#ifdef __ANDROID__
+	// Lifted two rows off the bottom edge: in landscape the game
+	// picture fills the screen height and the bottom ~40 dp belong
+	// to the system gesture navigation. A button hugging the edge
+	// there never receives its taps (the dead Exit of 1.9.8), so
+	// park it above that band; the slab area below adapts through
+	// w_exit->GetY(). Desktop keeps the original corner spot.
+	w_exit=new TextButton((rfull.w/10)*9,rfull.h-(space*4),"Exit");
+#else
 	w_exit=new TextButton((rfull.w/10)*9,rfull.h-(space*2),"Exit");
+#endif
 	AddWidget(w_exit);
 
 	// Create saveslab widgets
