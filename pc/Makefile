@@ -26,6 +26,15 @@
 #   make                            # system SDL2 via pkg-config
 #   make run GAME=/path/to/game     # launch with the game directory
 #
+# Automated drive test (optional):
+#   Build with CXXFLAGS="-DIKURADROID_AUTODRIVE" and run the binary with
+#   the IKURADROID_AUTODRIVE env var set (plus SDL_VIDEODRIVER=dummy for
+#   headless boxes). A helper thread then pushes synthetic clicks so the
+#   title menu and the in-game choice pipeline can be verified without a
+#   human: it taps the first title spot, then alternates between the
+#   choice rows and the text area while the engine log records every
+#   CSET/CWO/CC the script issues.
+#
 # Runtime notes:
 #   - The engine reads vile.cfg from the working directory and accepts
 #     CLI switches (--cwd, --game, --size, --fontface, --logfile ...).

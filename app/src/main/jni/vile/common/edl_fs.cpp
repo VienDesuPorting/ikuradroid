@@ -569,7 +569,7 @@ uString EDL_CreateTemporary(){
 	{
 		// Shift directory to string and get unique filename
 		uString path=lpPathBuffer;
-		if(GetTempFileName(path.c_str(),"ViLEVN",0,lpPathBuffer)!=0){
+		if(GetTempFileName(path.c_str(),"IKURAVN",0,lpPathBuffer)!=0){
 			// Create directory
 			EDL_DeleteFile(lpPathBuffer);
 			if(CreateDirectory(lpPathBuffer,0)!=0){
@@ -585,7 +585,7 @@ uString EDL_CreateTemporary(){
 			tmps="";
 		}
 	}
-	tmps+="ViLE-XXXXXX";
+	tmps+="IkuraDroid-XXXXXX";
 	char tmpc[tmps.length()];
 	strcpy(tmpc,tmps.c_str());
 	retval=mkdtemp(tmpc);

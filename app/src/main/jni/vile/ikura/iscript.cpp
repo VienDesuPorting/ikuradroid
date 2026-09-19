@@ -73,6 +73,27 @@ bool IkuraScript::GetOpcode(Uint8 *Opcode,const Uint8 **Buffer,Uint32 *Length){
 			positions->position+=(*Length)+2;
 		}
 
+#ifdef IKURADROID_AUTODRIVE
+		// TEMPORARY full opcode trace for the automated choice test
+		{
+			static const struct{Uint8 op;const char*name;} traceops[]={
+				{0x01,"LS"},{0x02,"LSBS"},{0x10,"CW"},{0x11,"CP"},{0x12,"CIR"},
+				{0x13,"CPS"},{0x15,"CSET"},{0x16,"CWO"},{0x17,"CWC"},{0x18,"CC"},
+				{0x19,"CCLR"},{0x1B,"CRND"},{0x04,"JP"},{0x05,"JS"},{0x06,"RT"},
+				{0x07,"ONJP"},{0x08,"ONJS"},{0x31,"SK"},{0x33,"HF"},{0x3B,"HN"},
+				{0x41,"HS"},{0x44,"CALC"},{0x47,"IF"},{0x84,"IH"},{0x85,"IG"},
+				{0x86,"IGINIT"},{0x88,"IHK"},{0xE5,"OPSL"},{0xE6,"OPPROP"},
+				{0xF1,"ATIMES"},{0xF2,"AWAIT"},{0xFA,"TIMERSET"},{0xE9,"TITLE"},
+				{0x00,"ED"},{0x22,"WL"},{0x23,"WW"},{0x8D,"CLK"},{0x4A,"EXC"},{0x49,"EXS"},
+			};
+			for(unsigned ti=0;ti<sizeof(traceops)/sizeof(traceops[0]);ti++){
+				if(traceops[ti].op==*Opcode){
+					LogError("TRACEOP %s @%u len=%d",traceops[ti].name,pos,*Length);
+					break;
+				}
+			}
+		}
+#endif
 		// Store save information
 		if(*Opcode==IOP_PM){
 			rsave_name=save_name;

@@ -120,10 +120,10 @@ int main(int argc,char **argv){
 			}
 			if(ini.Get("display","fullscreen",vint)){
 				if(vint){
-//					Cfg::Display::Flags|=SDL_FULLSCREEN;
+//                                      Cfg::Display::Flags|=SDL_FULLSCREEN;
 				}
 				else{
-//					Cfg::Display::Flags&=~SDL_FULLSCREEN;
+//                                      Cfg::Display::Flags&=~SDL_FULLSCREEN;
 				}
 			}
 
@@ -205,7 +205,7 @@ int main(int argc,char **argv){
 		// Switches and configuration parameters
 		if(!strcmp(argv[i],"--fullscreen")){
 			// Preset videoflag
-//			Cfg::Display::Flags|=SDL_FULLSCREEN;
+//                      Cfg::Display::Flags|=SDL_FULLSCREEN;
 		}
 		else if(!strcmp(argv[i],"--size") && i+2<argc){
 			// Set resolution
@@ -568,7 +568,7 @@ int main(int argc,char **argv){
 			uString(" (")+
 			uString(PACKAGE_LINE)+
 			uString(")");
-//		SDL_WM_SetCaption(caption.c_str(),NULL);
+//              SDL_WM_SetCaption(caption.c_str(),NULL);
 
 #ifdef ANDROID
 		//Cfg::Path::cwd = "/sdcard/ikuradroid/Crescendo";
@@ -617,14 +617,12 @@ int main(int argc,char **argv){
 		LogVerbose("\tGame directory: %s",Cfg::Path::game.c_str());
 
 		EngineVN *engine=game->LoadEngine(Cfg::Path::game);
-		LogVerbose("\tssssssssssss");
 		VILE_STAGE("main: engine probe %s", engine ? "ok" : "failed");
 
 		if(!engine){
 			LogError("Failed to load game resources");
 			retval=ERROR_INITGAME;
 		}
-		LogVerbose("\tttttthgfhffh");
 		// Dump information from loaded engine
 		if(engine && info_title){
 			game->InfoTitle(engine);
@@ -640,8 +638,8 @@ int main(int argc,char **argv){
 			// Report failed loading
 			uString title="No valid game resources";
 			uString text;
-			text+="ViLE needs the resources from the original games ";
-			text+="in order to play them. You can either start ViLE ";
+                        text+="IkuraDroid needs the resources from the original games ";
+                        text+="in order to play them. You can either start IkuraDroid ";
 			text+="from the root of the game folder, or specify the ";
 			text+="game folder from the commandline ";
 			text+="\r\n";
@@ -674,7 +672,6 @@ int main(int argc,char **argv){
 				Cfg::Display::Height=engine->NativeHeight();
 				LogVerbose("Autodetecting resolution: %dx%d",
 						Cfg::Display::Width,Cfg::Display::Height);
-			printf("Path game =\n");
 				//game->InitVideo();
 			}
 
@@ -941,11 +938,11 @@ bool ViLE::ProbeSUF(uString Path,uString Key){
 	if(isf || drs){
 		// Get SUF file
 		uString sufname;
-		if(ProbeResource(Path,"game.suf"))			sufname="game.suf";
-		else if(ProbeResource(Path,Key+".suf"))		sufname=Key+".suf";
-		else if(ProbeResource(Path,Key+"d.suf"))		sufname=Key+".suf";
-		else if(ProbeResource(Path,Key+"us.suf"))	sufname=Key+"us.suf";
-		else if(ProbeResource(Path,Key+"ml.suf"))	sufname=Key+"ml.suf";
+                if(ProbeResource(Path,"game.suf"))                      sufname="game.suf";
+                else if(ProbeResource(Path,Key+".suf"))         sufname=Key+".suf";
+                else if(ProbeResource(Path,Key+"d.suf"))                sufname=Key+"d.suf";
+                else if(ProbeResource(Path,Key+"us.suf"))       sufname=Key+"us.suf";
+                else if(ProbeResource(Path,Key+"ml.suf"))       sufname=Key+"ml.suf";
 
 		// Confirm title
 		if(sufname.length()){
@@ -955,6 +952,7 @@ bool ViLE::ProbeSUF(uString Path,uString Key){
 				uString gamekey,gametitle="unknown";
 				if(inifile->Get("Key",gamekey)){
 					if(ProbeString(gamekey,Key) ||
+                                                ProbeString(gamekey,Key+"d") ||
 						ProbeString(gamekey,Key+"us") ||
 						ProbeString(gamekey,Key+"ml")){
 						retval=true;
@@ -1044,6 +1042,68 @@ void ViLE::RunEngine(EngineVN *engine){
 		VILE_MAP_INPUT((nx)*winfw_,(ny)*winfh_,gx,gy); \
 	}while(0)
 
+#ifdef IKURADROID_AUTODRIVE
+        // TEMPORARY test hook (headless CI-style drive): if
+        // IKURADROID_AUTODRIVE is set, a helper thread pushes synthetic
+        // clicks/keys so the choice pipeline can be verified without a
+        // human. Remove after diagnosis.
+        if(getenv("IKURADROID_AUTODRIVE")){
+                static SDL_Thread *autodrive_thread=SDL_CreateThread(
+                                [](void*data)->int{
+                                        SDL_Delay(3000);
+                                        // Title menu: click the first menu
+                                        // spot ("New Game", IH region 0)
+                                        SDL_Event down,up;
+                                        SDL_zero(down);
+                                        SDL_zero(up);
+                                        down.type=SDL_MOUSEBUTTONDOWN;
+                                        down.button.button=SDL_BUTTON_LEFT;
+                                        down.button.x=567;
+                                        down.button.y=283;
+                                        down.button.state=SDL_PRESSED;
+                                        down.button.clicks=1;
+                                        SDL_PushEvent(&down);
+                                        up.type=SDL_MOUSEBUTTONUP;
+                                        up.button.button=SDL_BUTTON_LEFT;
+                                        up.button.x=567;
+                                        up.button.y=283;
+                                        up.button.state=SDL_RELEASED;
+                                        up.button.clicks=1;
+                                        SDL_PushEvent(&up);
+                                        // Alternate clicks: title spot
+                                        // ("New Game", skip demo), choice
+                                        // item 0, item 1, background
+                                        SDL_Delay(2000);
+                                        int spots[][2]={{567,283},{567,283},{567,283},{567,283},{567,283},{567,283},{320,194},{320,278},{400,240}};
+                                        int i=0;
+                                        for(int n=0;n<2000;n++){
+                                                SDL_Delay(250);
+                                                SDL_zero(down);
+                                                SDL_zero(up);
+                                                int x=spots[i%9][0];
+                                                int y=spots[i%9][1];
+                                                i++;
+                                                down.type=SDL_MOUSEBUTTONDOWN;
+                                                down.button.button=SDL_BUTTON_LEFT;
+                                                down.button.x=x;
+                                                down.button.y=y;
+                                                down.button.state=SDL_PRESSED;
+                                                down.button.clicks=1;
+                                                SDL_PushEvent(&down);
+                                                up.type=SDL_MOUSEBUTTONUP;
+                                                up.button.button=SDL_BUTTON_LEFT;
+                                                up.button.x=x;
+                                                up.button.y=y;
+                                                up.button.state=SDL_RELEASED;
+                                                up.button.clicks=1;
+                                                SDL_PushEvent(&up);
+                                        }
+                                        return 0;
+                                },"ikuradroid-autodrive",0);
+                (void)autodrive_thread;
+        }
+#endif
+
 	while(engine){
 		// Tick engine
 		engine->EventHostTick();
@@ -1106,7 +1166,7 @@ void ViLE::RunEngine(EngineVN *engine){
 				int gx,gy;
 				VILE_MAP_INPUT_FINGER(event.tfinger.x,
 				                event.tfinger.y,gx,gy);
-				LOGCAT("vile input: finger down norm=(%.3f,%.3f) logical=(%d,%d)",event.tfinger.x,event.tfinger.y,gx,gy);
+                                LOGCAT("ikuradroid input: finger down norm=(%.3f,%.3f) logical=(%d,%d)",event.tfinger.x,event.tfinger.y,gx,gy);
 				engine->EventHostMouseMove(
 				                        screenSurface,gx,gy);
 				engine->EventHostMouseLeftDown(
@@ -1116,7 +1176,7 @@ void ViLE::RunEngine(EngineVN *engine){
 				int gx,gy;
 				VILE_MAP_INPUT_FINGER(event.tfinger.x,
 				                event.tfinger.y,gx,gy);
-				LOGCAT("vile input: finger up norm=(%.3f,%.3f) logical=(%d,%d)",event.tfinger.x,event.tfinger.y,gx,gy);
+                                LOGCAT("ikuradroid input: finger up norm=(%.3f,%.3f) logical=(%d,%d)",event.tfinger.x,event.tfinger.y,gx,gy);
 				engine->EventHostMouseLeftUp(
 				                        screenSurface,gx,gy);
 			}
@@ -1178,44 +1238,44 @@ EngineVN *ViLE::LoadEngine(uString Path){
 	if(0){
 	}
 #ifdef VILE_SUPPORT_WINDY
-	else if(ProbeNocturnal(Path))				engine=new Nocturnal(Path);
-	else if(ProbeMayclub(Path))					engine=new Mayclub(Path);
+        else if(ProbeNocturnal(Path))                           engine=new Nocturnal(Path);
+        else if(ProbeMayclub(Path))                                     engine=new Mayclub(Path);
 #endif
 #ifdef VILE_SUPPORT_JAST
-	else if(ProbeJUMC(Path))					engine=new JUMC(Path);
+        else if(ProbeJUMC(Path))                                        engine=new JUMC(Path);
 #endif
 #ifdef VILE_SUPPORT_CWARE
-	else if(ProbeDiviDead(Path))				engine=new DiviDead(Path);
+        else if(ProbeDiviDead(Path))                            engine=new DiviDead(Path);
 #endif
 #ifdef VILE_SUPPORT_WILL
-	else if(ProbeYumeMiruKusuri(Path))			engine=new YumeMiruKusuri(Path);
-	else if(ProbePrincessWaltz(Path))			engine=new PrincessWaltz(Path);
-	else if(ProbeStarrySky(Path))			    engine=new StarrySky(Path);
+        else if(ProbeYumeMiruKusuri(Path))                      engine=new YumeMiruKusuri(Path);
+        else if(ProbePrincessWaltz(Path))                       engine=new PrincessWaltz(Path);
+        else if(ProbeStarrySky(Path))                       engine=new StarrySky(Path);
 
-	else if(ProbeCriticalPoint(Path))			engine=new CriticalPoint(Path);
-	else if(ProbeLittleMyMaid(Path))			engine=new LittleMyMaid(Path);
+        else if(ProbeCriticalPoint(Path))                       engine=new CriticalPoint(Path);
+        else if(ProbeLittleMyMaid(Path))                        engine=new LittleMyMaid(Path);
 #endif
 #ifdef VILE_SUPPORT_TLOVE
-	else if(ProbeTrueLove(Path)){		     	engine=new Truelove(Path);}
+        else if(ProbeTrueLove(Path)){                   engine=new Truelove(Path);}
 #endif
 #ifdef VILE_SUPPORT_IKURA
-	else if(ProbeCrescendo(Path))				engine=new Crescendo(Path);
-	else if(ProbeHDR(Path))				        engine=new Heartdr(Path);
-	else if(ProbeVirgin(Path))				    engine=new virgin(Path);
-	else if(ProbeSagara(Path))					engine=new Sagara(Path);
-	else if(ProbeSnow(Path))					engine=new Snow(Path);
-	else if(ProbeKanaOkaeri(Path))				engine=new KanaOkaeri(Path);
-	else if(ProbeKana(Path))					engine=new Kana(Path);
-	else if(ProbeHitomi(Path))					engine=new Hitomi(Path);
-	else if(ProbeCatGirl(Path))					engine=new CatGirl(Path);
-	else if(ProbeIdols(Path))					engine=new Idols(Path);
+        else if(ProbeCrescendo(Path))                           engine=new Crescendo(Path);
+        else if(ProbeHDR(Path))                                 engine=new Heartdr(Path);
+        else if(ProbeVirgin(Path))                                  engine=new virgin(Path);
+        else if(ProbeSagara(Path))                                      engine=new Sagara(Path);
+        else if(ProbeSnow(Path))                                        engine=new Snow(Path);
+        else if(ProbeKanaOkaeri(Path))                          engine=new KanaOkaeri(Path);
+        else if(ProbeKana(Path))                                        engine=new Kana(Path);
+        else if(ProbeHitomi(Path))                                      engine=new Hitomi(Path);
+        else if(ProbeCatGirl(Path))                                     engine=new CatGirl(Path);
+        else if(ProbeIdols(Path))                                       engine=new Idols(Path);
 #endif
 #ifdef VILE_SUPPORT_CROWD
-	else if(ProbeTokimeki(Path))				engine=new Tokimeki(Path);
-	else if(ProbeXChange1(Path))				engine=new XChange1(Path);
-	else if(ProbeXChange3(Path))				engine=new XChange3(Path);
+        else if(ProbeTokimeki(Path))                            engine=new Tokimeki(Path);
+        else if(ProbeXChange1(Path))                            engine=new XChange1(Path);
+        else if(ProbeXChange3(Path))                            engine=new XChange3(Path);
 #endif
-	else										;
+        else                                                                            ;
 	return engine;
 }
 
@@ -1249,6 +1309,13 @@ bool ViLE::InitVideo(){
 	window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_SHOWN/*|SDL_WINDOW_FULLSCREEN_DESKTOP*/);
 
     EDLRenderer= SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_TARGETTEXTURE);
+#ifdef IKURADROID_AUTODRIVE
+    // TEMPORARY headless fallback: the SDL dummy video driver exposes no
+    // accelerated renderer, so the automated drive test runs on software.
+    if(!EDLRenderer){
+        EDLRenderer= SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE|SDL_RENDERER_TARGETTEXTURE);
+    }
+#endif
 
    /* int real_width, real_height;
     SDL_GetWindowSize(window, &real_width, &real_height);
@@ -1331,7 +1398,7 @@ void ViLE::Quit(){
 void ViLE::Help(){
 	// Show available options
 	About();
-	LogMessage("Usage: vilevn [OPTIONS|COMMAND]");
+        LogMessage("Usage: ikuradroid [OPTIONS|COMMAND]");
 	LogMessage("");
 	LogMessage("Display settings:");
 	LogMessage("\t--fullscreen\t\t\tForces fullscreen mode");
@@ -1377,7 +1444,7 @@ void ViLE::Help(){
 	LogMessage("\t--xdec ARC [RES [RES ..]]\tExtract AND decode resources");
 	LogMessage("\t--archive ARC INFILE [INFILE..]\tArchives resources");
 	LogMessage("\t--help\t\t\t\tThis helpfull message");
-	LogMessage("\t--about\t\t\t\tAbout ViLE");
+        LogMessage("\t--about\t\t\t\tAbout IkuraDroid");
 	LogMessage("");
 	LogMessage("");
 	LogMessage("You can also use the following hotkeys at runtime:");
@@ -1500,7 +1567,7 @@ void ViLE::InfoRuntime(){
 bool ViLE::Archive(uString Archive,Stringlist *List){
 	Resources resman;
 	int count=List->GetCount();
-    LogMessage("ViLE::Archive count %d ",count);
+    LogMessage("IkuraDroid::Archive count %d ",count);
 	for(int i=0;i<count;i++){
 		resman.AddResource(List->GetString(i));
 	}

@@ -19,3 +19,4 @@ captures/
 # sources, ~235 MB). Not referenced by ndk-build (real path:
 # app/src/main/jni). Kept on disk for archaeology, kept out of the repo.
 app/src/main/java/jni/
+pc/pc-deps/

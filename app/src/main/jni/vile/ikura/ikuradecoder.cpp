@@ -272,7 +272,6 @@ bool IkuraDecoder::EventGameTick(){
 			state=IS_NORMAL;
 		}
 		else if(keyctrl()){
-            LogError("g1");
 			// Skip state and fall back
 			w_textview->CompleteText();
 			while(SkipAnimation());
@@ -282,7 +281,6 @@ bool IkuraDecoder::EventGameTick(){
 	if(state==IS_WAITTEXT){
 		if(!w_textview->GetRemainingText()){
 
-			            LogError("g2");
 			// Printing has completed
 			state=IS_NORMAL;
 		}
@@ -295,7 +293,6 @@ bool IkuraDecoder::EventGameTick(){
 		}
 		else if(keyok){
 			//LogError("keyok");
-            LogError("g3");
 			// Complete printing text
 			w_textview->CompleteText();
 			keyok=false;
@@ -310,7 +307,6 @@ bool IkuraDecoder::EventGameTick(){
 			state=IS_NORMAL;
 		}
 		else if(keyok){
-		            LogError("g4");
             //LogError("keyok");
 			// Advance text
 			if(!w_textview->GetRemainingText()){
@@ -329,7 +325,6 @@ bool IkuraDecoder::EventGameTick(){
 
 bool IkuraDecoder::EventBackgroundMouseLeftDown(int X,int Y){
     bool retval=EngineVN::EventBackgroundMouseLeftDown(X,Y);
-   LogError("EventBackgroundMouseLeftDown");
 	return retval;
 }
 /*! \brief Advances the scripted engine
@@ -1233,6 +1228,9 @@ bool IkuraDecoder::iop_pf(const Uint8 *Data,int Length){
 
 // Print text messages
 bool IkuraDecoder::iop_pm(const Uint8 *Data,int Length){
+#ifdef IKURADROID_AUTODRIVE
+    LogError("TRACE PM (text page)");
+#endif
 /*
 char b[255];
 uString sc,sx;
@@ -1446,6 +1444,9 @@ bool IkuraDecoder::iop_lsbs(const Uint8 *Data,int Length){
 
 // Loads a new script
 bool IkuraDecoder::iop_ls(const Uint8 *Data,int Length){
+#ifdef IKURADROID_AUTODRIVE
+    LogError("TRACE LS: %s",(char*)Data);
+#endif
 	RWops *blob=0;
 	if((blob=LoadScript((char*)Data,"ISF"))){
 		int tlength=blob->Seek(0,SEEK_END);
@@ -1467,7 +1468,7 @@ bool IkuraDecoder::iop_ls(const Uint8 *Data,int Length){
 
 // Sets window caption
 bool IkuraDecoder::iop_title(const Uint8 *Data,int Length){
-	uString t="ViLE: ";
+	uString t="IkuraDroid: ";
 	t+=(char*)Data;
 //	SDL_WM_SetCaption(t.c_str(),t.c_str());
 	return false;
@@ -1603,6 +1604,9 @@ bool IkuraDecoder::iop_cc(const Uint8 *Data,int Length){
 
 // Configures a command option
 bool IkuraDecoder::iop_cset(const Uint8 *Data,int Length){
+#ifdef IKURADROID_AUTODRIVE
+    LogError("TRACE CSET");
+#endif
 	Uint8 dst=GETBYTE(Data);		// Where to place the result
 	Uint8 val=GETBYTE(Data+1);		// Identifying value
 	Uint32 x=GETDWORD(Data+2);
@@ -2063,6 +2067,9 @@ bool IkuraDecoder::iop_exs(const Uint8 *Data,int Length){
 
 // Start delay
 bool IkuraDecoder::iop_await(const Uint8 *Data,int Length){
+#ifdef IKURADROID_AUTODRIVE
+    LogError("TRACE AWAIT state=%d remaining=%d",state,timerend-SDL_GetTicks());
+#endif
 
 	if(state==IS_WAITTIMER){
 		timerend+=delayvalue;
