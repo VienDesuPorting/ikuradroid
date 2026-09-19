@@ -25,6 +25,14 @@ CriticalPoint::CriticalPoint(uString Path) : EngineWill(640,480) {
 	// a black chroma base, frame 1 the actual scene at its own hint
 	compose_background=true;
 
+	// CP scripts place characters via the OP48 x/y arguments: y parks
+	// the 424-px sprites flush on the bottom menubar, x centers each
+	// sprite per character. Plain full-screen layers, no slots
+	sprite_positions=true;
+	for(int i=0;i<3;i++){
+		overlay[i]->Move(0,0);
+	}
+
 	// Add resources
 	AddBGM(new ArchiveWillARC(Path+"Bgm.arc"));
 	AddVoices(new ArchiveWillARC(Path+"Voice.arc"));

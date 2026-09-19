@@ -32,6 +32,12 @@ EngineWill::EngineWill(int Width,int Height) : EngineVN(Width,Height){
         prev_overlaySurfaces[i]=0;
     }
 
+	for(int i=0;i<3;i++){
+		sprite_x[i]=0;
+		sprite_y[i]=0;
+	}
+	sprite_positions=false;	// OP48 x/y placement: Critical Point enables it
+
 	table_data=0;
 	table_mouseindex=0;
 	anim_data=0;
@@ -1361,10 +1367,11 @@ bool EngineWill::OP47(){
 bool EngineWill::OP48(){
     LogVerbose("Loadcharacter");
 	Uint8 id=GETBYTE(script->buffer+script->index+0);
-	//Uint16 x=GETWORD(script->buffer+script->index+1);
-	//Uint16 y=GETWORD(script->buffer+script->index+3);
+	Uint16 x=GETWORD(script->buffer+script->index+1);
+	Uint16 y=GETWORD(script->buffer+script->index+3);
 	//Uint8 index=GETBYTE(script->buffer+script->index+9);
 	script->index+=10;
+	LogVerbose("Loadcharacter %d at %d,%d",id,x,y);
 	aString text;
 	while(script->buffer[script->index]){
 		text+=script->buffer[script->index++];
@@ -1376,6 +1383,10 @@ bool EngineWill::OP48(){
 		LogError("Invalid character id: %d",id);
 	}
 	else{
+		// Remember script placement (applied at composition time when
+		// the game subclass enables sprite_positions)
+		sprite_x[id]=x;
+		sprite_y[id]=y;
 		image=LoadMaskedImage(text);
 	}
 	if(image){
@@ -1513,11 +1524,32 @@ void EngineWill::SetTransit(Uint32 Duration){
 
             if (overlaySurfaces[id])
             {
-                SDL_Rect pos = overlay[id]->GetPosition();
-                EDL_BlendSurface(overlaySurfaces[id],0,AllSurface,&pos);
-                overlay[id]->Blit(overlaySurfaces[id]);
+                SDL_Rect wpos = overlay[id]->GetPosition();
+                // Sprite placement: script-supplied x/y (CP) or the
+                // legacy slot geometry of the widget itself
+                SDL_Rect spos;
+                if (sprite_positions){
+                    spos.x=sprite_x[id];
+                    spos.y=sprite_y[id];
+                }
+                else{
+                    spos.x=wpos.x;
+                    spos.y=wpos.y;
+                }
+                spos.w=overlaySurfaces[id]->w;
+                spos.h=overlaySurfaces[id]->h;
+                EDL_BlendSurface(overlaySurfaces[id],0,AllSurface,&spos);
+                // Blit the sprite into the widget surface at the same
+                // offset so the steady-state widget render matches the
+                // transit composition pixel for pixel
+                SDL_Rect wofs;
+                wofs.x=spos.x-wpos.x;
+                wofs.y=spos.y-wpos.y;
+                wofs.w=spos.w;
+                wofs.h=spos.h;
+                overlay[id]->Blit(overlaySurfaces[id],0,&wofs);
                 if (prev_overlaySurfaces[id])
-                    EDL_BlendSurface(prev_overlaySurfaces[id],0,prev_AllSurface,&pos);
+                    EDL_BlendSurface(prev_overlaySurfaces[id],0,prev_AllSurface,&spos);
             }
         }
 
