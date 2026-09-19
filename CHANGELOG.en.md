@@ -2,6 +2,14 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
+## 2.0.1 — 2026-09-19
+
+- Crescendo: the English release boots again with the original CresD.suf. ProbeSUF had a filename typo (it hunted the nonexistent CRES.suf) and never checked the CRESD key.
+- Branding: ViLE renamed to IkuraDroid in every user-visible string - the "No valid game resources" dialog, window caption and version, logcat tag, intro logo, screenshot names, --about. GPL license headers untouched.
+- Crescendo choices smoke-tested end-to-end on the English scripts: the story branches correctly.
+- The log is cleaned of debug leftovers, and a format string with two %d for one argument is fixed.
+- PC build: LOGCAT gained a desktop fallback, the choice autodrive (IKURADROID_AUTODRIVE) is documented in pc/Makefile.
+
 ## 2.0.0 — 2026-09-18
 
 - New app icon: portrait art on the adaptive background layer — the launcher mask crops it on its own, keeping the face inside the safe zone. PNGs for Android 7.x and older were regenerated up to xxxhdpi; the salmon-roe silhouette remains as the themed icon on Android 13+.

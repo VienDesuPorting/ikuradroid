@@ -1,5 +1,5 @@
 /*! \unit log.h
- *	\brief Standard logging interface
+ *      \brief Standard logging interface
  */
 #ifndef _LOG_H_
 #define _LOG_H_
@@ -14,7 +14,11 @@
   #include "config.h"
   #include <jni.h>
   #include <android/log.h>
-  #define LOGCAT(...) ((void)__android_log_print(ANDROID_LOG_INFO, "vile", __VA_ARGS__))
+  #define LOGCAT(...) ((void)__android_log_print(ANDROID_LOG_INFO, "ikuradroid", __VA_ARGS__))
+#else
+  // Desktop builds have no logcat; keep the call sites compiling and
+  // route them to stdout instead.
+  #define LOGCAT(...) do{ printf(__VA_ARGS__); }while(0)
 #endif
 // Define terminal colors
 #define LOG_BLACK           30
@@ -27,13 +31,13 @@
 #define LOG_WHITE           37
 
 // Default colors
-#define COLOR_ERROR			LOG_RED
-#define COLOR_WARNING		LOG_BLUE
-#define COLOR_MESSAGE		LOG_WHITE
-#define COLOR_DEBUG			LOG_GREEN
+#define COLOR_ERROR                     LOG_RED
+#define COLOR_WARNING           LOG_BLUE
+#define COLOR_MESSAGE           LOG_WHITE
+#define COLOR_DEBUG                     LOG_GREEN
 
 // Set minimum logging level
-#define MINLOGLEVEL			LLDEBUG
+#define MINLOGLEVEL                     LLDEBUG
 
 // Uncomment to flush every write (In case of crash)
 #define LOGFLUSH
@@ -58,19 +62,19 @@ extern void LogWarning(uString Text,...);
 extern void LogError(uString Text,...);
 extern void LogTest(uString Text,...);
 #else
-#define LogBase(Level,Channel,Text,...)			;
-#define LogRaw(Level,Channel,Text,...)			;
-#define LogMessage(Text,...)					;
-#define LogVerbose(Text,...)					;
-#define LogWarning(Text,...)					;
-#define LogError(Text,...)						;
-#define LogTest(Text,...)						;
+#define LogBase(Level,Channel,Text,...)                 ;
+#define LogRaw(Level,Channel,Text,...)                  ;
+#define LogMessage(Text,...)                                    ;
+#define LogVerbose(Text,...)                                    ;
+#define LogWarning(Text,...)                                    ;
+#define LogError(Text,...)                                              ;
+#define LogTest(Text,...)                                               ;
 #endif
 
 #ifdef VILE_LOGGING_DEBUG
 extern void LogDebug(uString Text,...);
 #else
-#define LogDebug(Text,...)						;
+#define LogDebug(Text,...)                                              ;
 #endif
 
 #endif

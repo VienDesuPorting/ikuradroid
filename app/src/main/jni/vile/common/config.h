@@ -58,28 +58,28 @@
 #define HAVE__BOOL 1
 
 /* Name of package */
-#define PACKAGE "ViLE"
+#define PACKAGE "IkuraDroid"
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "basf@vilevn.org"
+#define PACKAGE_BUGREPORT "ikuradroid@vk.com"
 
 /* Name of current line */
 #define PACKAGE_LINE "Locutus"
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "ViLE"
+#define PACKAGE_NAME "IkuraDroid"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "ViLE 0.4.13"
+#define PACKAGE_STRING "IkuraDroid 2.0.0"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "vile"
+#define PACKAGE_TARNAME "ikuradroid"
 
 /* Define to the home page for this package. */
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.4.13"
+#define PACKAGE_VERSION "2.0.0"
 
 /* SCM Revision */
 #define SCM_VERSION "1735b0d"
@@ -103,7 +103,7 @@
 /* #undef TM_IN_SYS_TIME */
 
 /* Version number of package */
-#define VERSION "0.4.13"
+#define VERSION "2.0.0"
 
 /* Compile code for a BSD based target */
 /* #undef VILE_ARCH_FREEBSD */

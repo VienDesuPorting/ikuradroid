@@ -591,7 +591,7 @@ void EngineBase::EventHostMouseLeftDown(SDL_Surface *Screen,int X,int Y){
 	else{
 		// Pass event to widgets
 		Widget *wptr=GetWidgetAt(X,Y);
-		LOGCAT("vile input: left down (%d,%d) hit=%p",X,Y,(void*)wptr);
+		LOGCAT("ikuradroid input: left down (%d,%d) hit=%p",X,Y,(void*)wptr);
 		if(!wptr || !wptr->MouseLeftDown(X,Y)){
 			EventBackgroundMouseLeftDown(X,Y);
 		}
@@ -785,7 +785,7 @@ void EngineBase::EventHostKeyDown(SDL_Keycode Key){
 		// Dump screenshot
 		SDL_Surface *tmp=EDL_CreateSurface(width,height);
 		Paint(tmp);
-		EDL_SaveSurface(tmp,"ViLE");
+		EDL_SaveSurface(tmp,"IkuraDroid");
 		SDL_FreeSurface(tmp);
 	}
 	else if(Key==SDLK_F11){
@@ -1061,7 +1061,7 @@ bool EngineBase::EventGameProcess(){
  *  savegames.
  */
 const uString EngineBase::NativeID(){
-	return "ViLE";
+	return "IkuraDroid";
 }
 
 /*! \brief Defines a name for the game
