@@ -2,6 +2,11 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
+## 2.0.2 — 2026-09-20
+
+- Critical Point: character sprites no longer "detach from the floor". Scripts pass each sprite's position right in the load opcode; the engine discarded the coordinates and drew the sprite from the top of its slot - at 424 px tall on a 480 px screen that left a gap of up to 56 px.
+- The autodrive test gained an optional periodic frame dump for headless render checks (IKURADROID_SHOTS).
+
 ## 2.0.1 — 2026-09-19
 
 - Crescendo: the English release boots again with the original CresD.suf. ProbeSUF had a filename typo (it hunted the nonexistent CRES.suf) and never checked the CRESD key.

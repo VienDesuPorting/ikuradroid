@@ -57,6 +57,12 @@ class EngineWill : public EngineVN {
 		SDL_Surface *prev_aniSurface;		//!<
 		SDL_Surface *aniSurface;
 
+		//! Script-supplied sprite placement (OP48), per overlay slot.
+		//! CP scripts position every character at explicit x/y;
+		//! ignored unless the game subclass enables sprite_positions
+		int sprite_x[3];				//!< OP48 x per slot
+		int sprite_y[3];				//!< OP48 y per slot
+
 		SDL_Surface *effect;		//!< Effectsurface
 
 		WILLANIMATION *anim_data;	//!< Holds animation data
@@ -81,6 +87,11 @@ class EngineWill : public EngineVN {
 		//! Critical Point stores its event graphics this way;
 		//! set by the game subclass
 		bool compose_background;
+
+		//! Honor the OP48 x/y sprite placement (see sprite_x/sprite_y).
+		//! CP-only: the shared Will widgets keep their legacy slot
+		//! geometry for the other games
+		bool sprite_positions;
 
 	private:
 

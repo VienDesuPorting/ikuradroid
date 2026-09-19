@@ -1107,6 +1107,35 @@ void ViLE::RunEngine(EngineVN *engine){
 	while(engine){
 		// Tick engine
 		engine->EventHostTick();
+#ifdef IKURADROID_AUTODRIVE
+		// TEMPORARY test hook: periodic full-frame dumps (headless CI)
+		if(getenv("IKURADROID_SHOTS")){
+			static unsigned int shot_tick=0;
+			static unsigned int shot_idx=0;
+			if(++shot_tick%100==0 && EDLRenderer){
+				int sw=0,sh=0;
+				SDL_GetRendererOutputSize(EDLRenderer,&sw,&sh);
+				fprintf(stderr,"[shot] tick=%u size=%dx%d\n",shot_tick,sw,sh);
+				SDL_Surface *shot=SDL_CreateRGBSurfaceWithFormat(0,sw,sh,32,SDL_PIXELFORMAT_RGBA32);
+				if(shot){
+					int rc=SDL_RenderReadPixels(EDLRenderer,0,SDL_PIXELFORMAT_RGBA32,shot->pixels,shot->pitch);
+					if(rc==0){
+						char fb[64];
+						snprintf(fb,sizeof(fb),"IkuraDroidShot%03d.bmp",(int)shot_idx++);
+						SDL_SaveBMP(shot,fb);
+						fprintf(stderr,"[shot] saved %s\n",fb);
+					}
+					else{
+						fprintf(stderr,"[shot] ReadPixels rc=%d err=%s\n",rc,SDL_GetError());
+					}
+					SDL_FreeSurface(shot);
+				}
+				else{
+					fprintf(stderr,"[shot] surface failed: %s\n",SDL_GetError());
+				}
+			}
+		}
+#endif
 		// Handle events
 		while(engine && SDL_PollEvent(&event)){
 			if(event.type==SDL_MOUSEMOTION){

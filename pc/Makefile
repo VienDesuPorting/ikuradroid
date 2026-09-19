@@ -35,6 +35,10 @@
 #   choice rows and the text area while the engine log records every
 #   CSET/CWO/CC the script issues.
 #
+#   Frame dumps for visual verification: set IKURADROID_SHOTS=1 as well
+#   and the loop saves a full-frame BMP every 100 ticks
+#   (IkuraDroidShotNNN.bmp in the working directory).
+#
 # Runtime notes:
 #   - The engine reads vile.cfg from the working directory and accepts
 #     CLI switches (--cwd, --game, --size, --fontface, --logfile ...).
