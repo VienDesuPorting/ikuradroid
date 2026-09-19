@@ -37,7 +37,7 @@ void Sequencer::CreateLogoText(SDL_Surface *Surface,SDL_Color FG){
 
 	for(int i=4;i<400;i++){
 		//printer.SetFontSize(i);
-		if(printer.GetTextSize("ViLE",&width,&height)){
+                if(printer.GetTextSize("IkuraDroid",&width,&height)){
 			if(width>Surface->w || height>Surface->h){
 				break;
 			}
@@ -52,16 +52,14 @@ void Sequencer::CreateLogoText(SDL_Surface *Surface,SDL_Color FG){
 	printer.Clear();
 	printer.SetFontColor(FG.r,FG.g,FG.b);
 	printer.Move(0,0);
-	printer.Print("V LE",0);
-	//printer.Copy(Surface);
+        printer.Print("IkuraDroid",0);
 
-	// Calculate and print 'i' in different color
-	if(printer.GetTextSize("V",&width,&height)){
+        // Accent the "Droid" half in red, like the old red "i" of ViLE
+        if(printer.GetTextSize("Ikura",&width,&height)){
 		printer.SetFontColor(0xFF,0,0);
 		printer.Move(width,0);
 		printer.Clear();
-		printer.Print("i",0);
-//		printer.Copy(Surface);
+                printer.Print("Droid",0);
 	}
 }
 
@@ -129,7 +127,7 @@ void Sequencer::RollVertical(SDL_Surface *Surface){
 	engine->AddAnimation(new Scroll(dst,Surface,start,end,time));
 }
 
-/*! \brief Picks a random ViLE logo with a random background color
+/*! \brief Picks a random IkuraDroid logo with a random background color
  */
 void Sequencer::LogoRandom(){
 	if(EDL_Random()){
@@ -174,7 +172,7 @@ void Sequencer::LogoZoom(Uint8 R,Uint8 G,Uint8 B){
 	int widthlogo=0,heightlogo=0;
 	Printer printer;
 	printer.SetFontSize(12);
-	printer.GetTextSize("ViLE",&widthlogo,&heightlogo);
+        printer.GetTextSize("IkuraDroid",&widthlogo,&heightlogo);
 	SDL_Rect rfull={0,0,width,height};
 	SDL_Rect rend={(width-(width/ratio))/2,
 		(height-(height/ratio))/2,
@@ -203,10 +201,10 @@ void Sequencer::LogoZoom(Uint8 R,Uint8 G,Uint8 B){
 	printer.Clear();
 	printer.SetFontColor(0xFF,0x00,0x00);
 	printer.Print("www.vilevn.org",0);
-//	printer.Copy(urlred);
+//      printer.Copy(urlred);
 	printer.SetFontColor(FG.r,FG.g,FG.b);
 	printer.Reprint(0);
-//	printer.Copy(urlnormal);
+//      printer.Copy(urlnormal);
 
 	// Assert background and zoom in logo
 	engine->AddAnimation(new FadeColor(rfull,R,G,B,150));
@@ -269,10 +267,10 @@ void Sequencer::LogoFlicker(Uint8 R,Uint8 G,Uint8 B){
 	printer.Clear();
 	printer.SetFontColor((FG.r+BG.r)/2,(FG.g+BG.g)/2,(FG.b+BG.b)/2);
 	printer.Print("Powered By",0);
-//	printer.Copy(tagdim);
+//      printer.Copy(tagdim);
 	printer.SetFontColor(FG.r,FG.g,FG.b);
 	printer.Reprint(0);
-//	printer.Copy(tagnormal);
+//      printer.Copy(tagnormal);
 
 	// Assert background
 	engine->AddAnimation(new FadeColor(rfull,R,G,B,100));

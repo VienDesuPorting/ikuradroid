@@ -409,7 +409,7 @@ void Widget::Dumpfile(uString Filename){
 			int cnt=0;
 			FILE *fd=0;
 			do{
-				sprintf(fb,"ViLE%04d.BMP",cnt++);
+				sprintf(fb,"IkuraDroid%04d.BMP",cnt++);
 				fd=fopen(fb,"r");
 				if(fd){
 					fclose(fd);

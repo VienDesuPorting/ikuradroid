@@ -18,9 +18,9 @@
 #ifdef VILE_LOGGING_ENABLED
 
 /*! \brief Rebuilds a string from variable argument list
- *	\param String Formatted string
- *	\param Arg Argument list
- *	\returns Rebuilt string
+ *      \param String Formatted string
+ *      \param Arg Argument list
+ *      \returns Rebuilt string
  */
 uString RebuildString(uString String,va_list Arg){
 	const int size=1024*8;
@@ -31,7 +31,7 @@ uString RebuildString(uString String,va_list Arg){
 }
 
 /*! \brief Logs a message
- *	\param Text Formatted text
+ *      \param Text Formatted text
  */
 void LogBase(LOGLEVEL Level,uString Text,...){
 	// Gather arguments
@@ -47,7 +47,7 @@ void LogBase(LOGLEVEL Level,uString Text,...){
 #ifdef VILE_LOGGING_DEBUG
 	if(Level==LLDEBUG) prio=ANDROID_LOG_DEBUG;
 #endif
-	__android_log_print(prio, "vile", "%s", Text.c_str());
+        __android_log_print(prio, "ikuradroid", "%s", Text.c_str());
 	// Optional mirror to a log file (absolute path set at startup)
 	if(Cfg::System::Logfile.length()){
 		FILE *tf=fopen(Cfg::System::Logfile.c_str(),"ab");
@@ -58,7 +58,6 @@ void LogBase(LOGLEVEL Level,uString Text,...){
 		}
 	}
 #else
-    printf("%s",Text.c_str());
 	if(Level>=MINLOGLEVEL){
 		// Optional logging to file
 		if(Cfg::System::Logfile.length()){
@@ -75,10 +74,10 @@ void LogBase(LOGLEVEL Level,uString Text,...){
 		if(Cfg::System::Logcolor){
 			char ansib[32];
 			int FG=LOG_WHITE;
-			if(Level==LLERROR)		FG=COLOR_ERROR;
-			if(Level==LLWARNING)	FG=COLOR_WARNING;
-			if(Level==LLMESSAGE)	FG=COLOR_MESSAGE;
-			if(Level==LLDEBUG)		FG=COLOR_DEBUG;
+                        if(Level==LLERROR)              FG=COLOR_ERROR;
+                        if(Level==LLWARNING)    FG=COLOR_WARNING;
+                        if(Level==LLMESSAGE)    FG=COLOR_MESSAGE;
+                        if(Level==LLDEBUG)              FG=COLOR_DEBUG;
 			int ansil=sprintf(ansib,"%c[%d;%dm",0x1B,0,FG);
 			fwrite(ansib,ansil,1,tf);
 			fwrite(Text.c_str(),Text.length(),1,tf);
@@ -98,7 +97,7 @@ void LogBase(LOGLEVEL Level,uString Text,...){
 }
 
 /*! \brief Logs a string without adding any formatting or newlines
- *	\param Text Formatted text
+ *      \param Text Formatted text
  */
 void LogRaw(LOGLEVEL Level,uString Text,...){
 	// Gather arguments
@@ -127,7 +126,7 @@ void LogRaw(LOGLEVEL Level,uString Text,...){
 }
 
 /*! \brief Logs a basic message
- *	\param Text Formatted text
+ *      \param Text Formatted text
  */
 void LogMessage(uString Text,...){
 	// Gather arguments
@@ -141,7 +140,7 @@ void LogMessage(uString Text,...){
 }
 
 /*! \brief Logs a message if the verbose flag is set
- *	\param Text Formatted text
+ *      \param Text Formatted text
  */
 void LogVerbose(uString Text,...){
 	if(Cfg::System::Verbose){
@@ -157,7 +156,7 @@ void LogVerbose(uString Text,...){
 }
 
 /*! \brief Logs an error message
- *	\param Text Formatted text
+ *      \param Text Formatted text
  */
 void LogError(uString Text,...){
 	// Gather arguments
@@ -171,7 +170,7 @@ void LogError(uString Text,...){
 }
 
 /*! \brief Logs temporary debug message
- *	\param Text Formatted text
+ *      \param Text Formatted text
  */
 void LogWarning(uString Text,...){
 	// Gather arguments
@@ -185,7 +184,7 @@ void LogWarning(uString Text,...){
 }
 
 /*! \brief Logs temporary debug message
- *	\param Text Formatted text
+ *      \param Text Formatted text
  */
 void LogTest(uString Text,...){
 	// Gather arguments
@@ -200,7 +199,7 @@ void LogTest(uString Text,...){
 
 #ifdef VILE_LOGGING_DEBUG
 /*! \brief Logs a message if the verbose flag is set
- *	\param Text Formatted text
+ *      \param Text Formatted text
  */
 void LogDebug(uString Text,...){
 	if(Cfg::System::Verbose){
@@ -214,7 +213,7 @@ void LogDebug(uString Text,...){
 		LogBase(LLDEBUG,Text);
 	}
 }
-#endif	// Endof Debugger enabled
+#endif  // Endof Debugger enabled
 
-#endif	// Endff Disable logging
+#endif  // Endff Disable logging
 

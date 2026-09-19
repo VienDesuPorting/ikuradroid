@@ -146,7 +146,7 @@ void IParser::SetValue(int Position,Uint32 Value){
  *  etc and will be overridden in the decoder stage with dynamic values.
  */
 void IParser::SetSystem(int Position,bool Value){
-    LogError("SetSystem: %d",Position);
+
 	System.SetBit(Position,Value);
 }
 
@@ -164,7 +164,7 @@ bool IParser::GetSystem(int Position){
  *  \param Value Value of target flag
  */
 void IParser::SetFlag(int Position,bool Value){
-    LogError("SetFlag: %d",Position);
+
 
    // Flags.SetBit(500,true);//меню в крещендо
 
@@ -181,7 +181,7 @@ void IParser::SetFlag(int Position,bool Value){
  *  \returns Value of read flag
  */
 bool IParser::GetFlag(int Position){
-LogError("GetFlag: %d",Position);
+
 /*
 500 - экстра в крещендо
 501 - вход в меню картинок
@@ -195,7 +195,7 @@ else
 /*! \brief Sets a hitpattern
  */
 void IParser::Setpattern(int Index,Uint8 *Buffer,int Size){
-LogError("Setpattern: %d %d",Index);
+LogError("Setpattern: %d",Index);
 
 	Patterns.SetBuffer(Index,Buffer,Size);
 }

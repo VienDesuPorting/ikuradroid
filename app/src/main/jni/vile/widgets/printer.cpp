@@ -158,7 +158,6 @@ void Printer::SetFontStyle(int Style){
 }
 
 void Printer::SetFontShadow(int X,int Y,SDL_Color Color){
-	LogMessage("SETFONTSHADOW");
 }
 
 void Printer::SetFontGlow(int Glow,SDL_Color Color){
