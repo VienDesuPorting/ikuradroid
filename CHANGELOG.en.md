@@ -5,7 +5,9 @@ English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), whi
 ## 2.0.2 — 2026-09-20
 
 - Critical Point: character sprites no longer "detach from the floor". Scripts pass each sprite's position right in the load opcode; the engine discarded the coordinates and drew the sprite from the top of its slot - at 424 px tall on a 480 px screen that left a gap of up to 56 px.
+- Critical Point: the text window moved to the bottom of the screen, as in the original. The position hint in the winbase0 header turned out to be dialog-local, not a screen position - the window stuck to the top edge. It now docks to the bottom of the play area: (12,300), 616x152.
 - The autodrive test gained an optional periodic frame dump for headless render checks (IKURADROID_SHOTS).
+- The version in common/config.h finally caught up with the release commits.
 
 ## 2.0.1 — 2026-09-19
 
