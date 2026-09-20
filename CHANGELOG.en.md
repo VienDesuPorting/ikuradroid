@@ -2,6 +2,10 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
+## 2.0.5 — 2026-09-21
+
+- Critical Point: choices are back inside the text window, as in the original. The layout still dated from when the window clung to the top edge, so the choice rows painted over the scene while the window sat empty below. Captions now sit on the same rows as the dialog text, centered; hovering inverts the row, and a tap past the rows no longer advances the line.
+
 ## 2.0.4 — 2026-09-21
 
 - Critical Point: nameless-page text moved down to the common row. The original keeps it on the same lines as named pages, not flush against the window frame.

@@ -51,12 +51,8 @@ CriticalPoint::CriticalPoint(uString Path) : EngineWill(640,480) {
 	textview=new CriticalTextview(this);
 	AddWidget(textview,VL_TEXTVIEW);
 
-	// Configure textview
-	//selection->Move(100,396);
-	//selection->Resize(440,70);
-	selection->Resize(640/3,480/3);
-	selection->Move(640/3,480/3);
-	selection->SetAlignment(HA_CENTER,VA_CENTER);
+	// The selection widget is laid out by LayoutTextSelection()
+	// every time OP02 presents a choice - no defaults needed here
 
 	// Show main menu
 	EventGameDialog(VD_TITLE);
@@ -70,18 +66,15 @@ const uString CriticalPoint::NativeName(){
 	return "Critical Point";
 }
 
-/*! PC choice layout, pixel-measured against the PC original (hover
- *  screenshot registered against the calm one): rows are the
- *  590-wide strips at (15,30+i*32) - the PC packs them 24 px
- *  tall, the Android build spaces them to 32 px so a thumb can
- *  hit a row reliably - and captions print centered in
- *  them, plain white without backing plates. Hovered rows are
- *  highlighted exactly as the PC original does: the strip is
- *  RGB-inverted, so the dark chrome turns into a light bar and
+/*! PC choice layout: the captions print inside the dialog window on
+ *  the uniform text rows - the same slots the message text uses -
+ *  centered in the strip, plain white without backing plates.
+ *  Hovered rows are highlighted as the PC original does: the strip
+ *  is RGB-inverted, so the dark chrome turns into a light bar and
  *  the white caption turns black. Touch handling follows the LMM
- *  scheme: the selection owns the chrome rectangle, missed
- *  presses are swallowed and every row doubles as a full-width
- *  hit area so there are no dead gaps between items
+ *  scheme: the selection owns the chrome rectangle, missed presses
+ *  are swallowed and every row extends across the full 24px pitch
+ *  so there are no dead gaps between items
  */
 void CriticalPoint::LayoutTextSelection(Stringlist *items){
 	selection->SetFontSize(Cfg::Font::default_size);
@@ -89,17 +82,20 @@ void CriticalPoint::LayoutTextSelection(Stringlist *items){
 	selection->SetColors(0x58585880,0xFFFFFFFF,0x00000000,0xFFFFFFFF);
 	selection->SetHoverInvert(true);
 	selection->SetBackgroundFill(false);
-	selection->Move(0,0);
-	// Touch layout: the strips keep the PC width and left
-	// offset, but rows are 32 px tall and packed 32 px apart
-	// instead of the PC's 24 - a thumb needs a bigger target
-	// than a mouse cursor. The widget grows with the row count,
-	// so the centered block stays balanced for any choice count.
-	selection->Resize(616,30+items->GetCount()*32+2);
+	// Own the chrome rectangle - the same dock the CriticalTextview
+	// computes for the window (bottom-anchored above the menubar,
+	// horizontally centered)
+	int boxx=(NativeWidth()-CP_WINDOW_W)/2;
+	int boxy=NativeHeight()-CP_MENUBAR_H-CP_WINDOW_H;
+	selection->Move(boxx,boxy);
+	selection->Resize(CP_WINDOW_W,CP_WINDOW_H);
 	selection->SetSwallowMisses(true);
 	uString text;
 	for(int i=0;items->GetString(i,&text);i++){
-		SDL_Rect area={15,30+i*32,590,32};
+		// Row i covers [30+24i,50+24i] padded to the full 24px pitch so
+		// consecutive rows touch
+		SDL_Rect area={boxx+CP_ROW_XPAD,boxy+CP_ROW_TOP+i*CP_ROW_PITCH,
+				CP_ROW_W,CP_ROW_PITCH};
 		selection->SetText(text,area,i);
 	}
 }
