@@ -14,7 +14,7 @@ android {
         // The only place the version is defined; the manifest carries no
         // version attributes of its own.
         versionCode 24
-        versionName "2.0.0"
+        versionName "2.0.5"
 
         externalNativeBuild {
             ndkBuild {
