@@ -26,6 +26,8 @@ class CriticalTextview : public Textview {
 		BitmapButton *w_repeat;
 		BitmapButton *w_thing;
 		Printer *header;
+		int boxx;		//!< Dialog origin on screen (children are absolute)
+		int boxy;
 	public:
 		CriticalTextview(CriticalPoint *Engine);
 		~CriticalTextview();

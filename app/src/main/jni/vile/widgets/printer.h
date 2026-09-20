@@ -16,6 +16,9 @@ class Printer : public Widget {
 		string font_name;
 		int font_size;
 		int font_style;
+		int shadow_x;			//!< Shadow offset X (0 disables)
+		int shadow_y;			//!< Shadow offset Y
+		SDL_Color shadow_color;		//!< Shadow ink
 		SDL_Surface *stext;		//!< Surface for current textview
 		EDLTexture *stexturetext;
 		string text;		//!< Text to print

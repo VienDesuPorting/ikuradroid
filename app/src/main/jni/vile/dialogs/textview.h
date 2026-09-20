@@ -32,9 +32,16 @@ class Textview : public DialogBase {
 		// Other data
 		int xdisplacement;
 		int ydisplacement;
+
+		// OP42 SAY id word (indexes the original's name-color table)
+		int nameid;
 	public:
 		Textview(EngineVN *Engine);
 		~Textview();
+
+		// Name color id carried from the script op to the textview
+		void SetNameId(int Id){nameid=Id;}
+		int GetNameId(){return nameid;}
 
 		// API
 		virtual void PrintText(uString Title,uString Text);
