@@ -41,17 +41,16 @@ CriticalTextview::CriticalTextview(CriticalPoint *Engine) : Textview(Engine) {
 					// play area - FRAME.WIP's transparent window spans rows 28..451, so
 					// the dialog docks at y=452-152=300, horizontally centered (x=12).
 					// The WIPF frame hint (0,0) is dialog-local, not a screen position.
-					// Text rows: nameless pages start on row 1
-					// (ink tops ~10/34/58 on the reference); named
-					// pages get the name on row 1 via the header
-					// printer and drop the text block to y=32 -
-					// see PrintText() overrides
+					// Text rows: the original lays text rows out uniformly - every row
+					// i occupies [30+24i,50+24i] regardless of any name; the name lives
+					// in the chrome band and never occupies a text row, so ALL pages
+					// start the text at the same y=32 slot - see PrintText() overrides
 					// Children of a dialog render at absolute screen positions, so the
 					// text block and the name row must be placed relative to the dialog
 					// origin
 					boxx=(Engine->NativeWidth()-rect.w)/2;
 					boxy=Engine->NativeHeight()-28-rect.h;
-					SetTextPosition(boxx+12,boxy+8,596,136);
+					SetTextPosition(boxx+12,boxy+32,596,112);
 					MoveDialog(boxx,boxy);
 					Resize(rect.w,rect.h);
 					Set(winbase[i]);
@@ -201,8 +200,9 @@ void CriticalTextview::PrintText(uString Title,uString Text){
 		header->Clear();
 		header->Print(Title.c_str(),0);
 		header->SetVisible(true);
-		// The name occupies row 1: the message text drops to row 2
-		// (reference text ink tops at local ~32/56/80, 24px pitch)
+		// The name sits in the chrome band (separate header
+		// printer) and does not consume a text row; the text
+		// block uses the uniform row slot y=32
 		SetTextPosition(boxx+12,boxy+32,596,112);
 	}
 	Textview::PrintText(Text);
@@ -212,9 +212,10 @@ void CriticalTextview::PrintText(uString Text){
 	if(header){
 		header->SetVisible(false);
 	}
-	// Nameless page: the text starts on row 1 right away (reference:
-	// 3 nameless lines with ink tops at local ~10/34/58)
-	SetTextPosition(boxx+12,boxy+8,596,136);
+	// Nameless page: same row layout as named pages - the
+	// original starts every page's text at the same row slot
+	// whether a name is shown or not
+	SetTextPosition(boxx+12,boxy+32,596,112);
 	Textview::PrintText(Text);
 }
 

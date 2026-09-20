@@ -2,6 +2,10 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
+## 2.0.4 — 2026-09-21
+
+- Critical Point: nameless-page text moved down to the common row. The original keeps it on the same lines as named pages, not flush against the window frame.
+
 ## 2.0.3 — 2026-09-20
 
 - Critical Point: the speaker name is shown in the text window. The color comes from the original's table (CP scripts only ever use blue and crimson), the name prints small and centered on the window's first row.
