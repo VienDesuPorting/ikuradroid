@@ -20,6 +20,9 @@ CriticalPoint::CriticalPoint(uString Path) : EngineWill(640,480) {
 	// CP-era script grammar: shorter argument blocks for OP4A/OP21/OP25/OP8A
 	// ("4A 1A 00", "21 01 <bgm>", "25 <u32> <se>", "8A 01 00")
 	script_v2=true;
+	// CP-era SAY op: [u16 name-color id][name][text] - no 0x20 separator,
+	// no sq/ch words
+	say_idword=true;
 
 	// CP event graphics (EV###.WIP) are two-layer WIPFs: frame 0 is
 	// a black chroma base, frame 1 the actual scene at its own hint

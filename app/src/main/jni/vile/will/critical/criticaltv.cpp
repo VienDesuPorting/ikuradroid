@@ -41,17 +41,17 @@ CriticalTextview::CriticalTextview(CriticalPoint *Engine) : Textview(Engine) {
 					// play area - FRAME.WIP's transparent window spans rows 28..451, so
 					// the dialog docks at y=452-152=300, horizontally centered (x=12).
 					// The WIPF frame hint (0,0) is dialog-local, not a screen position.
-					// Text rows: the speaker name rides as the block's
-					// first line, so the block top sits at y=8 to land the
-					// name at ~13 and the text rows at ~32/57/81 like the
-					// original
-					int boxx=(Engine->NativeWidth()-rect.w)/2;
-					int boxy=Engine->NativeHeight()-28-rect.h;
-					int textx=40;	// measured left text edge
-					int texty=8;	// name line + 3 rows at 24px pitch
-					int textw=562;	// right edge 602 as before
-					int texth=112;
-					SetTextPosition(textx,texty,textw,texth);
+					// Text rows: nameless pages start on row 1
+					// (ink tops ~10/34/58 on the reference); named
+					// pages get the name on row 1 via the header
+					// printer and drop the text block to y=32 -
+					// see PrintText() overrides
+					// Children of a dialog render at absolute screen positions, so the
+					// text block and the name row must be placed relative to the dialog
+					// origin
+					boxx=(Engine->NativeWidth()-rect.w)/2;
+					boxy=Engine->NativeHeight()-28-rect.h;
+					SetTextPosition(boxx+12,boxy+8,596,136);
 					MoveDialog(boxx,boxy);
 					Resize(rect.w,rect.h);
 					Set(winbase[i]);
@@ -125,19 +125,31 @@ CriticalTextview::CriticalTextview(CriticalPoint *Engine) : Textview(Engine) {
 					w_thing->SetState(WS_SELECT,winbase[i+14],0);
 					//AddWidget(w_thing);
 				}*/
-				if(i==CRITICALTV_BUTTON_HEADER){
-					// Background for displaying the name
-					header=new Printer(pos.x+30,pos.y+30,
-							winbase[i]->w,winbase[i]->h);
-					header->Blit(winbase[i]);
-					//AddWidget(header);
-				}
 
 			}
 			SDL_FreeSurface(winbase[i]);
 		}
 		delete [] winbase;
 	}
+
+	// Speaker name: the original renders it as plain colored text on the
+	// window's first row - there is no plate resource for it (WINBASE0.WIP
+	// carries 9 frames only: chrome + 8 skip buttons). Native-resolution
+	// reference (636x480 AniVisual capture): name ink at local y 10..20,
+	// centered inside a 360 px wide field (exe layout constant 0x168,
+	// "Devushka" 71 px lands at x 144.5 = (360-71)/2 exactly), and it is
+	// smaller than the message text (~12 px vs ~16 px)
+	header=new Printer(boxx,boxy+6,360,20);
+	header->SetFontSize(14);
+	header->SetVisible(false);
+	AddWidget(header);
+
+	// The original renders all dialog ink with a black drop shadow by
+	// default (registry FontShadow=1, FontEdge=0): both the name and the
+	// message text carry a 2px-offset copy beneath the glyphs
+	SDL_Color shadow={0x00,0x00,0x00,0};
+	header->SetFontShadow(2,2,shadow);
+	SetFontShadow(2,2,shadow);
 }
 
 CriticalTextview::~CriticalTextview(){
@@ -167,9 +179,31 @@ bool CriticalTextview::InputOk(Widget *Object){
 
 void CriticalTextview::PrintText(uString Title,uString Text){
 	if(header){
+		// Name color: the original indexes its color table with the SAY
+		// id word (COLORREF 0x00BBGGRR):
+		// 0=white 1=blue 2=crimson 3=green 4=magenta 5=cyan 6=yellow.
+		// CP scripts only ever use 1 (Elise/Charlotte) and 2 (Reiko)
+		static const SDL_Color nametable[7]={
+			{0xFF,0xFF,0xFF,0},{0x00,0x80,0xFF,0},{0xFF,0x00,0x80,0},
+			{0x00,0xFF,0x00,0},{0xFF,0x00,0xFF,0},{0x00,0xFF,0xFF,0},
+			{0xFF,0xFF,0x00,0}};
+		int id=GetNameId();
+		if(id<0||id>6){
+			id=2;
+		}
+		header->SetFontColor(nametable[id]);
+		int w=0,h=0;
+		header->GetTextSize(Title.c_str(),&w,&h);
+		if(w<=0||w>360){
+			w=360;
+		}
+		header->Move(boxx+(360-w)/2,boxy+6);
 		header->Clear();
 		header->Print(Title.c_str(),0);
 		header->SetVisible(true);
+		// The name occupies row 1: the message text drops to row 2
+		// (reference text ink tops at local ~32/56/80, 24px pitch)
+		SetTextPosition(boxx+12,boxy+32,596,112);
 	}
 	Textview::PrintText(Text);
 }
@@ -178,6 +212,9 @@ void CriticalTextview::PrintText(uString Text){
 	if(header){
 		header->SetVisible(false);
 	}
+	// Nameless page: the text starts on row 1 right away (reference:
+	// 3 nameless lines with ink tops at local ~10/34/58)
+	SetTextPosition(boxx+12,boxy+8,596,136);
 	Textview::PrintText(Text);
 }
 

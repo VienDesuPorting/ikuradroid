@@ -79,7 +79,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.0.2"
+#define PACKAGE_VERSION "2.0.3"
 
 /* SCM Revision */
 #define SCM_VERSION "1735b0d"
@@ -103,7 +103,7 @@
 /* #undef TM_IN_SYS_TIME */
 
 /* Version number of package */
-#define VERSION "2.0.2"
+#define VERSION "2.0.3"
 
 /* Compile code for a BSD based target */
 /* #undef VILE_ARCH_FREEBSD */

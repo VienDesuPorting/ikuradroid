@@ -28,6 +28,7 @@ Textview::Textview(EngineVN *Engine) : DialogBase(Engine,false) {
 	textlog_flag=true;
 	xdisplacement=0;
 	ydisplacement=0;
+	nameid=0;
 
 	// Always allocate text widget
 	w_text=new Printer();
