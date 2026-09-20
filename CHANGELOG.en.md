@@ -5,6 +5,7 @@ English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), whi
 ## 2.0.5 — 2026-09-21
 
 - Critical Point: choices are back inside the text window, as in the original. The layout still dated from when the window clung to the top edge, so the choice rows painted over the scene while the window sat empty below. Captions now sit on the same rows as the dialog text, centered; hovering inverts the row, and a tap past the rows no longer advances the line.
+- The version strings in config.h are aligned: PACKAGE_STRING caught up with PACKAGE_VERSION, SCM_VERSION points at the release commit.
 
 ## 2.0.4 — 2026-09-21
 
