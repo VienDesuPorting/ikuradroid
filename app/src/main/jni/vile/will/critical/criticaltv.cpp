@@ -37,17 +37,18 @@ CriticalTextview::CriticalTextview(CriticalPoint *Engine) : Textview(Engine) {
 
 
 				if(i==CRITICALTV_BACKGROUND){
-					// PC reference geometry, pixel-fitted against the
-					// PC screenshot (diff 4.1 at (0,0) vs 12.9/17.5 at
-					// the older guesses): the chrome docks at (0,0) and
-					// spans the top 616x152 pixels. Its header window
-					// is translucent on purpose - full screen
-					// backgrounds show through it - so the WIPF frame
-					// hint is trusted verbatim
-					int boxx=(rect.x>=0 && rect.x<100)?rect.x:0;
-					int boxy=(rect.y>=0 && rect.y<100)?rect.y:0;
+					// Dialog placement: the chrome (616x152) is bottom-anchored to the
+					// play area - FRAME.WIP's transparent window spans rows 28..451, so
+					// the dialog docks at y=452-152=300, horizontally centered (x=12).
+					// The WIPF frame hint (0,0) is dialog-local, not a screen position.
+					// Text rows: the speaker name rides as the block's
+					// first line, so the block top sits at y=8 to land the
+					// name at ~13 and the text rows at ~32/57/81 like the
+					// original
+					int boxx=(Engine->NativeWidth()-rect.w)/2;
+					int boxy=Engine->NativeHeight()-28-rect.h;
 					int textx=40;	// measured left text edge
-					int texty=34;	// measured top of line 1
+					int texty=8;	// name line + 3 rows at 24px pitch
 					int textw=562;	// right edge 602 as before
 					int texth=112;
 					SetTextPosition(textx,texty,textw,texth);
