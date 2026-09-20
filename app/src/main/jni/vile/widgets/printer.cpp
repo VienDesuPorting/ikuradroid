@@ -24,6 +24,8 @@ Printer::Printer(int X,int Y,int Width,int Height) : Widget(X,Y,Width,Height){
 	charcount=0;
 	wordwrap=true;
 	clearscreen=false;
+	shadow_x=0;
+	shadow_y=0;
 
 	// Create default font
 	font_ttf=0;
@@ -43,6 +45,8 @@ Printer::Printer(SDL_Rect Pos) : Widget(Pos){
 	charcount=0;
 	wordwrap=true;
 	clearscreen=false;
+	shadow_x=0;
+	shadow_y=0;
 
 	// Create default font
 	font_ttf=0;
@@ -62,6 +66,8 @@ Printer::Printer() : Widget(){
 	charcount=0;
 	wordwrap=true;
 	clearscreen=false;
+	shadow_x=0;
+	shadow_y=0;
 
 	// Create default font
 	font_ttf=0;
@@ -158,6 +164,9 @@ void Printer::SetFontStyle(int Style){
 }
 
 void Printer::SetFontShadow(int X,int Y,SDL_Color Color){
+	shadow_x=X;
+	shadow_y=Y;
+	shadow_color=Color;
 }
 
 void Printer::SetFontGlow(int Glow,SDL_Color Color){
@@ -441,6 +450,19 @@ bool Printer::printnext(){
 			if(index==text.length()){
 				text="";
 				index=0;
+			}
+
+			// Drop shadow (opt-in via SetFontShadow): an ink-colored copy
+			// of the glyph at the offset, blitted before the glyph itself
+			if(shadow_x||shadow_y){
+				SDL_Surface *ss=EDL_RenderText(font_ttf,print,shadow_color);
+				if(ss){
+					SDL_Rect srect=trect;
+					srect.x+=shadow_x;
+					srect.y+=shadow_y;
+					EDL_BlitSurface(ss,0,stext,&srect);
+					SDL_FreeSurface(ss);
+				}
 			}
 
 			// Experimental font rendering

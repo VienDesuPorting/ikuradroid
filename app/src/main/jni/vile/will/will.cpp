@@ -47,6 +47,7 @@ EngineWill::EngineWill(int Width,int Height) : EngineVN(Width,Height){
 	ticks_stamp=SDL_GetTicks();
 	state=WILLSTATE_NORMAL;
 	script_v2=false;	// YumeMiru-era grammar; CriticalPoint enables the shorter CP blocks
+	say_idword=false;	// OP42 SAY: LMM-era [u32?][name] 0x20 [text] grammar; CP overrides
 	choice_params=false;	// OP02 items: leading u16 parameter exists in LMM only
 	compose_background=false;	// layered WIPF backgrounds: Critical Point EV graphics only
 
@@ -1168,10 +1169,25 @@ bool EngineWill::OP41(){
 }
 
 /*! Text with title (Usually a name)
+ *
+ *  CP SAY layout: [u16 name-color id][name cstring][text cstring].
+ *  The id indexes the original's name-color table (COLORREF
+ *  0x00BBGGRR: 0=white, 1=blue, 2=crimson, 3=green, 4=magenta,
+ *  5=cyan, 6=yellow; CP scripts only ever use 1 and 2). The historic +4
+ *  skip swallowed the id word AND the first two characters of every name
+ *  ("Reiko" -> "iko", "Girl" -> "rl").
  */
 bool EngineWill::OP42(){
-	//Uint16 id=GETWORD(script->buffer+script->index+0);
-	script->index+=4;
+	// CP grammar: [u16 id][name][text]. LMM-era grammar keeps the
+	// historic skip+0x20 path verbatim.
+	Uint16 id=0;
+	if(say_idword){
+		id=GETWORD(script->buffer+script->index+0);
+		script->index+=2;
+	}
+	else{
+		script->index+=4;
+	}
 	aString title;
 	while(script->buffer[script->index]){
 		title+=script->buffer[script->index++];
@@ -1196,6 +1212,7 @@ bool EngineWill::OP42(){
 	script->index++;
 	textview->SetVisible(true);
 	textview->ClearText();
+	textview->SetNameId(id);
 	textview->PrintText(title,text);
 	state=WILLSTATE_WAITCLICK;
 	return true;

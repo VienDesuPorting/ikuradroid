@@ -76,6 +76,7 @@ class EngineWill : public EngineVN {
 		//! CP/LMM-era scripts use shorter argument blocks
 		//! (OP4A=3B, OP21=2B, OP25=5B, OP8A=3B); set by the game subclass
 		bool script_v2;
+		bool say_idword;	//!< OP42 SAY: CP-era [u16 id][name][text] layout
 
 		//! OP02 choice items carry a leading u16 parameter.
 		//! Byte-verified LMM-only trap (CP items go straight to

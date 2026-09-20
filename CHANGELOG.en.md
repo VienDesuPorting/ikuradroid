@@ -2,6 +2,14 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
+## 2.0.3 — 2026-09-20
+
+- Critical Point: the speaker name is shown in the text window. The color comes from the original's table (CP scripts only ever use blue and crimson), the name prints small and centered on the window's first row.
+- Critical Point: fixed the SAY opcode read - names used to lose their first two characters ("Reiko" turned into "iko"). LMM uses a different SAY format and stays untouched, same for the v1 games.
+- Critical Point: dialog text is back inside the window instead of the screen's top edge - after the window moved down, the text kept its dialog-local coordinates.
+- Text shadow implemented: it was an empty stub in the engine. Critical Point draws the text and the name with a shadow, like the original default.
+- The window position (12,300) was checked against the MsgPos registry value shipped with the original's installer.
+
 ## 2.0.2 — 2026-09-20
 
 - Critical Point: character sprites no longer "detach from the floor". Scripts pass each sprite's position right in the load opcode; the engine discarded the coordinates and drew the sprite from the top of its slot - at 424 px tall on a 480 px screen that left a gap of up to 56 px.
