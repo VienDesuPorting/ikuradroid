@@ -2,6 +2,13 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
+## 2.0.6 — 2026-09-22
+
+- Crescendo: music plays on the intro, in the menu and in scenes. SE and WMSC were read through ArchiveViLE, which only understands ViLEPACK repacks, so the native archives indexed zero items and every lookup failed silently. Both archives now load as native SM2MPX10, and the MIDI bank (MID01–MID30) comes from the separate MIDI file, like in the other Ikura GDL games.
+- Music from compressed WAVs plays again. The WAV music parser in SDL_mixer only understood PCM while every Crescendo track in WMSC is IMA ADPCM, so every track selection failed with "Unknown WAVE data format". Such files are now fully decoded through SDL_LoadWAV and played from memory; PCM and AIFF keep their old paths.
+- Critical Point: savegames no longer load mirrored. The save screenshot is taken by reading the frame back from the renderer (SDL_RenderReadPixels), which returns the picture top-down on some devices, and Paint flipped the surface unconditionally. The readback orientation is now probed at startup, and the flip is applied only where needed. The thumbnails in the load dialog are fixed by the same change.
+- Critical Point: loading a savegame resumes the scene music. Loading used to leave the menu music playing while the scene track never came back. The save now stores the current track name, loading silences all audio and restarts the stored track after the picture is restored; old saves without the key behave as before.
+
 ## 2.0.5 — 2026-09-21
 
 - Critical Point: choices are back inside the text window, as in the original. The layout still dated from when the window clung to the top edge, so the choice rows painted over the scene while the window sat empty below. Captions now sit on the same rows as the dialog text, centered; hovering inverts the row, and a tap past the rows no longer advances the line.

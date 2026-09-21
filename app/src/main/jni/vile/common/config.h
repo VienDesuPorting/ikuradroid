@@ -70,7 +70,7 @@
 #define PACKAGE_NAME "IkuraDroid"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "IkuraDroid 2.0.5"
+#define PACKAGE_STRING "IkuraDroid 2.0.6"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "ikuradroid"
@@ -79,10 +79,10 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.0.5"
+#define PACKAGE_VERSION "2.0.6"
 
 /* SCM Revision */
-#define SCM_VERSION "553daa1"
+#define SCM_VERSION "0122422"
 
 /* Define to the type of arg 1 for `select'. */
 #define SELECT_TYPE_ARG1 int
