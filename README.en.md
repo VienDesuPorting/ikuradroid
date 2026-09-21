@@ -27,12 +27,11 @@ Current statuses also live in `app/src/main/assets/engines.json` and are shown o
 ## Known issues
 
 - The Exit button in the save/load menu does not work yet.
-- When a save is loaded, the background can end up flipped upside down — seen only in Critical Point so far.
 - The Settings button does not work and/or misbehaves in certain titles — it will be polished in future updates.
 
 ## Additional modules
 
-The base engine code is extended with dedicated modules built for specific games. The first one is **Little My Maid (LMM)** for the Will family. Currently working: game launch and scene playback, PC-style choices, enlarged touch hit areas and the «ОЧКИ» (points) bar on the game window frame.
+The base engine code is extended with dedicated modules built for specific games. The first one is **Little My Maid (LMM)** for the Will family. Currently working: game launch and scene playback, PC-style choices, enlarged touch hit areas and the points bar on the game window frame.
 
 Still planned: speaker name plates and an extra playthrough check on real saves. See [CHANGELOG.en.md](CHANGELOG.en.md) for the per-version details.
 
