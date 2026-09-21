@@ -40,6 +40,7 @@ typedef struct {
     SDL_AudioCVT cvt;
     int numloops;
     WAVLoopPoint *loops;
+    Uint8 *memory;      /* decoded PCM buffer for compressed WAV formats */
 } WAVStream;
 
 /* Initialize the WAVStream player, with the given mixer settings

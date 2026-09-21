@@ -128,6 +128,37 @@ void WAVStream_SetVolume(int volume)
     wavestream_volume = volume;
 }
 
+/* Peek the WAVE format tag of a RIFF file without disturbing the stream.
+   Returns the fmt chunk encoding, or 0 if it cannot be located. */
+static Uint16 PeekWAVEEncoding(SDL_RWops *src)
+{
+    Sint64 pos = SDL_RWtell(src);
+    Uint16 encoding = 0;
+    Uint8 head[4];
+
+    if (SDL_RWread(src, head, 1, 4) != 4 || SDL_memcmp(head, "WAVE", 4) != 0) {
+        goto done;
+    }
+    for (;;) {
+        Uint8 id[4];
+        Uint32 length;
+        if (SDL_RWread(src, id, 1, 4) != 4) {
+            break;
+        }
+        length = SDL_ReadLE32(src);
+        if (SDL_memcmp(id, "fmt ", 4) == 0) {
+            encoding = SDL_ReadLE16(src);
+            break;
+        }
+        if (SDL_RWseek(src, length + (length & 1), RW_SEEK_CUR) < 0) {
+            break;
+        }
+    }
+done:
+    SDL_RWseek(src, pos, RW_SEEK_SET);
+    return encoding;
+}
+
 /* Load a WAV stream from the given RWops object */
 WAVStream *WAVStream_LoadSong_RW(SDL_RWops *src, int freesrc)
 {
@@ -149,7 +180,43 @@ WAVStream *WAVStream_LoadSong_RW(SDL_RWops *src, int freesrc)
 
         magic = SDL_ReadLE32(src);
         if (magic == RIFF || magic == WAVE) {
-            loaded = LoadWAVStream(wave);
+            Uint16 encoding = PeekWAVEEncoding(src);
+            if (encoding != PCM_CODE) {
+                /* Non-PCM WAV (IMA/MS ADPCM, IEEE float): decode the
+                   whole track through SDL_LoadWAV_RW and stream the
+                   resulting PCM from memory. */
+                SDL_AudioSpec decspec;
+                Uint8 *decbuf = NULL;
+                Uint32 declen = 0;
+
+                SDL_zero(decspec);
+                SDL_RWseek(src, 0, RW_SEEK_SET);
+                if (SDL_LoadWAV_RW(src, 0, &decspec, &decbuf, &declen)) {
+                    SDL_RWops *mem = SDL_RWFromMem(decbuf, (int)declen);
+                    if (mem) {
+                        wave->memory = decbuf;
+                        wave->src = mem;
+                        wave->freesrc = SDL_TRUE;
+                        wave->spec = decspec;
+                        wave->start = 0;
+                        wave->stop = (Sint64)declen;
+                        if (freesrc) {
+                            SDL_RWclose(src);
+                        }
+                        loaded = SDL_TRUE;
+                    } else {
+                        SDL_FreeWAV(decbuf);
+                        SDL_OutOfMemory();
+                    }
+                } else {
+                    /* Not understood here either: let the legacy parser
+                       produce its classic diagnostic. */
+                    SDL_RWseek(src, 4, RW_SEEK_SET);
+                    loaded = LoadWAVStream(wave);
+                }
+            } else {
+                loaded = LoadWAVStream(wave);
+            }
         } else if (magic == FORM) {
             loaded = LoadAIFFStream(wave);
         } else {
@@ -302,6 +369,9 @@ void WAVStream_FreeSong(WAVStream *wave)
         }
         if (wave->cvt.buf) {
             SDL_free(wave->cvt.buf);
+        }
+        if (wave->memory) {
+            SDL_free(wave->memory);
         }
         if (wave->freesrc) {
             SDL_RWclose(wave->src);
