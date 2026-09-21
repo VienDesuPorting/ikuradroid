@@ -71,6 +71,7 @@ class EngineWill : public EngineVN {
 		int table_varclick;			//!< Variable to register index in
 		int table_varkind;			//!< Variable to register kind in
 		uString bgname;			//!< Name of current bg resource
+		uString musicname;		//!< Name of current bgm request (OP21/OP22)
 
 	protected:
 		//! CP/LMM-era scripts use shorter argument blocks

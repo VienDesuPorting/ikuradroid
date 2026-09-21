@@ -507,10 +507,15 @@ void EngineBase::Paint(SDL_Surface *Surface,VN_LAYERS Toplayer){
     SDL_Surface *tsurface=SDL_CreateRGBSurface(SDL_SWSURFACE,Surface->w,Surface->h,32,
                                                 0xff000000,0x00ff0000,0x0000ff00,0x000000ff);
     SDL_RenderReadPixels(EDLRenderer,0,SDL_PIXELFORMAT_RGBA8888,tsurface->pixels,tsurface->pitch);
-    SDL_Surface * fl = flip_surface( tsurface,FLIP_VERTICAL);
+    // Render-target readback orientation varies between backends
+    // (bottom-up storage on some GLES2 targets); probe it once instead
+    // of assuming a flip
+    SDL_Surface *fl=EDL_ReadbackFlipped()?flip_surface(tsurface,FLIP_VERTICAL):tsurface;
     EDL_BlendSurface(fl,0,Surface,0);
 
-    SDL_FreeSurface(fl);
+    if(fl!=tsurface){
+        SDL_FreeSurface(fl);
+    }
     SDL_FreeSurface(tsurface);
 
     SDL_SetRenderTarget( EDLRenderer, NULL );

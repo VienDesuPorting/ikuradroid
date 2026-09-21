@@ -35,6 +35,7 @@ extern void EDL_SetBox(SDL_Surface *src, int x, int y, int w, int h, Uint8 R, Ui
 // ----- PC-style hover invert (queued, flushed after the widget pass) -----
 extern void EDL_QueueHoverInvert(SDL_Rect Rect);
 extern void EDL_FlushHoverInverts(void);
+extern bool EDL_ReadbackFlipped(void);
 
 extern void EDL_BlendSurface(
 		SDL_Surface *src, SDL_Rect *srcrect,

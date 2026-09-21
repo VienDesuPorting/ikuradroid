@@ -1155,6 +1155,18 @@ static bool DetectReadbackFlip(){
 	return flipped;
 }
 
+/*! \brief Whether render-target readback arrives vertically flipped
+ *
+ *  Probed once per session; every readback consumer shares the result
+ *  so target-to-surface copies keep one consistent orientation.
+ */
+bool EDL_ReadbackFlipped(void){
+	if(invert_flip<0){
+		invert_flip=DetectReadbackFlip()?1:0;
+	}
+	return invert_flip!=0;
+}
+
 void EDL_QueueHoverInvert(SDL_Rect Rect){
 	if(invert_count<8){
 		invert_queue[invert_count++]=Rect;
