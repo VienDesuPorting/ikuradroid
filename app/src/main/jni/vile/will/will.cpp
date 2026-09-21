@@ -509,6 +509,9 @@ bool EngineWill::EventLoad(int Index){
 		textview->ClearText();
 		OnSelectClosed();
 		Stop();
+		StopMusic();
+		StopSound(VA_ALL);
+		musicname="";
 
 		// Recreate script stack
 		Uint32 count=0;
@@ -523,6 +526,7 @@ bool EngineWill::EventLoad(int Index){
 			script->save=index;
 		}
 		load->LoadVector("variables",&vars);
+		load->LoadString("musicname",&musicname);
 		state=WILLSTATE_NORMAL;
 
 		// Load graphics
@@ -530,6 +534,11 @@ bool EngineWill::EventLoad(int Index){
 		if(load->LoadSurface("screen-display",&tmps)){
 			display->Blit(tmps);
 			SDL_FreeSurface(tmps);
+		}
+
+		// Restart the track the saved scene was playing
+		if(musicname.length()){
+			PlayMusic(musicname);
 		}
 
 		// Close dialog
@@ -560,6 +569,7 @@ bool EngineWill::EventSave(int Index){
 	save->SaveVector("variables",&vars);
 	save->SaveString("savedate",datetime);
 	save->SaveString("savemsg",GetSavename());
+	save->SaveString("musicname",musicname);
 
 	// Store graphics
 	SDL_Surface *screen=EDL_CreateSurface(NativeWidth(),NativeHeight());
@@ -1082,6 +1092,7 @@ bool EngineWill::OP21(){
 		text+=script->buffer[script->index++];
 	}
 	script->index++;
+	musicname=text;
 	PlayMusic(text);
 	return false;
 }
@@ -1091,6 +1102,7 @@ bool EngineWill::OP21(){
 bool EngineWill::OP22(){
 	//Uint16 fadeout=GETWORD(script->buffer+script->index+1);
 	script->index+=script_v2?1:4;
+	musicname="";
 	StopMusic();
 	return false;
 }
