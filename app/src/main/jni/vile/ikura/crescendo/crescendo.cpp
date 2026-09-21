@@ -20,8 +20,9 @@ Crescendo::Crescendo(uString Path) : IkuraDecoder(640,480){
 	AddScripts(new ArchiveIkura(Path+"ISF"));
 	AddImages(new ArchiveIkura(Path+"GGD"));
 	AddVoices(new ArchiveIkura(Path+"VOICE"));
-	AddSE(new ArchiveViLE(Path+"SE"));
-    AddBGM(new ArchiveViLE(Path+"WMSC"));
+	AddSE(new ArchiveIkura(Path+"SE"));
+	AddBGM(new ArchiveIkura(Path+"WMSC"));
+	AddBGM(new ArchiveIkura(Path+"MIDI"));
 	AddVideo(new ArchiveFiles(Path+"dologo.mpg"));
 	AddVideo(new ArchiveFiles(Path+"DOLOGO.MPG"));
 	AddOther(new ArchiveFiles(Path+"*.suf"));
