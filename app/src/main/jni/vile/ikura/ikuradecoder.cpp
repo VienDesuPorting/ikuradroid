@@ -20,8 +20,12 @@ IkuraDecoder::IkuraDecoder(int Width,int Height) : EngineVN(Width,Height){
 	state=IS_NORMAL;
 	asurfaces=0;
 	isf_keybuffer=0;
-	isf_keysize=0;
 	selresult=-1;
+	selwait_dst=-1;
+	cmdrect.x=0;
+	cmdrect.y=0;
+	cmdrect.w=0;
+	cmdrect.h=0;
     nameMusic = "stop";
 	// Create ikura widget
 	SDL_Rect bgrect={0,0,Width,Height};
@@ -265,6 +269,20 @@ bool IkuraDecoder::EventSave(int Index){
 
 bool IkuraDecoder::EventGameTick(){
 	//*
+	if(state==IS_WAITSELECT){
+		// Blocking command selection (CC cmd=0): halt here until the
+		// player picks an option. Skip/ctrl is deliberately ignored so
+		// that skipping stops at choices, like the PC originals.
+		if(selresult>=0){
+			parser.SetValue(selwait_dst,selresult);
+			selresult=-1;
+			if(w_select){
+				w_select->SetVisible(false);
+				w_select->Clear();
+			}
+			state=IS_NORMAL;
+		}
+	}
 	if(state==IS_WAITTIMER){
 		if(timerend<SDL_GetTicks()){
 			// Timed state has ended
@@ -1521,13 +1539,24 @@ bool IkuraDecoder::iop_cp(const Uint8 *Data,int Length){
 // Close command screen
 bool IkuraDecoder::iop_cwc(const Uint8 *Data,int Length){
 	LogError("Closing Command window: %d",Data[0]);
+	if(w_select){
+		w_select->SetVisible(false);
+		w_select->Clear();
+	}
 	w_textview->SetVisible(false);
-    w_textview->SetGlobalXY(false);
+	w_textview->SetGlobalXY(false);
 
 	return false;
 }
 
 // Set command window position
+SDL_Rect IkuraDecoder::MapChoiceRect(Uint32 X,Uint32 Y,Uint32 W,Uint32 H){
+	// Legacy Ikura titles need their choice rects scaled onto the
+	// message area; keep the original y*3 behaviour for those.
+	SDL_Rect rect={(Sint16)X,(Sint16)(Y*3),(Sint16)W,(Sint16)H};
+	return rect;
+}
+
 bool IkuraDecoder::iop_cw(const Uint8 *Data,int Length){
 	Uint8 dst=GETBYTE(Data);
 	Uint32 x=GETDWORD(Data+1);
@@ -1539,6 +1568,10 @@ bool IkuraDecoder::iop_cw(const Uint8 *Data,int Length){
 		LogError("ILLEGAL COMMAND WINDOW:%d",dst);
 	}
 	LogError("Command window position:%d,%d,%d,%d,%d,%d",dst,x,y,w,h,cmd);
+	cmdrect.x=(Sint16)x;
+	cmdrect.y=(Sint16)y;
+	cmdrect.w=(Sint16)w;
+	cmdrect.h=(Sint16)h;
 	return false;
 }
 
@@ -1560,13 +1593,6 @@ bool IkuraDecoder::iop_cwo(const Uint8 *Data,int Length){
 
 // Execute command selection
 bool IkuraDecoder::iop_cc(const Uint8 *Data,int Length){
-		w_textview->SetVisible(false);
-        w_textview->SetGlobalXY(false);
-
-        w_textview->ClearText();
-
-    //LogError("iop_cc");
-
 	if(iop_check(4,IOP_CC,Data,Length)){
 		// Parse values
 		//LogTest("CC:%x:%x:%x:%x",Data[0],Data[1],Data[2],Data[3]);
@@ -1580,17 +1606,43 @@ bool IkuraDecoder::iop_cc(const Uint8 *Data,int Length){
 		if(!w_select){
 			LogError("Invalid selection control");
 		}
+		else if(cmd==0x00){
+			// Blocking fetch: wait for a selection and store it in the
+			// target register. The text window is kept visible so that
+			// skinned choices appear inside the message frame, and the
+			// pending wait halts skipmode like the PC originals do.
+			w_textview->ClearText();
+			if(selresult>=0){
+				parser.SetValue(dst,selresult);
+				selresult=-1;
+				w_select->SetVisible(false);
+				w_select->Clear();
+			}
+			else{
+				selwait_dst=dst;
+				state=IS_WAITSELECT;
+			}
+		}
 		else if(cmd==0x01){
 			// Set default value for target register
+			w_textview->SetVisible(false);
+			w_textview->SetGlobalXY(false);
+			w_textview->ClearText();
 			parser.SetValue(dst,-1);
 		}
 		else if(cmd==0x02){
 			// Closing command selection
+			w_textview->SetVisible(false);
+			w_textview->SetGlobalXY(false);
+			w_textview->ClearText();
 			w_select->SetVisible(false);
 			w_select->Clear();
 		}
 		else if(cmd==0x03){
 			// Get command status
+			w_textview->SetVisible(false);
+			w_textview->SetGlobalXY(false);
+			w_textview->ClearText();
 			if(selresult>=0){
 				parser.SetValue(dst,selresult);
 			}
@@ -1625,7 +1677,7 @@ bool IkuraDecoder::iop_cset(const Uint8 *Data,int Length){
 	caption[Length-18]=0;
 
 	// Create a new command option
-	SDL_Rect rect={x,y*3,w,h};
+	SDL_Rect rect=MapChoiceRect(x,y,w,h);
 	if(w_select){
 		w_select->SetText(caption,rect,val);
 	}

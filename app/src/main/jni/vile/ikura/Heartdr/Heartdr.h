@@ -14,6 +14,8 @@ class Heartdr : public IkuraDecoder {
 
 		// Override opcode handlers
 		virtual bool iop_wp(const Uint8 *Data,int Length);
+		virtual SDL_Rect MapChoiceRect(Uint32 X,Uint32 Y,
+						Uint32 W,Uint32 H);
 	public:
 		Heartdr(uString Path);
 };

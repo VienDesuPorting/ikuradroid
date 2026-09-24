@@ -25,6 +25,7 @@ enum IKURA_STATE {
 	IS_WAITTIMER,						//!< Waiting for statetimer to time out
 	IS_WAITTEXT,						//!< Waiting for text to print
 	IS_WAITCLICK,						//!< Waiting for user input
+	IS_WAITSELECT,						//!< Waiting for a command selection (CC cmd=0)
 	IS_LOAD,							//!< Load dialog
 	IS_SAVE,							//!< Save dialog
 	IS_OPTIONS							//!< Options dialog
@@ -44,6 +45,8 @@ class IkuraDecoder : public EngineVN {
 
 		// Selection data
 		int selresult;					//!< Selection result (-1 = none)
+		int selwait_dst;				//!< Register to store selection in while waiting
+		SDL_Rect cmdrect;				//!< Command window geometry (CW opcode)
 
 		// Gamedata
 		Stringlist s_names;				//!< Character names (Newer games)
@@ -72,6 +75,13 @@ class IkuraDecoder : public EngineVN {
 
 		// Overridden opcode handlers
 		virtual bool iop_wp(const Uint8 *Data,int Length);
+
+		// Maps a CSET choice rectangle onto the screen. The base
+		// implementation keeps the legacy y*3 scaling used by older
+		// Ikura games; game modules may map rects relative to the
+		// command window instead.
+		virtual SDL_Rect MapChoiceRect(Uint32 X,Uint32 Y,
+						Uint32 W,Uint32 H);
         virtual bool iop_pcend(const Uint8 *Data,int Length);
 
 		// Opcode handlers
