@@ -2,7 +2,7 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
-## 2.0.6 — 2026-09-22
+## 2.0.6 — 2026-09-21
 
 - Crescendo: music plays on the intro, in the menu and in scenes. SE and WMSC were read through ArchiveViLE, which only understands ViLEPACK repacks, so the native archives indexed zero items and every lookup failed silently. Both archives now load as native SM2MPX10, and the MIDI bank (MID01–MID30) comes from the separate MIDI file, like in the other Ikura GDL games.
 - Music from compressed WAVs plays again. The WAV music parser in SDL_mixer only understood PCM while every Crescendo track in WMSC is IMA ADPCM, so every track selection failed with "Unknown WAVE data format". Such files are now fully decoded through SDL_LoadWAV and played from memory; PCM and AIFF keep their old paths.
