@@ -39,6 +39,10 @@ Heartdr::Heartdr(uString Path) : IkuraDecoder(640,480){
 	w_select->SetShadow(true);
 	w_select->SetSwallowMisses(true);
 
+	// Choice rows start from the script's first CSET Y
+	cset_batch=true;
+	cset_basey=cset_lasty=0;
+
 	// Load standard boot script
 	RunScript("START.ISF");
 }
@@ -70,15 +74,32 @@ bool Heartdr::iop_wp(const Uint8 *Data,int Length){
 /*! \brief Maps choice rects relative to the command window
  *
  *  START.ISF shares the message window geometry with the command
- *  window (CW 12,320,640x152) and CSET specifies item rects inside
- *  it.
+ *  window (CW 12,320,640x152); CSET specifies item rects inside it
+ *  (x=32, y=44/68/92, w=560, h=20 - rows 24px apart).
+ *
+ *  Touch adjustments over the mouse-sized script rects:
+ *  - rows are spread 25% farther apart (24px -> 30px pitch) and
+ *    every row uses the full pitch as its hit height, so the
+ *    highlight strips touch and finger taps never land between
+ *    items; a new batch starts when the script returns to an
+ *    upper row than the previous item
+ *  - captions start level with the message text (abs x=30) and
+ *    reach the inner right edge of the frame; TextButton shrinks
+ *    oversized captions to fit instead of clipping them
  */
 SDL_Rect Heartdr::MapChoiceRect(Uint32 X,Uint32 Y,Uint32 W,Uint32 H){
+	if(cset_batch || (Sint16)Y<cset_lasty){
+		cset_basey=(Sint16)Y;
+		cset_batch=false;
+	}
+	cset_lasty=(Sint16)Y;
+
+	int row=(Sint16)Y-cset_basey;
 	SDL_Rect rect;
-	rect.x=(Sint16)(cmdrect.x+(Sint16)X);
-	rect.y=(Sint16)(cmdrect.y+(Sint16)Y);
-	rect.w=(Sint16)W;
-	rect.h=(Sint16)H;
+	rect.x=(Sint16)(cmdrect.x+(Sint16)X-14);
+	rect.y=(Sint16)(cmdrect.y+cset_basey+row+row/4);
+	rect.w=(Sint16)(624-X);
+	rect.h=30;
 	return rect;
 }
 
