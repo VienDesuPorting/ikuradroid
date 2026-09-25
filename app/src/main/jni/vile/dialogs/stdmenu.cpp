@@ -76,7 +76,11 @@ void StdMenu::ShowMenu(bool Visible){
 			//Blit(s_gfx);
 		}
 		else{
-		    Fill(0x00,0x00,0x00,0x00);
+			// Drop the fill entirely: a hidden menu used to keep
+			// rendering a (0,0,0,0) box every frame, which both wasted
+			// a blend pass and left the renderer draw color polluted
+			// (SDL_RenderClear then painted the letterbox with it).
+			filled=false;
 			Free();
 		}
 	}

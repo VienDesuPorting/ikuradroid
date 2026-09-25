@@ -184,6 +184,7 @@ bool VideoFFMPEG::Paint(){
 	SDL_UnlockMutex(framelock);
 	if(frame){
 	    if(frame->Texture){
+            SDL_SetRenderDrawColor(EDLRenderer,0,0,0,255);
             SDL_RenderClear(EDLRenderer);
             int w,h=0;
             SDL_RenderGetLogicalSize(EDLRenderer,&w,&h);

@@ -65,6 +65,7 @@ bool EngineVideo::PlayAnimation(SDL_Surface **Animation){
 		// Blit animation sequence until user cancels
 		if(asurface[aframe]){
 
+			SDL_SetRenderDrawColor(EDLRenderer,0,0,0,255);
 			SDL_RenderClear(EDLRenderer);
             EDLTexture *stexture = EDL_CreateTexture(asurface[aframe]->w,asurface[aframe]->h);
             stexture->loadFromSurface(asurface[aframe]);
