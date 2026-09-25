@@ -15,6 +15,7 @@
 
 #include "widget.h"
 #include "group.h"
+#include <cstring>
 
 bool Widget::global_refresh=false;
 SDL_Rect Widget::global_update={0,0,0,0};
@@ -432,9 +433,21 @@ void Widget::Tick(){
 
 void Widget::Render(){
     if(simage){
-        EDLTexture *stexture = EDL_CreateTexture(pos.w,pos.h);
+        // Size the texture after the actual surface, not the
+        // (possibly resized) widget rect, and copy row by row with
+        // the source pitch. Window skins (WP) are blitted 1:1 into
+        // frames that WS may have resized afterwards; a linear
+        // pos-sized copy tore every row and overread the buffer.
+        EDLTexture *stexture = EDL_CreateTexture(simage->w,simage->h);
         stexture->lockTexture();
-        stexture->copyPixels( simage->pixels );
+        Uint8 *dst=(Uint8*)stexture->getPixels();
+        Uint8 *src=(Uint8*)simage->pixels;
+        int dpitch=stexture->getPitch();
+        int spitch=simage->pitch;
+        int rowbytes=simage->w*simage->format->BytesPerPixel;
+        for(int y=0;y<simage->h;y++){
+            memcpy(dst+y*dpitch,src+y*spitch,rowbytes);
+        }
         stexture->unlockTexture();
         stexture->render(pos.x,pos.y);
         stexture->free();

@@ -14,6 +14,7 @@
  */
 
 #include "ikuradecoder.h"
+#include <cstring>
 
 IkuraDecoder::IkuraDecoder(int Width,int Height) : EngineVN(Width,Height){
 	// Preset values
@@ -1621,6 +1622,11 @@ bool IkuraDecoder::iop_cc(const Uint8 *Data,int Length){
 			else{
 				selwait_dst=dst;
 				state=IS_WAITSELECT;
+				// Halt the opcode fetch right here: returning false would
+				// let the current process slice run straight past the
+				// choice, so ONJP took the default branch before the
+				// player ever picked an option.
+				return true;
 			}
 		}
 		else if(cmd==0x01){
