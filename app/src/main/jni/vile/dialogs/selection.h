@@ -18,6 +18,7 @@ class Selection : public DialogBase {
 	bool bfill; //!< Backing strips behind text items
 	bool swallow; //!< Ignore presses that miss every item
 	bool hinvert; //!< Invert the hovered row instead of a fill (CP)
+	bool fshadow; //!< Drop shadow under item captions
 	public:
 		Selection(EngineVN *Engine);
 		~Selection();
@@ -40,6 +41,7 @@ class Selection : public DialogBase {
 	void SetBackgroundFill(bool Enable);
 	void SetSwallowMisses(bool Enable);
 	void SetHoverInvert(bool Enable);
+	void SetShadow(bool Enable);
 
 		// Hook into user input
 		bool MouseLeftDown(int X,int Y);

@@ -31,6 +31,7 @@ TextButton::TextButton(int X,int Y,uString Caption)
 	fontsize=Cfg::Font::default_size;
 	bfill=true;
 	hinvert=false;
+	fshadow=false;
 	caption=Caption;
 	SetColorDefault();
 
@@ -45,6 +46,7 @@ TextButton::TextButton(int X,int Y,int Width,int Height,uString Caption)
 	fontsize=Cfg::Font::default_size;
 	bfill=true;
 	hinvert=false;
+	fshadow=false;
 	caption=Caption;
 	SetColorDefault();
 	autogenerate();
@@ -58,6 +60,7 @@ TextButton::TextButton(SDL_Rect Dst,uString Caption)
 	fontsize=Cfg::Font::default_size;
 	bfill=true;
 	hinvert=false;
+	fshadow=false;
 	caption=Caption;
 	SetColorDefault();
 	autogenerate();
@@ -69,6 +72,7 @@ TextButton::TextButton(SDL_Rect Dst) : StateWidget(Dst) {
 	vertical=VA_CENTER;
 	bfill=true;
 	hinvert=false;
+	fshadow=false;
 	SetColorDefault();
 }
 
@@ -78,6 +82,7 @@ TextButton::TextButton() : StateWidget() {
 	vertical=VA_CENTER;
 	bfill=true;
 	hinvert=false;
+	fshadow=false;
 	SetColorDefault();
 }
 
@@ -104,6 +109,20 @@ void TextButton::SetBackgroundFill(bool Enable){
 void TextButton::SetHoverInvert(bool Enable){
 	hinvert=Enable;
 	autogenerate();
+}
+
+/*! \brief Enables a black (2,2) drop shadow under the caption
+ *
+ *  The PC originals print their menu captions white on translucent
+ *  windows; without the shadow white text washes out on bright
+ *  scenes. Rendered by the autogenerate() pass, so both states
+ *  (hovered and idle) carry it.
+ */
+void TextButton::SetTextShadow(bool Enable){
+	if(fshadow!=Enable){
+		fshadow=Enable;
+		autogenerate();
+	}
 }
 
 
@@ -233,6 +252,16 @@ void TextButton::autogenerate(){
 				td.y=pos.h-txt->h;
 			}
 			SDL_Surface *surface=EDL_CreateSurface(pos.w,pos.h);
+			if(fshadow){
+				SDL_Surface *sh=EDL_CreateText(caption,0x000000FF,pos.w,fontsize);
+				if(sh){
+					SDL_Rect sd=td;
+					sd.x+=2;
+					sd.y+=2;
+					EDL_BlitSurface(sh,0,surface,&sd);
+					SDL_FreeSurface(sh);
+				}
+			}
 			if(colorbg[es]&0xFF){
 				Uint8 r=(colorbg[es]>>24)&0xFF;
 				Uint8 g=(colorbg[es]>>16)&0xFF;

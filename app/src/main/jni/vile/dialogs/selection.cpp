@@ -27,6 +27,7 @@ Selection::Selection(EngineVN *Engine) : DialogBase(Engine,false){
 	bfill=true;
 	swallow=false;
 	hinvert=false;
+	fshadow=false;
 }
 
 Selection::~Selection(){
@@ -82,6 +83,16 @@ void Selection::SetSwallowMisses(bool Enable){
  */
 void Selection::SetHoverInvert(bool Enable){
 	hinvert=Enable;
+}
+
+/*! \brief Enables a black (2,2) drop shadow under item captions
+ *
+ *  Forwarded to every text item created afterwards. The PC original
+ *  of this game prints its choice captions white with a shadow so
+ *  they stay readable on any scene behind the translucent window.
+ */
+void Selection::SetShadow(bool Enable){
+	fshadow=Enable;
 }
 
 /*! \brief Routes a press to the item under the cursor
@@ -151,6 +162,7 @@ void Selection::SetText(uString Caption,SDL_Rect Area,int ID){
 	button->SetAlignment(halign,valign);
 	button->SetBackgroundFill(bfill);
 	button->SetHoverInvert(hinvert);
+	button->SetTextShadow(fshadow);
 	button->SetTag(ID);
 		AddWidget(button);
 	}
@@ -194,6 +206,7 @@ void Selection::SetText(Stringlist *Captions){
 	button->SetAlignment(halign,valign);
 	button->SetBackgroundFill(bfill);
 	button->SetHoverInvert(hinvert);
+	button->SetTextShadow(fshadow);
 	button->SetTag(GetWidgetCount());
 				AddWidget(button);
 			}
