@@ -31,11 +31,12 @@ Heartdr::Heartdr(uString Path) : IkuraDecoder(640,480){
 	AddVideo(new ArchiveFiles(Path+"DOLOGO.MPG"));
 	AddOther(new ArchiveFiles(Path+"*.suf"));
 
-	// Skinned selection items (PC style: plain captions inside the
-	// message frame, highlighted by a translucent strip on hover)
-	w_select->SetColors(0xF49CA8C8,0x984040FF,0x00000000,0x984040FF);
+	// Skinned selection items (PC style: white captions with a drop
+	// shadow inside the message frame, hovered rows on a pink strip)
+	w_select->SetColors(0xF8A0B0FF,0xFFFFFFFF,0x00000000,0xFFFFFFFF);
 	w_select->SetAlignment(HA_LEFT,VA_CENTER);
 	w_select->SetFontSize(18);
+	w_select->SetShadow(true);
 	w_select->SetSwallowMisses(true);
 
 	// Load standard boot script
@@ -54,14 +55,15 @@ const uString Heartdr::NativeName(){
  *
  *  The base implementation loads the window graphics referenced by
  *  the WP opcode. After the skin is in place the text area is
- *  fitted inside the frame and the font switches to the dark navy
- *  the PC original prints with on this window (START.ISF registers
- *  it as font 1).
+ *  fitted inside the frame. Colors and style stay with the script:
+ *  START.ISF registers font 0 as white plus bold with a (2,2)
+ *  shadow, which is exactly how the PC original prints here.
  */
 bool Heartdr::iop_wp(const Uint8 *Data,int Length){
 	bool retval=IkuraDecoder::iop_wp(Data,Length);
-	w_textview->SetTextPosition(24,32,568,104);
-	w_textview->SetFontColor(0x47,0x2F,0x92);
+	// Body lines start 45px below the window top on the PC original;
+	// the printer leading accounts for the remaining few pixels.
+	w_textview->SetTextPosition(18,41,574,95);
 	return retval;
 }
 
