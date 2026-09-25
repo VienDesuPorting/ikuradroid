@@ -55,6 +55,24 @@ public final class GameLibrary {
             {"may0.dat", "may0.lst"},               // Windy: Mayclub
     };
 
+    // Engine family display names, index-aligned with GAME_SIGNATURES;
+    // shown as the badge on library tiles (RunAdapter). These are brand
+    // names, so they stay untranslated in every locale.
+    private static final String[] ENGINE_FAMILIES = {
+            "Ikura GDL",                            // Ikura GDL (classic data set)
+            "Ikura GDL",                            // Ikura GDL (DRS data set)
+            "Will",                                 // Will: Critical Point, Princess Waltz, Starry Sky, ...
+            "Crowd",                                // Crowd: Tokimeki Check-in!
+            "Crowd",                                // Crowd: XChange 1
+            "Crowd",                                // Crowd: XChange 3
+            "JAST USA",                             // JAST USA Memorial Collection
+            "C-Ware",                               // C-Ware: DiviDead
+            "T-Love",                               // T-Love: True Love
+            "T-Love",                               // T-Love: True Love (alt. data set)
+            "Windy",                                // Windy: Nocturnal Illusion
+            "Windy",                                // Windy: Mayclub
+    };
+
     private static final String PREFS_FILE = "library";
     private static final String KEY_ROOT_PATH = "library_root";      // pre-1.9.0 single root, migrated on read
     private static final String KEY_ROOTS = "library_roots";         // StringSet of absolute paths
@@ -191,6 +209,8 @@ public final class GameLibrary {
                     RunItem item = new RunItem();
                     item.setTitle(dir.getName());
                     item.setInstalledPath(dir.getAbsolutePath());
+                    item.setEngine(detectEngine(dir));
+                    item.setSizeBytes(folderSize(dir));
                     items.add(item);
                 }
             }
@@ -266,6 +286,8 @@ public final class GameLibrary {
         RunItem item = new RunItem();
         item.setTitle(name);
         item.setSourcePath(dir.getAbsolutePath());
+        item.setEngine(detectEngine(dir));
+        item.setSizeBytes(folderSize(dir));
         items.add(item);
     }
 
@@ -285,22 +307,32 @@ public final class GameLibrary {
      * would hide a working game from the library entirely.
      */
     public static boolean isGameFolder(File dir) {
+        return detectEngine(dir) != null;
+    }
+
+    /**
+     * Engine family display name matched by the signatures ("Ikura GDL",
+     * "Will", ...) or null when the folder is not a game. The Java-side
+     * check is deliberately looser than the native probes (see
+     * isGameFolder).
+     */
+    public static String detectEngine(File dir) {
         if (dir == null || !dir.isDirectory()) {
-            return false;
+            return null;
         }
-        for (String[] signature : GAME_SIGNATURES) {
+        for (int i = 0; i < GAME_SIGNATURES.length; i++) {
             boolean matched = true;
-            for (String marker : signature) {
+            for (String marker : GAME_SIGNATURES[i]) {
                 if (!hasFile(dir, marker)) {
                     matched = false;
                     break;
                 }
             }
             if (matched) {
-                return true;
+                return ENGINE_FAMILIES[i];
             }
         }
-        return false;
+        return null;
     }
 
     /** Case-insensitive lookup of dir/relativePath ("sub/file" works). */
@@ -324,5 +356,29 @@ public final class GameLibrary {
             current = match;
         }
         return current.isFile();
+    }
+
+    /**
+     * Recursive byte size of a folder tree; -1 when the folder cannot be
+     * read. A stat-only walk - the scan already runs off the UI thread
+     * (MainActivity.rescanLibrary).
+     */
+    private static long folderSize(File dir) {
+        File[] children = dir.listFiles();
+        if (children == null) {
+            return -1L;
+        }
+        long total = 0L;
+        for (File child : children) {
+            if (child.isDirectory()) {
+                long sub = folderSize(child);
+                if (sub > 0) {
+                    total += sub;
+                }
+            } else {
+                total += child.length();
+            }
+        }
+        return total;
     }
 }
