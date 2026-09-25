@@ -77,7 +77,7 @@ public class MainActivity extends AppCompatActivity
                 }
 
                 final RecyclerView recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
-                recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
+                recyclerView.setLayoutManager(new GridLayoutManager(this, spanCountForLibrary()));
                 ra = new RunAdapter(new RunAdapter.OnGameClickListener() {
                         @Override
                         public void onGameClick(RunItem item) {
@@ -158,6 +158,17 @@ public class MainActivity extends AppCompatActivity
                 boolean empty = ra.getItemCount() == 0;
                 mEmptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
                 findViewById(R.id.my_recycler_view).setVisibility(empty ? View.GONE : View.VISIBLE);
+        }
+
+        /**
+         * Library columns from the available width (about 160 dp per
+         * tile): two on a phone, three or four on tablets and in
+         * landscape - instead of a hardcoded count for every device.
+         */
+        private int spanCountForLibrary() {
+                float density = getResources().getDisplayMetrics().density;
+                float widthDp = getResources().getDisplayMetrics().widthPixels / density;
+                return Math.max(2, Math.min(4, (int) (widthDp / 160f)));
         }
 
         // ------------------------------------------------------------------

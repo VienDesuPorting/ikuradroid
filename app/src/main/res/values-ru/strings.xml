@@ -21,7 +21,7 @@
     <string name="menu_more">Ещё</string>
     <string name="menu_about">О приложении</string>
     <string name="menu_engines">Движки</string>
-    <string name="dir_change">Добавить папку с новеллой</string>
+    <string name="dir_change">Добавить папку с новеллами</string>
 
     <!-- Библиотека -->
     <string name="library_empty_title">Библиотека пуста</string>
@@ -30,6 +30,13 @@
     <string name="library_added_title">Папка добавлена</string>
     <string name="library_added_message">«%1$s» теперь в библиотеке. Добавить ещё одну папку?</string>
     <string name="library_add_more">Добавить ещё</string>
+
+    <!-- Плитка библиотеки: подстрока «бренд + размер папки» и единицы размера -->
+    <string name="tile_sub_size">ViLE · %1$s</string>
+    <string name="tile_sub_plain">ViLE</string>
+    <string name="size_kb">%1$s КБ</string>
+    <string name="size_mb">%1$s МБ</string>
+    <string name="size_gb">%1$s ГБ</string>
 
     <!-- Долгий тап на карточке тайтла -->
     <string name="ctx_hide">Убрать из списка</string>
@@ -69,7 +76,7 @@
     <string name="about_people_header">Люди</string>
     <string name="about_people">«Иван» — анонимный и изначальный разработчик Android-реализации ViLE (2015–2016).\n\nВозрождение и сопровождение — VienDesu! Porting Team (2026).</string>
     <string name="about_thirdparty_header">Сторонние компоненты</string>
-    <string name="about_thirdparty">SDL 2.30.12, SDL_image, SDL_mixer, SDL_ttf, SDL_gfx, libmikmod, smpeg2, libwebp; фильтры HQx © MaxSt (LGPL 2.1+); utf8cpp © Nemanja Trifunovic; движок Will портирован из VNMV © soywiz.</string>
+    <string name="about_thirdparty">SDL 2.30.12, SDL_image, SDL_mixer, SDL_ttf, SDL_gfx, libmikmod, smpeg2, libwebp; фильтры HQx © MaxSt (LGPL 2.1+); utf8cpp © Nemanja Trifunovic; движок Will портирован из VNVM © soywiz.</string>
     <string name="about_links_header">Ссылки</string>
     <string name="about_links">https://sourceforge.net/projects/vilevn/\nhttps://vk.ru/topic-69564393_33447386\nTelegram — VienDesu! Porting Team: https://t.me/visual_novels_for_android</string>
 </resources>

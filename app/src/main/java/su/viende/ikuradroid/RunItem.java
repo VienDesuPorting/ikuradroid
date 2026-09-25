@@ -14,6 +14,8 @@ public class RunItem {
     private String title;
     private String sourcePath;     // absolute path of the game folder in shared storage, null when legacy-copy-only
     private String installedPath;  // absolute path of the legacy copy in the app-private area, null when there is none
+    private String engine;         // engine family display name (GameLibrary.detectEngine), null when unknown
+    private long sizeBytes = -1;   // game folder size in bytes, -1 when it could not be measured
 
     public String getTitle() {
         return title;
@@ -37,5 +39,23 @@ public class RunItem {
 
     public void setInstalledPath(String installedPath) {
         this.installedPath = installedPath;
+    }
+
+    /** Engine family display name ("Ikura GDL", "Will", ...), null when unknown. */
+    public String getEngine() {
+        return engine;
+    }
+
+    public void setEngine(String engine) {
+        this.engine = engine;
+    }
+
+    /** Game folder size in bytes; -1 when it could not be measured. */
+    public long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public void setSizeBytes(long sizeBytes) {
+        this.sizeBytes = sizeBytes;
     }
 }
