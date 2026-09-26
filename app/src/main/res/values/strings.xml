@@ -53,6 +53,7 @@
     <!-- VNDB covers: searched by the display title (kana API, anonymous);
          one hit downloads silently, several open the pick dialog -->
     <string name="ctx_cover">VNDB cover</string>
+    <string name="ctx_cover_remove">Remove cover</string>
     <string name="cover_searching">Searching VNDB…</string>
     <string name="cover_saved">Cover updated</string>
     <string name="cover_saved_title">Cover and title updated</string>

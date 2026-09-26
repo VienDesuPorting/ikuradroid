@@ -53,6 +53,7 @@
     <!-- Обложки VNDB: поиск по отображаемому названию (kana API, анонимно);
          одно совпадение скачивается тихо, несколько открывают диалог выбора -->
     <string name="ctx_cover">Обложка из VNDB</string>
+    <string name="ctx_cover_remove">Убрать обложку</string>
     <string name="cover_searching">Ищу на VNDB…</string>
     <string name="cover_saved">Обложка обновлена</string>
     <string name="cover_saved_title">Обложка и название обновлены</string>
