@@ -31,9 +31,8 @@
     <string name="library_added_message">«%1$s» теперь в библиотеке. Добавить ещё одну папку?</string>
     <string name="library_add_more">Добавить ещё</string>
 
-    <!-- Плитка библиотеки: подстрока «бренд + размер папки» и единицы размера -->
-    <string name="tile_sub_size">ViLE · %1$s</string>
-    <string name="tile_sub_plain">ViLE</string>
+    <!-- Плитка библиотеки: подстрока с размером папки и единицы размера -->
+    <string name="tile_sub_size">%1$s</string>
     <string name="size_kb">%1$s КБ</string>
     <string name="size_mb">%1$s МБ</string>
     <string name="size_gb">%1$s ГБ</string>

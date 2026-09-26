@@ -31,9 +31,8 @@
     <string name="library_added_message">“%1$s” is now in the library. Add another folder?</string>
     <string name="library_add_more">Add another</string>
 
-    <!-- Library tile sub line ("brand + folder size") and size units -->
-    <string name="tile_sub_size">ViLE · %1$s</string>
-    <string name="tile_sub_plain">ViLE</string>
+    <!-- Library tile sub line (folder size) and size units -->
+    <string name="tile_sub_size">%1$s</string>
     <string name="size_kb">%1$s KB</string>
     <string name="size_mb">%1$s MB</string>
     <string name="size_gb">%1$s GB</string>
