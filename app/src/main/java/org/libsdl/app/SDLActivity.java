@@ -59,6 +59,7 @@ import java.util.Hashtable;
 import java.util.Locale;
 
 import su.viende.ikuradroid.R;
+import su.viende.ikuradroid.SaveLoadDialog;
 
 
 /**
@@ -544,9 +545,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         addMenuRow(sheet, items, R.drawable.ic_ingame_title, R.string.menu_title, 0,
                 () -> onNativeKeyDown(KeyEvent.KEYCODE_F8));
         addMenuRow(sheet, items, R.drawable.ic_ingame_save, R.string.menu_save, 0,
-                () -> onNativeKeyDown(KeyEvent.KEYCODE_F6));
+                // Java slot dialog replaces the old F6 -> native StdSave
+                // detour; the engine still does the actual save.
+                () -> openSaveLoadDialog(true));
         addMenuRow(sheet, items, R.drawable.ic_ingame_load, R.string.menu_load, 0,
-                () -> onNativeKeyDown(KeyEvent.KEYCODE_F5));
+                () -> openSaveLoadDialog(false));
         addMenuRow(sheet, items, R.drawable.ic_ingame_skip, R.string.menu_skip,
                 skip ? R.string.skip_on : R.string.skip_off,
                 () -> {
@@ -622,6 +625,33 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         TypedValue tv = new TypedValue();
         getTheme().resolveAttribute(attr, tv, true);
         return tv.data;
+    }
+
+    /** Small confirmation feedback after a Java-side save/load. */
+    public void toast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
+    // ------------------------------------------------------------------
+    // Java save/load UI. The slot dialog reads the savegames from disk
+    // itself (SaveFileRepository, no JNI in the read path); the actual
+    // save/load lands on the engine thread through an SDL_USEREVENT
+    // pushed by nativeSendSaveLoadEvent. Falls back to the classic
+    // F5/F6 hotkeys when the engine bridge is not up (no engine running,
+    // or the save root is unknown) - the native dialogs still work.
+    // ------------------------------------------------------------------
+    private void openSaveLoadDialog(boolean saveMode) {
+        String prefix = null;
+        try {
+            prefix = nativeGetSavePrefix();
+        } catch (UnsatisfiedLinkError ignored) {
+            // Old .so without the bridge - native dialogs remain.
+        }
+        if (prefix == null || prefix.length() == 0 || gCurrentSavePath == null) {
+            onNativeKeyDown(saveMode ? KeyEvent.KEYCODE_F6 : KeyEvent.KEYCODE_F5);
+            return;
+        }
+        new SaveLoadDialog(this, saveMode, gCurrentSavePath, prefix).show();
     }
 
     // ------------------------------------------------------------------
@@ -1339,6 +1369,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     public static native void resumeMixer();
     public static native void nativeLowMemory();
     public static native void nativeSendQuit();
+    // Java save/load bridge (jni/vile/ikurajni.cpp)
+    public static native String nativeGetSavePrefix();
+    public static native void nativeSendSaveLoadEvent(int mode, int slot);
     public static native void nativeQuit();
     public static native void nativePause();
     public static native void nativeResume();

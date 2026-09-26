@@ -17,6 +17,24 @@
     <string name="menu_settings">Settings</string>
     <string name="menu_quit">Quit</string>
 
+    <!-- Java save/load UI. The slot list is read from disk
+         (SaveFileRepository); the engine performs the actual
+         save/load on its own thread (SDL_USEREVENT bridge). -->
+    <string name="saveload_title_save">Save game</string>
+    <string name="saveload_title_load">Load game</string>
+    <string name="saveload_slot">Slot %1$d</string>
+    <string name="saveload_slot_empty">Slot %1$d - empty</string>
+    <string name="saveload_hint_save">Tap a slot to save the current scene. Long-press an occupied slot to delete its save.</string>
+    <string name="saveload_hint_load">Long-press an occupied slot to delete its save.</string>
+    <string name="saveload_saved">Saved to slot %1$d</string>
+    <string name="saveload_loaded">Loaded slot %1$d</string>
+    <string name="saveload_overwrite_title">Overwrite the save?</string>
+    <string name="saveload_overwrite_message">Slot %1$d already holds a save - it will be replaced.</string>
+    <string name="saveload_overwrite_ok">Overwrite</string>
+    <string name="saveload_delete_title">Delete the save?</string>
+    <string name="saveload_delete_message">The save in slot %1$d will be permanently deleted.</string>
+    <string name="saveload_delete_ok">Delete</string>
+
     <!-- Launcher toolbar menu -->
     <string name="menu_more">More options</string>
     <string name="menu_about">About</string>

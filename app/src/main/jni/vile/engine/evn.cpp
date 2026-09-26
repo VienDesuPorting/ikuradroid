@@ -516,10 +516,7 @@ int EngineVN::GetMessageDelayInterval(){
 
 void EngineVN::EventGameDialog(VN_DIALOGS Dialog){
 
-    DestroyWidget(opt,VL_DIALOG);
-    DestroyWidget(Halt,VL_DIALOG);
-    DestroyWidget(Sav,VL_DIALOG);
-    DestroyWidget(Loa,VL_DIALOG);
+    EventCloseDialogs();
 
 	if(Dialog==VD_OPTIONS){
         opt = new Options(this);
@@ -537,6 +534,25 @@ void EngineVN::EventGameDialog(VN_DIALOGS Dialog){
         Loa = new StdLoad(this);
 		AddWidget(Loa,VL_DIALOG);
 	}
+}
+
+/*! \brief Tears down any open standard dialog
+ *
+ *  Used by EventGameDialog before it mounts the next dialog, and by the
+ *  Java save/load bridge before it triggers an EventSave/EventLoad -
+ *  the Java slot dialog replaces whatever standard dialog the script
+ *  had parked on screen. The four pointers are nulled afterwards: they
+ *  dangle as soon as the widgets are dropped from the layer.
+ */
+void EngineVN::EventCloseDialogs(){
+    DestroyWidget(opt,VL_DIALOG);
+    DestroyWidget(Halt,VL_DIALOG);
+    DestroyWidget(Sav,VL_DIALOG);
+    DestroyWidget(Loa,VL_DIALOG);
+    opt=0;
+    Halt=0;
+    Sav=0;
+    Loa=0;
 }
 
 bool EngineVN::EventSaveSystem(){
