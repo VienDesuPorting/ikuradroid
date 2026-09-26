@@ -308,9 +308,19 @@ public class SaveLoadDialog {
                 date.setVisibility(View.GONE);
                 thumb.setImageBitmap(null);
                 root.setAlpha(0.55f);
-                root.setOnClickListener(null);
-                root.setClickable(false);
-                root.setOnLongClickListener(null);
+                if (saveMode) {
+                    // The only way to make a first save: in save mode an
+                    // empty slot is tappable (no overwrite confirmation
+                    // needed - nothing is being overwritten). In load
+                    // mode empty slots stay dead.
+                    root.setOnClickListener(v -> performSaveOrLoad(slot.index));
+                    root.setClickable(true);
+                    root.setOnLongClickListener(null);
+                } else {
+                    root.setOnClickListener(null);
+                    root.setClickable(false);
+                    root.setOnLongClickListener(null);
+                }
             }
         }
     }
