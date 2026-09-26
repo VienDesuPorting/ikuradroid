@@ -3,6 +3,7 @@ package su.viende.ikuradroid;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
  */
 public final class VndbCover {
 
+    private static final String LOG_TAG = "VndbCover";
     private static final String API_URL = "https://api.vndb.org/kana/vn";
     // VNDB asks API clients to identify themselves in the User-Agent
     private static final String USER_AGENT =
@@ -103,6 +105,7 @@ public final class VndbCover {
         } catch (Exception e) {
             // A failed request is null (a genuine no-hit is empty), so
             // the automatic fetch can tell the two apart
+            Log.d(LOG_TAG, "search response failed: " + e);
             return null;
         }
         return out;
@@ -132,6 +135,7 @@ public final class VndbCover {
                     Candidate candidate) {
         Bitmap bitmap = decodeScaled(candidate.imageUrl, MAX_CACHE_DIM);
         if (bitmap == null) {
+            Log.d(LOG_TAG, "cover image decode failed: " + candidate.imageUrl);
             return null;
         }
         File file = GameLibrary.coverFile(context, folderName);
@@ -236,10 +240,12 @@ public final class VndbCover {
             }
             int code = conn.getResponseCode();
             if (code < 200 || code >= 300) {
+                Log.d(LOG_TAG, "POST " + url + " HTTP " + code);
                 return null;
             }
             return new JSONObject(readAll(conn.getInputStream(), 512 * 1024));
         } catch (Exception e) {
+            Log.d(LOG_TAG, "POST " + url + " failed: " + e);
             return null;
         } finally {
             if (conn != null) {
@@ -258,10 +264,12 @@ public final class VndbCover {
             conn.setRequestProperty("User-Agent", USER_AGENT);
             int code = conn.getResponseCode();
             if (code < 200 || code >= 300) {
+                Log.d(LOG_TAG, "GET " + url + " HTTP " + code);
                 return null;
             }
             return readBytes(conn.getInputStream(), 12 * 1024 * 1024);
         } catch (Exception e) {
+            Log.d(LOG_TAG, "GET " + url + " failed: " + e);
             return null;
         } finally {
             if (conn != null) {
