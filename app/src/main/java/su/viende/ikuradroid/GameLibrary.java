@@ -18,6 +18,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -89,6 +90,14 @@ public final class GameLibrary {
     private static final String KEY_DISPLAY = "display_name:";       // manual tile renames, keyed by folder name
     private static final String KEY_COVER = "cover:";                // VNDB cover metadata (JSON), keyed by folder name
     private static final String KEY_AUTOCOVER = "autocover:";        // automatic cover search already ran, keyed by folder name
+    private static final String KEY_COVER_REMOVED = "cover_removed:"; // cover deleted by the user on purpose
+    private static final String KEY_MATCHER_VERSION = "autocover_matcher_version";
+    /**
+     * Version of the automatic cover matching logic; bumped when the
+     * matcher improves, so silent misses of the previous version get
+     * one more try (see {@link #retryMissedAutoCovers}).
+     */
+    private static final int AUTO_COVER_MATCHER_VERSION = 2;
     private static final String INSTALL_DIR = "games";
 
     private GameLibrary() {
@@ -331,7 +340,10 @@ public final class GameLibrary {
         if (json == null || json.length() == 0) {
             prefs.edit().remove(KEY_COVER + folderName).apply();
         } else {
-            prefs.edit().putString(KEY_COVER + folderName, json).apply();
+            // A cover is in place again: a later "remove cover" must be
+            // a fresh deliberate decision, so forget the removed flag
+            prefs.edit().putString(KEY_COVER + folderName, json)
+                            .remove(KEY_COVER_REMOVED + folderName).apply();
         }
     }
 
@@ -350,6 +362,43 @@ public final class GameLibrary {
     public static void markAutoCoverTried(Context context, String folderName) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
         prefs.edit().putBoolean(KEY_AUTOCOVER + folderName, true).apply();
+    }
+
+    /** Marks a cover as deliberately removed by the user ("remove cover"). */
+    public static void markCoverRemoved(Context context, String folderName) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_COVER_REMOVED + folderName, true).apply();
+    }
+
+    /**
+     * One-time migration after a matcher improvement: tiles the old
+     * logic gave up on (marked as searched, still without a cover,
+     * not user-removed) get their single silent try back. Covers
+     * removed through the menu keep their marks - re-fetching them
+     * would override the user's decision. Runs at most once per
+     * matcher version bump; a no-op afterwards.
+     */
+    public static void retryMissedAutoCovers(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        if (prefs.getInt(KEY_MATCHER_VERSION, 1) >= AUTO_COVER_MATCHER_VERSION) {
+            return;
+        }
+        SharedPreferences.Editor editor = prefs.edit();
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            String key = entry.getKey();
+            if (!key.startsWith(KEY_AUTOCOVER)
+                            || !Boolean.TRUE.equals(entry.getValue())) {
+                continue;
+            }
+            String folder = key.substring(KEY_AUTOCOVER.length());
+            if (prefs.contains(KEY_COVER + folder)
+                            || prefs.getBoolean(KEY_COVER_REMOVED + folder, false)) {
+                continue;
+            }
+            editor.remove(key);
+        }
+        editor.putInt(KEY_MATCHER_VERSION, AUTO_COVER_MATCHER_VERSION);
+        editor.apply();
     }
 
     /** Absolute path of the cached cover of a game folder, or null. */
