@@ -62,8 +62,10 @@ public final class VndbCover {
     /**
      * Searches VNDB for the query string and returns candidates that
      * carry a visible main cover (entries whose cover is hidden from
-     * anonymous access are useless here and get skipped). Never null;
-     * a network or parse failure returns an empty list.
+     * anonymous access are useless here and get skipped). Returns an
+     * empty list when VNDB genuinely found nothing and null when the
+     * request itself failed - the automatic cover fetch only retries
+     * on null, so a flaky network never marks a tile as searched.
      */
     public static ArrayList<Candidate> search(String query) {
         ArrayList<Candidate> out = new ArrayList<>();
@@ -79,7 +81,7 @@ public final class VndbCover {
             body.put("results", 12);
             JSONObject response = postJson(API_URL, body.toString());
             if (response == null) {
-                return out;
+                return null;
             }
             JSONArray results = response.optJSONArray("results");
             for (int i = 0; results != null && i < results.length(); i++) {
@@ -99,7 +101,9 @@ public final class VndbCover {
                                 imageUrl));
             }
         } catch (Exception e) {
-            // A failed search is an empty result, never a crash
+            // A failed request is null (a genuine no-hit is empty), so
+            // the automatic fetch can tell the two apart
+            return null;
         }
         return out;
     }
