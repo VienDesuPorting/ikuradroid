@@ -39,6 +39,9 @@
     <string name="size_gb">%1$s GB</string>
 
     <!-- Long-press menu of a library tile -->
+    <string name="ctx_rename">Rename</string>
+    <string name="ctx_rename_title">Rename the game</string>
+    <string name="ctx_rename_message">The name is only shown in the library - the folder on disk keeps its name.</string>
     <string name="ctx_hide">Remove from list</string>
     <string name="ctx_delete">Delete from device</string>
     <string name="ctx_delete_title">Delete the game?</string>

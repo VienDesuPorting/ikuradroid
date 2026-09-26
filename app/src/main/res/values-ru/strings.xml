@@ -39,6 +39,9 @@
     <string name="size_gb">%1$s ГБ</string>
 
     <!-- Долгий тап на карточке тайтла -->
+    <string name="ctx_rename">Переименовать</string>
+    <string name="ctx_rename_title">Переименовать игру</string>
+    <string name="ctx_rename_message">Название отображается только в библиотеке — папка на диске останется с прежним именем.</string>
     <string name="ctx_hide">Убрать из списка</string>
     <string name="ctx_delete">Удалить с устройства</string>
     <string name="ctx_delete_title">Удалить игру?</string>

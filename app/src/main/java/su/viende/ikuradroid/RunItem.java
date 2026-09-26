@@ -16,6 +16,7 @@ public class RunItem {
     private String installedPath;  // absolute path of the legacy copy in the app-private area, null when there is none
     private String engine;         // engine family display name (GameLibrary.detectEngine), null when unknown
     private long sizeBytes = -1;   // game folder size in bytes, -1 when it could not be measured
+    private String displayName;    // resolved tile name (manual rename or SUF title), null = plain folder name
 
     public String getTitle() {
         return title;
@@ -57,5 +58,20 @@ public class RunItem {
 
     public void setSizeBytes(long sizeBytes) {
         this.sizeBytes = sizeBytes;
+    }
+
+    /** Resolved tile name (manual rename or SUF title); null shows the folder name. */
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    /** What a tile shows: the display name when set, the folder name otherwise. */
+    public String displayTitle() {
+        return displayName != null && displayName.length() > 0
+                        ? displayName : title;
     }
 }
