@@ -17,6 +17,7 @@ public class RunItem {
     private String engine;         // engine family display name (GameLibrary.detectEngine), null when unknown
     private long sizeBytes = -1;   // game folder size in bytes, -1 when it could not be measured
     private String displayName;    // resolved tile name (manual rename or SUF title), null = plain folder name
+    private String coverPath;      // cached VNDB cover (absolute path), null = no cover yet
 
     public String getTitle() {
         return title;
@@ -67,6 +68,15 @@ public class RunItem {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    /** Cached VNDB cover file (absolute path); null shows the icon/placeholder. */
+    public String getCoverPath() {
+        return coverPath;
+    }
+
+    public void setCoverPath(String coverPath) {
+        this.coverPath = coverPath;
     }
 
     /** What a tile shows: the display name when set, the folder name otherwise. */

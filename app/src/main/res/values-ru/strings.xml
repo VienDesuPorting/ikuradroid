@@ -51,6 +51,15 @@
     <string name="ctx_deleted_toast">Игра удалена</string>
     <string name="ctx_delete_failed_toast">Некоторые файлы не удалось удалить</string>
 
+    <!-- Обложки VNDB: поиск по отображаемому названию (kana API, анонимно);
+         одно совпадение скачивается тихо, несколько открывают диалог выбора -->
+    <string name="ctx_cover">Обложка из VNDB</string>
+    <string name="cover_searching">Ищу на VNDB…</string>
+    <string name="cover_saved">Обложка обновлена</string>
+    <string name="cover_none">По запросу «%1$s» ничего не нашлось</string>
+    <string name="cover_fail">Не удалось загрузить обложку</string>
+    <string name="cover_pick_title">Выберите обложку</string>
+
     <!-- Собственный браузер папок (корень библиотеки в реальной ФС) -->
     <string name="picker_title">Выбор папки</string>
     <string name="picker_select">Выбрать эту папку</string>
