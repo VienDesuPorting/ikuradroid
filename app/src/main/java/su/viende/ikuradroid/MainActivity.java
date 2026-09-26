@@ -160,7 +160,7 @@ public class MainActivity extends AppCompatActivity
                                                 updateEmptyState();
                                                 // New tiles without a cover
                                                 // get one silent VNDB try
-                                                startAutoCoverFetch(dataset);
+                                                startAutoCoverFetch();
                                         }
                                 });
                         }
@@ -746,29 +746,53 @@ public class MainActivity extends AppCompatActivity
         // cached cover exactly one silent VNDB search by its display
         // title. A single hit downloads and applies - latinizing the
         // tile name the same way the manual flow does. Several hits
-        // still auto-pick when exactly one candidate is titled like the
-        // query ("Crescendo" has five VNDB hits, only one VN is titled
-        // "Crescendo"); otherwise the tile stays silent - pick dialogs
-        // would spam a fresh scan, the manual menu row covers it. A
-        // searched tile is marked, so rescans never hammer the API
-        // again; a failed request marks nothing and retries on the next
-        // scan. Logcat tag "VndbCover" follows the whole pipeline.
+        // still auto-pick on a specific enough title match, checked
+        // by falling specificity: English release title, romaji main
+        // title, main title + subtitle ("Crescendo" - three VNs are
+        // named exactly that, only the D.O. classic adds "~Eien da
+        // to...~"); otherwise the tile stays silent - pick dialogs
+        // would spam a fresh scan, the manual menu row covers it.
+        // A searched tile is marked, so rescans never hammer the
+        // API again; a failed request marks nothing and retries on
+        // the next scan. Tiles whose scan request arrived while a
+        // fetch pass was still running are re-checked when it ends,
+        // so adding games back-to-back never leaves one behind.
+        // Logcat tag "VndbCover" follows the whole pipeline.
         // ------------------------------------------------------------------
 
-        private void startAutoCoverFetch(final ArrayList<RunItem> dataset) {
-                ArrayList<RunItem> pending = new ArrayList<>();
-                for (RunItem item : dataset) {
+        /** Tiles eligible for a silent auto-fetch right now. */
+        private ArrayList<RunItem> pendingCoverTiles() {
+                ArrayList<RunItem> out = new ArrayList<>();
+                if (ra == null) {
+                        return out;
+                }
+                for (RunItem item : ra.datasetSnapshot()) {
                         if (item.getCoverPath() == null
                                         && !GameLibrary.autoCoverTried(this,
                                                         item.getTitle())
-                                        && item.displayTitle().trim().length() >= 2) {
-                                pending.add(item);
+                                        && item.displayTitle().trim()
+                                                        .length() >= 2) {
+                                out.add(item);
                         }
                 }
-                if (pending.isEmpty() || autoCoverRunning) {
-                        Log.d(LOG_TAG, pending.isEmpty()
-                                        ? "auto-cover scan: no tiles to fetch"
-                                        : "auto-cover scan: fetch already running");
+                return out;
+        }
+
+        private void startAutoCoverFetch() {
+                // One-time migration: after a matcher improvement the
+                // silent misses of the old logic (marked, still without
+                // a cover, not user-removed) get their single try back
+                GameLibrary.retryMissedAutoCovers(this);
+                ArrayList<RunItem> pending = pendingCoverTiles();
+                if (pending.isEmpty()) {
+                        Log.d(LOG_TAG, "auto-cover scan: no tiles to fetch");
+                        return;
+                }
+                if (autoCoverRunning) {
+                        // The running pass re-checks for late tiles when
+                        // it is done, so nothing is lost here
+                        Log.d(LOG_TAG, "auto-cover scan: fetch already "
+                                        + "running - tiles re-checked after");
                         return;
                 }
                 Log.d(LOG_TAG, "auto-cover scan: " + pending.size()
@@ -778,17 +802,37 @@ public class MainActivity extends AppCompatActivity
                         @Override
                         public void run() {
                                 try {
-                                        for (final RunItem item : pending) {
-                                                if (isFinishing() || isDestroyed()) {
-                                                        return;
+                                        ArrayList<RunItem> queue = pending;
+                                        // Three passes at most: the follow-ups
+                                        // pick up tiles that arrived while a
+                                        // pass was running, but a tile that
+                                        // keeps failing (offline) must wait
+                                        // for the next scan like before
+                                        for (int pass = 0; !queue.isEmpty()
+                                                        && pass < 3
+                                                        && !isFinishing()
+                                                        && !isDestroyed(); pass++) {
+                                                for (final RunItem item : queue) {
+                                                        if (isFinishing() || isDestroyed()) {
+                                                                return;
+                                                        }
+                                                        autoCoverOne(item);
+                                                        // A small pause between
+                                                        // tiles keeps a fresh
+                                                        // multi-game library well
+                                                        // inside the anonymous
+                                                        // API budget
+                                                        Thread.sleep(1000);
                                                 }
-                                                autoCoverOne(item);
-                                                // A small pause between
-                                                // tiles keeps a fresh
-                                                // multi-game library well
-                                                // inside the anonymous
-                                                // API budget
-                                                Thread.sleep(1000);
+                                                // Latecomers: tiles whose scan
+                                                // request arrived while this
+                                                // pass was running got dropped
+                                                queue = pendingCoverTiles();
+                                                if (!queue.isEmpty()) {
+                                                        Log.d(LOG_TAG, "auto-cover: "
+                                                                        + queue.size() + " tile(s) "
+                                                                        + "missed by the scan - extra pass");
+                                                }
                                         }
                                 } catch (InterruptedException e) {
                                         Thread.currentThread().interrupt();
@@ -802,7 +846,7 @@ public class MainActivity extends AppCompatActivity
         /**
          * Searches, marks and (on a confident match) downloads for one
          * tile. A single hit is confident; among several hits exactly
-         * one candidate titled like the query still is (see
+         * one candidate named like the query still is (see
          * {@link #exactTitleMatch}); everything else stays silent.
          */
         private void autoCoverOne(final RunItem item) {
@@ -841,8 +885,8 @@ public class MainActivity extends AppCompatActivity
                         } else {
                                 Log.d(LOG_TAG, "auto-cover: " + found.size()
                                                 + " hits for \"" + query
-                                                + "\", none titled exactly "
-                                                + "- left to the user");
+                                                + "\", no unambiguous title "
+                                                + "match - left to the user");
                         }
                         return;
                 }
@@ -870,34 +914,85 @@ public class MainActivity extends AppCompatActivity
         }
 
         /**
-         * The one candidate whose VNDB title equals the query, ignoring
-         * case; null when there is none - or more than one, which would
-         * make the pick as ambiguous as the name itself.
+         * Among several hits, the one candidate the query names
+         * unambiguously, by specificity: 1) the candidate whose
+         * official English release title equals the query, 2) the
+         * candidate whose romaji main title equals the query, 3) the
+         * candidate whose main title is the query plus a subtitle
+         * ("Crescendo" - three VNDB entries carry that exact name,
+         * but only the D.O. classic is "Crescendo ~Eien da to...~").
+         * A tier with several matches falls through to the next one;
+         * nothing specific enough stays silent - such a pick would
+         * be as ambiguous as the name itself.
          */
         private static VndbCover.Candidate exactTitleMatch(
                         ArrayList<VndbCover.Candidate> found, String query) {
                 String wanted = query.trim().toLowerCase(Locale.US);
-                VndbCover.Candidate match = null;
+                ArrayList<VndbCover.Candidate> tier =
+                                titledLike(found, wanted, true, false);
+                if (tier.size() == 1) {
+                        return tier.get(0);
+                }
+                tier = titledLike(found, wanted, false, false);
+                if (tier.size() == 1) {
+                        return tier.get(0);
+                }
+                tier = titledLike(found, wanted, false, true);
+                return tier.size() == 1 ? tier.get(0) : null;
+        }
+
+        /**
+         * Candidates whose English release title (true) or main title
+         * (false) equals the wanted name - or, with prefix, starts
+         * with it followed by a subtitle separator.
+         */
+        private static ArrayList<VndbCover.Candidate> titledLike(
+                        ArrayList<VndbCover.Candidate> found, String wanted,
+                        boolean englishTitle, boolean prefix) {
+                ArrayList<VndbCover.Candidate> out = new ArrayList<>();
                 for (int i = 0; i < found.size(); i++) {
                         VndbCover.Candidate candidate = found.get(i);
-                        if (candidate.title == null) {
+                        String title = englishTitle ? candidate.altTitle
+                                        : candidate.title;
+                        if (title == null) {
                                 continue;
                         }
-                        if (candidate.title.trim().toLowerCase(Locale.US)
-                                        .equals(wanted)) {
-                                if (match != null) {
-                                        return null;
-                                }
-                                match = candidate;
+                        String norm = title.trim().toLowerCase(Locale.US);
+                        boolean match = prefix
+                                        ? norm.startsWith(wanted)
+                                                        && hasSubtitle(norm,
+                                                                        wanted.length())
+                                        : norm.equals(wanted);
+                        if (match) {
+                                out.add(candidate);
                         }
                 }
-                return match;
+                return out;
+        }
+
+        /**
+         * Whether the main title continues after the query with a
+         * subtitle: optional spaces, then "~", ":" or "(" - as in
+         * "Crescendo ~Eien...~" or "Clannad: ..."; a plain
+         * continuation word ("Crescendo Moon") does not count.
+         */
+        private static boolean hasSubtitle(String norm, int at) {
+                int i = at;
+                while (i < norm.length() && norm.charAt(i) == ' ') {
+                        i++;
+                }
+                if (i >= norm.length()) {
+                        return false;
+                }
+                char c = norm.charAt(i);
+                return c == '~' || c == ':' || c == '(';
         }
 
         // ------------------------------------------------------------------
         // "Remove cover": drops the cached poster (file + metadata) of a
         // tile - the escape hatch for a wrong automatic match. The folder
-        // keeps its "cover was searched for" mark, so the scan never
+        // keeps its "cover was searched for" mark plus a "user removed"
+        // flag, so neither the scan nor the one-time matcher migration
         // re-fetches over the user's decision; the menu row stays for a
         // deliberate re-fetch.
         // ------------------------------------------------------------------
@@ -905,6 +1000,7 @@ public class MainActivity extends AppCompatActivity
         private void removeCover(final RunItem item) {
                 String path = item.getCoverPath();
                 GameLibrary.setCoverMeta(this, item.getTitle(), null);
+                GameLibrary.markCoverRemoved(this, item.getTitle());
                 item.setCoverPath(null);
                 if (path != null) {
                         // The cache file is app-private; failure is harmless

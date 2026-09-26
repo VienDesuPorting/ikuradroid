@@ -111,11 +111,15 @@ public final class VndbCover {
         return out;
     }
 
-    /** English release title from the titles array; null when there is none. */
+    /**
+     * English release title from the titles array (VNDB kana language
+     * code "en"; "eng" is accepted for safety); null when there is none.
+     */
     private static String englishTitle(JSONArray titles) {
         for (int i = 0; titles != null && i < titles.length(); i++) {
             JSONObject t = titles.optJSONObject(i);
-            if (t != null && "eng".equals(t.optString("lang", null))) {
+            String lang = t == null ? null : t.optString("lang", null);
+            if ("en".equals(lang) || "eng".equals(lang)) {
                 String title = t.optString("title", null);
                 if (title != null && title.length() > 0) {
                     return title;

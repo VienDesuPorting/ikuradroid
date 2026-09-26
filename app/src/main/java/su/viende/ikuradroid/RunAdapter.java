@@ -85,11 +85,19 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
         mLongListener = longListener;
     }
 
-    public void swapArray(ArrayList<RunItem> dataset) {
+    public synchronized void swapArray(ArrayList<RunItem> dataset) {
         mDataset.clear();
         if (dataset != null) {
             mDataset.addAll(dataset);
         }
+    }
+
+    /**
+     * Copy of the current tiles; safe to iterate off the UI thread
+     * while a rescan swaps the list in.
+     */
+    public synchronized ArrayList<RunItem> datasetSnapshot() {
+        return new ArrayList<>(mDataset);
     }
 
     public RunItem getItem(int position) {
