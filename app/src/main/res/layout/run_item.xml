@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!-- Library tile: a square icon (1:1, SquareImageView), the title, a
-     "brand + folder size" sub line and the engine family badge. Ids
-     (card_view, iv_recycler_item, tv_recycler_item) are referenced by
-     RunAdapter and must not change. The root height is wrap_content -
-     it once was match_parent, which stretched every tile over the whole
-     list (one visible "row", dead tap zones, rows lost off-screen). -->
+<!-- Library tile: a 2:3 poster image (TileImageView - a cached VNDB
+     cover when there is one, the game's square icon.png centered on a
+     neutral surface otherwise), the title, a "brand + folder size" sub
+     line and the engine family badge. Ids (card_view, iv_recycler_item,
+     tv_recycler_item) are referenced by RunAdapter and must not change.
+     The root height is wrap_content - it once was match_parent, which
+     stretched every tile over the whole list (one visible "row", dead
+     tap zones, rows lost off-screen). -->
 
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -25,7 +27,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <su.viende.ikuradroid.SquareImageView
+            <su.viende.ikuradroid.TileImageView
                 android:id="@+id/iv_recycler_item"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

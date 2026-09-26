@@ -3,12 +3,15 @@ package su.viende.ikuradroid;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CodingErrorAction;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -84,6 +87,7 @@ public final class GameLibrary {
     private static final String KEY_ROOTS = "library_roots";         // StringSet of absolute paths
     private static final String KEY_HIDDEN = "hidden_titles";        // StringSet of game folder names
     private static final String KEY_DISPLAY = "display_name:";       // manual tile renames, keyed by folder name
+    private static final String KEY_COVER = "cover:";                // VNDB cover metadata (JSON), keyed by folder name
     private static final String INSTALL_DIR = "games";
 
     private GameLibrary() {
@@ -236,9 +240,11 @@ public final class GameLibrary {
         }
 
         // Tile names: a manual rename wins, then the SUF startup title
-        // of Ikura GDL games, otherwise the plain folder name
+        // of Ikura GDL games, otherwise the plain folder name; covers
+        // resolve from the cache alongside
         for (RunItem item : items) {
             item.setDisplayName(resolveDisplayName(prefs, item));
+            item.setCoverPath(resolveCoverPath(context, prefs, item));
         }
 
         Collections.sort(items, new Comparator<RunItem>() {
@@ -285,6 +291,87 @@ public final class GameLibrary {
             prefs.edit().remove(KEY_DISPLAY + folderName).apply();
         } else {
             prefs.edit().putString(KEY_DISPLAY + folderName, name).apply();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Covers: VNDB posters cached in the app-private files area
+    // (VndbCover does the network work; here only storage and metadata)
+    // ------------------------------------------------------------------
+
+    /**
+     * The private directory cached cover files live in (created on
+     * demand); null when the storage is unavailable.
+     */
+    public static File coversDir(Context context) {
+        File dir = new File(context.getFilesDir(), "covers");
+        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
+            return null;
+        }
+        return dir;
+    }
+
+    /** Cache file of one game folder: covers/&lt;md5 of the name&gt;.jpg. */
+    public static File coverFile(Context context, String folderName) {
+        File dir = coversDir(context);
+        if (dir == null) {
+            return null;
+        }
+        return new File(dir, md5Hex(folderName) + ".jpg");
+    }
+
+    /**
+     * Stores or drops (null/blank) the cover metadata of a game folder.
+     * Like renames, covers are keyed by the folder name, so they survive
+     * rescans, hiding and re-adding the folder.
+     */
+    public static void setCoverMeta(Context context, String folderName, String json) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        if (json == null || json.length() == 0) {
+            prefs.edit().remove(KEY_COVER + folderName).apply();
+        } else {
+            prefs.edit().putString(KEY_COVER + folderName, json).apply();
+        }
+    }
+
+    /** Absolute path of the cached cover of a game folder, or null. */
+    private static String resolveCoverPath(Context context, SharedPreferences prefs,
+                    RunItem item) {
+        String meta = prefs.getString(KEY_COVER + item.getTitle(), null);
+        if (meta == null) {
+            return null;
+        }
+        try {
+            String fileName = new JSONObject(meta).optString("f", null);
+            if (fileName == null || fileName.length() == 0) {
+                return null;
+            }
+            File dir = coversDir(context);
+            if (dir == null) {
+                return null;
+            }
+            File file = new File(dir, fileName);
+            return file.isFile() ? file.getAbsolutePath() : null;
+        } catch (Exception e) {
+            // Malformed metadata means no cover, never a crash
+            return null;
+        }
+    }
+
+    /** Lowercase MD5 hex of a string (cover cache file names). */
+    private static String md5Hex(String text) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(text.getBytes("UTF-8"));
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(String.format(Locale.US, "%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            // MD5 exists on every Android build; the fallback keeps the
+            // cache file name valid even so
+            return text.replaceAll("[^A-Za-z0-9._-]", "_");
         }
     }
 

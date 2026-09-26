@@ -7,6 +7,7 @@ import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
@@ -20,10 +21,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -358,6 +363,14 @@ public class MainActivity extends AppCompatActivity
                                                 showRenameDialog(item);
                                         }
                                 });
+                content.findViewById(R.id.ctx_cover_row).setOnClickListener(
+                                new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                                popup.dismiss();
+                                                startCoverFetch(item);
+                                        }
+                                });
                 content.findViewById(R.id.ctx_hide_row).setOnClickListener(
                                 new View.OnClickListener() {
                                         @Override
@@ -489,6 +502,158 @@ public class MainActivity extends AppCompatActivity
                 // Redraw in place: re-sort by the new title, no storage walk
                 ra.sortByDisplayTitle();
                 ra.notifyDataSetChanged();
+                // A fresh name is also the entry point for the cover:
+                // VNDB is searched by it right away (no fetch on reset)
+                if (name.length() > 0 && !name.equals(item.getTitle())) {
+                        startCoverFetch(item);
+                }
+        }
+
+        // ------------------------------------------------------------------
+        // "VNDB cover": searches VNDB (kana API, anonymous) by the tile's
+        // display title - the string "Rename" sets, so manual naming and
+        // cover fetching share one source of truth. One hit downloads
+        // silently, several open the pick dialog, none shows a toast.
+        // The cover caches in the app-private files area and survives
+        // rescans like the rename does; re-fetching goes through the
+        // same menu row.
+        // ------------------------------------------------------------------
+
+        private void startCoverFetch(final RunItem item) {
+                Toast.makeText(this, R.string.cover_searching,
+                                Toast.LENGTH_SHORT).show();
+                final String query = item.displayTitle();
+                new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                                final ArrayList<VndbCover.Candidate> found =
+                                                VndbCover.search(query);
+                                // Pick-dialog thumbnails decode here too, so
+                                // the dialog opens with everything ready
+                                final Bitmap[] thumbs = new Bitmap[found.size()];
+                                for (int i = 0; i < found.size(); i++) {
+                                        thumbs[i] = VndbCover.thumb(found.get(i));
+                                }
+                                runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                                if (isFinishing() || isDestroyed()) {
+                                                        return;
+                                                }
+                                                if (found.isEmpty()) {
+                                                        Toast.makeText(MainActivity.this,
+                                                                        getString(R.string.cover_none, query),
+                                                                        Toast.LENGTH_LONG).show();
+                                                } else if (found.size() == 1) {
+                                                        downloadCover(item, found.get(0));
+                                                } else {
+                                                        showCoverPicker(item, found, thumbs);
+                                                }
+                                        }
+                                });
+                        }
+                }).start();
+        }
+
+        private void showCoverPicker(final RunItem item,
+                        final ArrayList<VndbCover.Candidate> candidates,
+                        final Bitmap[] thumbs) {
+                final LinearLayout list = new LinearLayout(this);
+                list.setOrientation(LinearLayout.VERTICAL);
+                LayoutInflater inflater = LayoutInflater.from(this);
+                for (int i = 0; i < candidates.size(); i++) {
+                        final VndbCover.Candidate candidate = candidates.get(i);
+                        final View row = inflater.inflate(
+                                        R.layout.cover_candidate_row, list, false);
+                        ImageView thumb = (ImageView) row.findViewById(
+                                        R.id.cover_thumb);
+                        Bitmap bitmap = thumbs[i];
+                        if (bitmap != null) {
+                                thumb.setImageBitmap(bitmap);
+                        }
+                        TextView title = (TextView) row.findViewById(
+                                        R.id.cover_candidate_title);
+                        title.setText(candidate.title != null
+                                                        ? candidate.title : candidate.altTitle);
+                        TextView sub = (TextView) row.findViewById(
+                                        R.id.cover_candidate_sub);
+                        sub.setText(candidateSubtitle(candidate));
+                        row.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                        if (row.getTag() instanceof AlertDialog) {
+                                                ((AlertDialog) row.getTag()).dismiss();
+                                        }
+                                        downloadCover(item, candidate);
+                                }
+                        });
+                        list.addView(row);
+                }
+                final ScrollView scroll = new ScrollView(this);
+                scroll.addView(list);
+                final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                                .setTitle(R.string.cover_pick_title)
+                                .setView(scroll)
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .show();
+                // Rows close the dialog through the tag (the builder runs
+                // before the dialog reference exists)
+                for (int i = 0; i < list.getChildCount(); i++) {
+                        list.getChildAt(i).setTag(dialog);
+                }
+        }
+
+        /** "English title · 1998 · v145" style picker sub line. */
+        private static String candidateSubtitle(VndbCover.Candidate candidate) {
+                StringBuilder sb = new StringBuilder();
+                if (candidate.altTitle != null
+                                && !candidate.altTitle.equals(candidate.title)) {
+                        sb.append(candidate.altTitle);
+                }
+                if (candidate.released != null
+                                && candidate.released.length() >= 4) {
+                        if (sb.length() > 0) {
+                                sb.append(" · ");
+                        }
+                        sb.append(candidate.released.substring(0, 4));
+                }
+                if (candidate.vndbId != null) {
+                        if (sb.length() > 0) {
+                                sb.append(" · ");
+                        }
+                        sb.append(candidate.vndbId);
+                }
+                return sb.toString();
+        }
+
+        private void downloadCover(final RunItem item,
+                        final VndbCover.Candidate candidate) {
+                new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                                final File cover = VndbCover.download(
+                                                MainActivity.this, item.getTitle(), candidate);
+                                runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                                if (isFinishing() || isDestroyed()) {
+                                                        return;
+                                                }
+                                                if (cover == null) {
+                                                        Toast.makeText(MainActivity.this,
+                                                                        R.string.cover_fail,
+                                                                        Toast.LENGTH_LONG).show();
+                                                        return;
+                                                }
+                                                item.setCoverPath(cover.getAbsolutePath());
+                                                ra.notifyDataSetChanged();
+                                                Toast.makeText(MainActivity.this,
+                                                                R.string.cover_saved,
+                                                                Toast.LENGTH_SHORT).show();
+                                        }
+                                });
+                        }
+                }).start();
         }
 
         // ------------------------------------------------------------------

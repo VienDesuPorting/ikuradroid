@@ -18,6 +18,10 @@
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
 
+    <!-- VNDB cover fetch (kana API, anonymous): a normal install-time
+         permission, nothing to ask for at runtime -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application android:name=".IkuraApplication"
         android:label="@string/app_name"
         android:icon="@drawable/icon"
