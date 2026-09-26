@@ -4,7 +4,7 @@
 
 The project grew out of the abandoned 2016 Android port of **ViLE (Visual Library Engine)**. ViLE itself covered not only Ikura GDL but also Will, Crowd, C-Ware, JAST, Windy and T-Love. The current goal is to polish the old games and gradually bring back support for the other engines.
 
-At the moment **Crescendo** (minori) runs from start to finish. Interface: English / Russian. License: GPLv3.
+Interface: English / Russian. License: GPLv3.
 
 Русская версия: [README.md](README.md)
 
