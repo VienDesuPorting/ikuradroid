@@ -2,6 +2,7 @@ package su.viende.ikuradroid;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import android.Manifest;
 import android.content.DialogInterface;
@@ -15,6 +16,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -44,6 +46,9 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class MainActivity extends AppCompatActivity
 {
+        /** Single logcat tag for the whole VNDB cover pipeline. */
+        private static final String LOG_TAG = "VndbCover";
+
         private static final int REQUEST_PICK_FOLDER = 42;
         private static final int REQUEST_STORAGE_ACCESS = 43;
 
@@ -549,6 +554,10 @@ public class MainActivity extends AppCompatActivity
                                 // toast); an empty list is a genuine no-hit
                                 final ArrayList<VndbCover.Candidate> found =
                                                 VndbCover.search(query);
+                                Log.d(LOG_TAG, "manual search \"" + query
+                                                + "\": " + (found == null
+                                                ? "request failed"
+                                                : found.size() + " hit(s)"));
                                 // Pick-dialog thumbnails decode here too, so
                                 // the dialog opens with everything ready
                                 final Bitmap[] thumbs = new Bitmap[found == null
@@ -701,6 +710,13 @@ public class MainActivity extends AppCompatActivity
                         public void run() {
                                 final File cover = VndbCover.download(
                                                 MainActivity.this, item.getTitle(), candidate);
+                                if (cover == null) {
+                                        Log.d(LOG_TAG, "cover download failed for \""
+                                                        + item.getTitle() + "\"");
+                                } else {
+                                        Log.i(LOG_TAG, "cover saved for \""
+                                                        + item.getTitle() + "\"");
+                                }
                                 runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
@@ -728,13 +744,15 @@ public class MainActivity extends AppCompatActivity
         // ------------------------------------------------------------------
         // Automatic covers: every (re)scan gives each tile without a
         // cached cover exactly one silent VNDB search by its display
-        // title. One hit downloads and applies - latinizing the tile
-        // name the same way the manual flow does. Several hits stay
-        // silent: pick dialogs would spam a fresh scan, those tiles are
-        // covered by the manual menu row instead. No-hit and multi-hit
-        // both mark the tile as tried, so rescans never hammer the API
+        // title. A single hit downloads and applies - latinizing the
+        // tile name the same way the manual flow does. Several hits
+        // still auto-pick when exactly one candidate is titled like the
+        // query ("Crescendo" has five VNDB hits, only one VN is titled
+        // "Crescendo"); otherwise the tile stays silent - pick dialogs
+        // would spam a fresh scan, the manual menu row covers it. A
+        // searched tile is marked, so rescans never hammer the API
         // again; a failed request marks nothing and retries on the next
-        // scan.
+        // scan. Logcat tag "VndbCover" follows the whole pipeline.
         // ------------------------------------------------------------------
 
         private void startAutoCoverFetch(final ArrayList<RunItem> dataset) {
@@ -748,8 +766,13 @@ public class MainActivity extends AppCompatActivity
                         }
                 }
                 if (pending.isEmpty() || autoCoverRunning) {
+                        Log.d(LOG_TAG, pending.isEmpty()
+                                        ? "auto-cover scan: no tiles to fetch"
+                                        : "auto-cover scan: fetch already running");
                         return;
                 }
+                Log.d(LOG_TAG, "auto-cover scan: " + pending.size()
+                                + " tile(s) to fetch");
                 autoCoverRunning = true;
                 new Thread(new Runnable() {
                         @Override
@@ -760,7 +783,15 @@ public class MainActivity extends AppCompatActivity
                                                         return;
                                                 }
                                                 autoCoverOne(item);
+                                                // A small pause between
+                                                // tiles keeps a fresh
+                                                // multi-game library well
+                                                // inside the anonymous
+                                                // API budget
+                                                Thread.sleep(1000);
                                         }
+                                } catch (InterruptedException e) {
+                                        Thread.currentThread().interrupt();
                                 } finally {
                                         autoCoverRunning = false;
                                 }
@@ -768,43 +799,99 @@ public class MainActivity extends AppCompatActivity
                 }).start();
         }
 
-        /** Searches, marks and (on a single hit) downloads for one tile. */
+        /**
+         * Searches, marks and (on a confident match) downloads for one
+         * tile. A single hit is confident; among several hits exactly
+         * one candidate titled like the query still is (see
+         * {@link #exactTitleMatch}); everything else stays silent.
+         */
         private void autoCoverOne(final RunItem item) {
-                final ArrayList<VndbCover.Candidate> found =
-                                VndbCover.search(item.displayTitle());
+                final String query = item.displayTitle().trim();
+                Log.d(LOG_TAG, "auto-cover: searching \"" + query + "\"");
+                ArrayList<VndbCover.Candidate> found = VndbCover.search(query);
+                if (found == null) {
+                        // The first request after a cold app start can
+                        // fail on its own (DNS and friends); one
+                        // immediate retry keeps that from costing a
+                        // whole scan cycle
+                        Log.d(LOG_TAG, "auto-cover: request failed, retrying once");
+                        try {
+                                Thread.sleep(3000);
+                        } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                return;
+                        }
+                        found = VndbCover.search(query);
+                }
                 if (found == null) {
                         // Network trouble: no mark, the next scan retries
+                        Log.d(LOG_TAG, "auto-cover: request failed twice, "
+                                        + "retrying on the next scan");
                         return;
                 }
                 GameLibrary.markAutoCoverTried(MainActivity.this,
                                 item.getTitle());
-                if (found.size() != 1) {
-                        // Nothing found or ambiguous: the user decides
+                VndbCover.Candidate candidate = found.size() == 1
+                                ? found.get(0)
+                                : exactTitleMatch(found, query);
+                if (candidate == null) {
+                        if (found.isEmpty()) {
+                                Log.d(LOG_TAG, "auto-cover: no hits for \""
+                                                + query + "\"");
+                        } else {
+                                Log.d(LOG_TAG, "auto-cover: " + found.size()
+                                                + " hits for \"" + query
+                                                + "\", none titled exactly "
+                                                + "- left to the user");
+                        }
                         return;
                 }
-                final VndbCover.Candidate candidate = found.get(0);
+                Log.d(LOG_TAG, "auto-cover: picked " + candidate.vndbId
+                                + " \"" + candidate.title + "\"");
+                final VndbCover.Candidate picked = candidate;
                 final File cover = VndbCover.download(MainActivity.this,
-                                item.getTitle(), candidate);
+                                item.getTitle(), picked);
+                Log.d(LOG_TAG, "auto-cover: download "
+                                + (cover == null ? "failed" : "done")
+                                + " for \"" + item.getTitle() + "\"");
                 runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                                 if (isFinishing() || isDestroyed()) {
                                         return;
                                 }
-                                applyVndbTitle(item, candidate);
+                                applyVndbTitle(item, picked);
                                 if (cover != null) {
                                         item.setCoverPath(cover.getAbsolutePath());
                                         ra.notifyDataSetChanged();
                                 }
                         }
                 });
-                // A small pause keeps a fresh multi-game library well
-                // inside the anonymous API budget
-                try {
-                        Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+        }
+
+        /**
+         * The one candidate whose VNDB title equals the query, ignoring
+         * case; null when there is none - or more than one, which would
+         * make the pick as ambiguous as the name itself.
+         */
+        private static VndbCover.Candidate exactTitleMatch(
+                        ArrayList<VndbCover.Candidate> found, String query) {
+                String wanted = query.trim().toLowerCase(Locale.US);
+                VndbCover.Candidate match = null;
+                for (int i = 0; i < found.size(); i++) {
+                        VndbCover.Candidate candidate = found.get(i);
+                        if (candidate.title == null) {
+                                continue;
+                        }
+                        if (candidate.title.trim().toLowerCase(Locale.US)
+                                        .equals(wanted)) {
+                                if (match != null) {
+                                        return null;
+                                }
+                                match = candidate;
+                        }
                 }
+                return match;
         }
 
         // ------------------------------------------------------------------
