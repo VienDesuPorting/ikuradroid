@@ -1,7 +1,7 @@
 /*! \class EngineWill
  *	\brief Will game engine
  *
- *  This implementation was ported from VNMV (http://code.google.com/p/vnvm/)
+ *  This implementation was ported from VNVM (http://code.google.com/p/vnvm/)
  *  with the concent of its author, soywiz. Thank you!
  */
 #ifndef _WILL_H_

@@ -1,5 +1,6 @@
 package su.viende.ikuradroid;
 
+import android.content.Context;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,16 +10,18 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 /**
- * Library grid adapter. Tiles bind a game title and its per-game
- * icon.png - read straight from the real game folder, with the legacy
- * install-area copy as a fallback; until then the placeholder is shown.
- * Clicks are delegated to the host (MainActivity launches the game),
- * long clicks open the per-game context menu (remove/delete).
+ * Library grid adapter. Tiles bind a game title, its square icon (read
+ * straight from the real game folder's icon.png, with the legacy
+ * install-area copy as a fallback and a vector placeholder until then),
+ * a "brand + folder size" sub line and the engine family badge. Clicks
+ * are delegated to the host (MainActivity launches the game), long
+ * clicks open the per-game context menu (remove/delete).
  */
 public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
 
@@ -38,12 +41,16 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         public final TextView mTextView;
+        public final TextView mSubText;
+        public final TextView mChipText;
         public final ImageView mImageView;
         public RunItem mItem;
 
         public ViewHolder(View v) {
             super(v);
             mTextView = (TextView) v.findViewById(R.id.tv_recycler_item);
+            mSubText = (TextView) v.findViewById(R.id.tv_recycler_item_sub);
+            mChipText = (TextView) v.findViewById(R.id.chip_recycler_item);
             mImageView = (ImageView) v.findViewById(R.id.iv_recycler_item);
         }
     }
@@ -89,6 +96,7 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
         } else {
             holder.mImageView.setImageResource(R.drawable.card_img);
         }
+        bindSubAndChip(holder, item);
         holder.mItem = item;
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -108,6 +116,43 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
                 return false;
             }
         });
+    }
+
+    /** Sub line: engine brand plus folder size; chip: engine family badge. */
+    private void bindSubAndChip(ViewHolder holder, RunItem item) {
+        Context context = holder.itemView.getContext();
+        String size = formatSize(item.getSizeBytes(), context);
+        if (size != null) {
+            holder.mSubText.setText(context.getString(R.string.tile_sub_size, size));
+        } else {
+            holder.mSubText.setText(R.string.tile_sub_plain);
+        }
+        String engine = item.getEngine();
+        if (engine != null && engine.length() > 0) {
+            holder.mChipText.setText(engine);
+            holder.mChipText.setVisibility(View.VISIBLE);
+        } else {
+            // Reset on recycle so badges never bleed through tiles
+            holder.mChipText.setVisibility(View.GONE);
+        }
+    }
+
+    /** "312 MB"-style folder size for the sub line; null when unknown. */
+    private static String formatSize(long bytes, Context context) {
+        if (bytes < 0) {
+            return null;
+        }
+        float kb = bytes / 1024f;
+        float mb = kb / 1024f;
+        float gb = mb / 1024f;
+        Locale locale = Locale.getDefault();
+        if (gb >= 1f) {
+            return context.getString(R.string.size_gb, String.format(locale, "%.1f", gb));
+        }
+        if (mb >= 1f) {
+            return context.getString(R.string.size_mb, String.format(locale, "%.0f", mb));
+        }
+        return context.getString(R.string.size_kb, String.format(locale, "%.0f", kb));
     }
 
     @Override
