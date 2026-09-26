@@ -10,6 +10,8 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Locale;
 
 import androidx.annotation.NonNull;
@@ -71,6 +73,16 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
         return mDataset.get(position);
     }
 
+    /** Re-sorts the grid by display title after a rename (A-Z). */
+    public void sortByDisplayTitle() {
+        Collections.sort(mDataset, new Comparator<RunItem>() {
+            @Override
+            public int compare(RunItem a, RunItem b) {
+                return a.displayTitle().compareToIgnoreCase(b.displayTitle());
+            }
+        });
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -82,7 +94,7 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         final RunItem item = mDataset.get(position);
-        holder.mTextView.setText(item.getTitle());
+        holder.mTextView.setText(item.displayTitle());
         File icon = null;
         if (item.getSourcePath() != null) {
             icon = new File(item.getSourcePath(), "icon.png");

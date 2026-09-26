@@ -18,6 +18,8 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -348,6 +350,14 @@ public class MainActivity extends AppCompatActivity
                 // focusable=true dismisses on an outside tap or on Back
                 popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
                 popup.setElevation(getResources().getDisplayMetrics().density * 8f);
+                content.findViewById(R.id.ctx_rename_row).setOnClickListener(
+                                new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                                popup.dismiss();
+                                                showRenameDialog(item);
+                                        }
+                                });
                 content.findViewById(R.id.ctx_hide_row).setOnClickListener(
                                 new View.OnClickListener() {
                                         @Override
@@ -424,6 +434,64 @@ public class MainActivity extends AppCompatActivity
         }
 
         // ------------------------------------------------------------------
+        // "Rename": edits the display title of a tile (JoiPlay-style
+        // manual naming). The folder on disk keeps its name, so saves,
+        // hidden state and re-adding the folder are unaffected. An empty
+        // field returns the tile to its automatic title (the SUF name of
+        // Ikura GDL games, otherwise the folder name).
+        // ------------------------------------------------------------------
+
+        private void showRenameDialog(final RunItem item) {
+                final EditText input = new EditText(this);
+                input.setSingleLine(true);
+                String current = item.displayTitle();
+                input.setText(current);
+                input.setSelection(current.length());
+
+                // Dialogs have no free padding for raw views: wrap the
+                // field so the text does not touch the rounded corners
+                final float density = getResources().getDisplayMetrics().density;
+                final FrameLayout holder = new FrameLayout(this);
+                holder.setPadding((int) (density * 24f), (int) (density * 8f),
+                                (int) (density * 24f), 0);
+                holder.addView(input, new FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+                new MaterialAlertDialogBuilder(this)
+                                .setTitle(R.string.ctx_rename_title)
+                                .setMessage(R.string.ctx_rename_message)
+                                .setView(holder)
+                                .setPositiveButton(android.R.string.ok,
+                                                new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog,
+                                                                        int which) {
+                                                applyRename(item,
+                                                                input.getText().toString());
+                                        }
+                                })
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .show();
+        }
+
+        private void applyRename(RunItem item, String value) {
+                String name = value == null ? "" : value.trim();
+                if (name.length() == 0 || name.equals(item.getTitle())) {
+                        // Blank or identical to the folder name: the
+                        // automatic title (SUF name or folder) takes over
+                        GameLibrary.setDisplayName(this, item.getTitle(), null);
+                        item.setDisplayName(null);
+                } else {
+                        GameLibrary.setDisplayName(this, item.getTitle(), name);
+                        item.setDisplayName(name);
+                }
+                // Redraw in place: re-sort by the new title, no storage walk
+                ra.sortByDisplayTitle();
+                ra.notifyDataSetChanged();
+        }
+
+        // ------------------------------------------------------------------
         // About modal: the same rounded-panel look as the tile context
         // menu (about_popup.xml + bg_game_context.xml), centered on a dim
         // backdrop. Tap outside or Back dismisses; the panel itself
@@ -494,7 +562,7 @@ public class MainActivity extends AppCompatActivity
         private void confirmDeleteGame(final RunItem item) {
                 new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.ctx_delete_title)
-                                .setMessage(getString(R.string.ctx_delete_message, item.getTitle()))
+                                .setMessage(getString(R.string.ctx_delete_message, item.displayTitle()))
                                 .setPositiveButton(R.string.ctx_delete_confirm,
                                                 new DialogInterface.OnClickListener() {
                                         @Override
