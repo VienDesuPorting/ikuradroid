@@ -729,8 +729,16 @@ public class MainActivity extends AppCompatActivity
                                                                         Toast.LENGTH_LONG).show();
                                                         return;
                                                 }
-                                                item.setCoverPath(cover.getAbsolutePath());
-                                                ra.notifyDataSetChanged();
+                                                // Same orphan hazard as the
+                                                // auto flow: re-target the
+                                                // live tile of the dataset
+                                                RunItem live = liveTile(
+                                                                item.getTitle());
+                                                if (live != null) {
+                                                        live.setCoverPath(
+                                                                        cover.getAbsolutePath());
+                                                        ra.notifyDataSetChanged();
+                                                }
                                                 Toast.makeText(MainActivity.this,
                                                                 renamed ? R.string.cover_saved_title
                                                                                 : R.string.cover_saved,
@@ -776,6 +784,26 @@ public class MainActivity extends AppCompatActivity
                         }
                 }
                 return out;
+        }
+
+        /**
+         * The tile of the current dataset for a folder name. Fetch
+         * threads hold items captured earlier: a rescan swaps the
+         * dataset (and its RunItem objects) while a download is in
+         * flight, so updating the captured item would paint an orphan
+         * and the cover would only show up on the next rescan - the
+         * visual update must go to the live object.
+         */
+        private RunItem liveTile(String folderName) {
+                if (ra == null) {
+                        return null;
+                }
+                for (RunItem item : ra.datasetSnapshot()) {
+                        if (folderName.equals(item.getTitle())) {
+                                return item;
+                        }
+                }
+                return null;
         }
 
         private void startAutoCoverFetch() {
@@ -904,9 +932,16 @@ public class MainActivity extends AppCompatActivity
                                 if (isFinishing() || isDestroyed()) {
                                         return;
                                 }
-                                applyVndbTitle(item, picked);
+                                // A rescan may have swapped the dataset
+                                // while this download was in flight -
+                                // the captured item would be an orphan
+                                RunItem live = liveTile(item.getTitle());
+                                if (live == null) {
+                                        return;
+                                }
+                                applyVndbTitle(live, picked);
                                 if (cover != null) {
-                                        item.setCoverPath(cover.getAbsolutePath());
+                                        live.setCoverPath(cover.getAbsolutePath());
                                         ra.notifyDataSetChanged();
                                 }
                         }
