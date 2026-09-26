@@ -2,8 +2,8 @@
 
 <!-- Library tile: a 2:3 poster image (TileImageView - a cached VNDB
      cover when there is one, the game's square icon.png centered on a
-     neutral surface otherwise), the title, a "brand + folder size" sub
-     line and the engine family badge. Ids (card_view, iv_recycler_item,
+     neutral surface otherwise), the title, a folder-size sub line and
+     the engine family badge. Ids (card_view, iv_recycler_item,
      tv_recycler_item) are referenced by RunAdapter and must not change.
      The root height is wrap_content - it once was match_parent, which
      stretched every tile over the whole list (one visible "row", dead
