@@ -500,6 +500,7 @@ SDL_Surface *flip_surface( SDL_Surface *surface, int flags )
 
 void EngineBase::Paint(SDL_Surface *Surface,VN_LAYERS Toplayer){
 
+    SDL_SetRenderDrawColor(EDLRenderer,0,0,0,255);
     SDL_RenderClear(EDLRenderer);
     EDLrendererTex->setAsRenderTarget();
     renderer->Render(Toplayer);
@@ -544,6 +545,7 @@ void EngineBase::render(){
 		else{
 			// Copy surface to display
 			//renderer->Update(Screen);
+			SDL_SetRenderDrawColor(EDLRenderer,0,0,0,255);
 			SDL_RenderClear(EDLRenderer);
 			EDLrendererTex->setAsRenderTarget();
 			renderer->Update();
@@ -555,6 +557,7 @@ void EngineBase::render(){
 	}
 	else
 	{
+		SDL_SetRenderDrawColor(EDLRenderer,0,0,0,255);
 		SDL_RenderClear(EDLRenderer);
 		EDLrendererTex->render(0, 0);
 		SDL_RenderPresent(EDLRenderer);

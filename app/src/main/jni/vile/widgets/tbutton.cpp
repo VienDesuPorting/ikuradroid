@@ -235,8 +235,31 @@ void TextButton::autogenerate(){
 				Resize(w,h);
 			}
 		}
-		// Create graphics
-		SDL_Surface *txt=EDL_CreateText(caption,colorfg[es],pos.w,fontsize);
+		// Fit the caption: step the point size down while the string
+		// measures wider than the widget, so long localized choice
+		// lines shrink instead of being clipped at the button edge.
+		// EDL_SizeText measures raw bytes; EDL_SizeUTF8 converts
+		// cp1251 captions exactly like the renderer does.
+		int rsize=fontsize;
+		while(pos.w>0 && caption.length() && rsize>10){
+			int tw=0,th=0;
+			bool measured=false;
+			TTF_Font *font=TTF_OpenFont(
+						Cfg::Font::default_face.c_str(),rsize);
+			if(font){
+				measured=!EDL_SizeUTF8(font,caption,&tw,&th);
+				TTF_CloseFont(font);
+			}
+			if(!measured || tw<=pos.w){
+				break;
+			}
+			rsize--;
+		}
+		// Create graphics (a shrunk caption renders through a fresh
+		// font object at the fitted size)
+		SDL_Surface *txt=(rsize==fontsize)?
+				EDL_CreateText(caption,colorfg[es],pos.w,fontsize):
+				EDL_CreateText(caption,colorfg[es],pos.w,rsize,true);
 		if(txt){
 			SDL_Rect td={0,0,txt->w,txt->h};
 			if(horizontal==HA_CENTER){
@@ -253,7 +276,8 @@ void TextButton::autogenerate(){
 			}
 			SDL_Surface *surface=EDL_CreateSurface(pos.w,pos.h);
 			if(fshadow){
-				SDL_Surface *sh=EDL_CreateText(caption,0x000000FF,pos.w,fontsize);
+				SDL_Surface *sh=EDL_CreateText(caption,0x000000FF,pos.w,
+								rsize,rsize!=fontsize);
 				if(sh){
 					SDL_Rect sd=td;
 					sd.x+=2;

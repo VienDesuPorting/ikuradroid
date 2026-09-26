@@ -1604,6 +1604,7 @@ void EngineWill::SetTransit(Uint32 Duration){
         }
         else
             while(!quit){
+            SDL_SetRenderDrawColor(EDLRenderer,0,0,0,255);
             SDL_RenderClear(EDLRenderer);
             Uint32 now=SDL_GetTicks();
 

@@ -8,6 +8,11 @@
 
 class Heartdr : public IkuraDecoder {
 	private:
+		// Choice batch tracking (touch-friendly row spacing)
+		Sint16 cset_basey;	//!< Script Y of the batch's first row
+		Sint16 cset_lasty;	//!< Script Y of the previous row
+		bool cset_batch;	//!< Next row starts a new batch
+
 		// Override game attributes
 		virtual const uString NativeID();
 		virtual const uString NativeName();
