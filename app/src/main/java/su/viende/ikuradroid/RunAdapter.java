@@ -235,14 +235,18 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
         return BitmapFactory.decodeFile(file.getAbsolutePath(), opts);
     }
 
-    /** Sub line: engine brand plus folder size; chip: engine family badge. */
+    /** Sub line: folder size; chip: engine family badge. */
     private void bindSubAndChip(ViewHolder holder, RunItem item) {
         Context context = holder.itemView.getContext();
         String size = formatSize(item.getSizeBytes(), context);
         if (size != null) {
             holder.mSubText.setText(context.getString(R.string.tile_sub_size, size));
+            holder.mSubText.setVisibility(View.VISIBLE);
         } else {
-            holder.mSubText.setText(R.string.tile_sub_plain);
+            // No size: no sub line at all (reset on recycle so stale
+            // text never bleeds through tiles)
+            holder.mSubText.setText(null);
+            holder.mSubText.setVisibility(View.GONE);
         }
         String engine = item.getEngine();
         if (engine != null && engine.length() > 0) {
