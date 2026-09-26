@@ -17,6 +17,24 @@
     <string name="menu_settings">Настройки</string>
     <string name="menu_quit">Выйти</string>
 
+    <!-- Java-экран сохранений/загрузки. Список слотов читается с диска
+         (SaveFileRepository); саму запись/загрузку выполняет движок
+         в своём потоке (мост через SDL_USEREVENT). -->
+    <string name="saveload_title_save">Сохранение игры</string>
+    <string name="saveload_title_load">Загрузка игры</string>
+    <string name="saveload_slot">Слот %1$d</string>
+    <string name="saveload_slot_empty">Слот %1$d — пустой</string>
+    <string name="saveload_hint_save">Нажмите на слот, чтобы сохранить текущую сцену. Долгое нажатие на занятый слот удаляет сохранение.</string>
+    <string name="saveload_hint_load">Долгое нажатие на занятый слот удаляет сохранение.</string>
+    <string name="saveload_saved">Сохранено в слот %1$d</string>
+    <string name="saveload_loaded">Загружен слот %1$d</string>
+    <string name="saveload_overwrite_title">Перезаписать сохранение?</string>
+    <string name="saveload_overwrite_message">В слоте %1$d уже есть сохранение — оно будет заменено.</string>
+    <string name="saveload_overwrite_ok">Перезаписать</string>
+    <string name="saveload_delete_title">Удалить сохранение?</string>
+    <string name="saveload_delete_message">Сохранение в слоте %1$d будет удалено безвозвратно.</string>
+    <string name="saveload_delete_ok">Удалить</string>
+
     <!-- Меню панели запуска -->
     <string name="menu_more">Ещё</string>
     <string name="menu_about">О приложении</string>

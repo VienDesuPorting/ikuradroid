@@ -15,7 +15,9 @@
 
 #include "vile.h"
 #include "common/edl_texture.h"
+#include "javabridge.h"
 #include <SDL.h>
+#include <stdint.h>
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -965,6 +967,10 @@ bool ViLE::ProbeSUF(uString Path,uString Key){
 	return retval;
 }
 
+// See javabridge.h. Java reads it through nativeGetSavePrefix() and
+// pushes save/load triggers that the pump below consumes.
+EngineVN *g_running_engine=0;
+
 void ViLE::RunEngine(EngineVN *engine){
     engine->updateRenderWindow(window);
 
@@ -1215,6 +1221,29 @@ void ViLE::RunEngine(EngineVN *engine){
 			else if(event.type==SDL_KEYUP){
 				engine->EventHostKeyUp(event.key.keysym.sym);
 			}
+			else if(event.type==SDL_USEREVENT &&
+					(event.user.code==VILE_JAVA_EVENT_LOAD ||
+					 event.user.code==VILE_JAVA_EVENT_SAVE)){
+					// Java save/load UI (SDLActivity): the slot dialog
+					// read the savegames from disk itself and now asks
+					// the engine to do the actual work. EventSave and
+					// EventLoad touch widgets, parser and audio state,
+					// so they must run here on the engine thread - the
+					// event is the handoff. Any native save/load dialog
+					// parked by the script (iop_opsl) is torn down: the
+					// Java dialog replaces it.
+					int slot=(int)(intptr_t)event.user.data1;
+					LOGCAT("ikuradroid saveload: java event code=%d slot=%d",event.user.code,slot);
+					engine->EventCloseDialogs();
+					if(event.user.code==VILE_JAVA_EVENT_LOAD){
+						if(engine->EventLoad(slot)){
+							engine->SetTransition();
+						}
+					}
+					else if(engine->EventSave(slot)){
+						engine->SetTransition();
+					}
+				}
 			else if(event.type==SDL_QUIT){
 #ifdef __ANDROID__
 				// Android has no window close button: a QUIT is
@@ -1247,6 +1276,7 @@ void ViLE::RunEngine(EngineVN *engine){
 		Group::Purge();
 	}
 	#undef VILE_MAP_INPUT
+	g_running_engine=0;
 	//*/
 }
 

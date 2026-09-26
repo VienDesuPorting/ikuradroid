@@ -258,7 +258,9 @@ bool IkuraDecoder::EventSave(int Index){
 		// Store graphics onscreen graphics
 		SDL_Surface *screen=EDL_CreateSurface(NativeWidth(),NativeHeight());
 		Paint(screen,VL_CHOICES);
-		save->SaveSurface("screen-thumb",screen,96,72);
+		// 192x144: Java save/load UI and native dialogs both read the stored
+		// dimensions from the blob itself, so the bump is transparent.
+		save->SaveSurface("screen-thumb",screen,192,144);
         SDL_FreeSurface(screen);
 		// Write savegame to disk
 		save->Write();

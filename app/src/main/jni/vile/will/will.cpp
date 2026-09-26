@@ -574,7 +574,9 @@ bool EngineWill::EventSave(int Index){
 	// Store graphics
 	SDL_Surface *screen=EDL_CreateSurface(NativeWidth(),NativeHeight());
 	Paint(screen,VL_BACKGROUND);
-	save->SaveSurface("screen-thumb",screen,96,72);
+	// 192x144: readers take the dimensions from the blob itself,
+	// so the bump is transparent to Java UI and native dialogs.
+	save->SaveSurface("screen-thumb",screen,192,144);
 	save->SaveSurface("screen-display",screen);
 	SDL_FreeSurface(screen);
 

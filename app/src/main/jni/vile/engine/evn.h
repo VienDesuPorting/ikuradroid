@@ -134,6 +134,8 @@ class EngineVN : public EngineVideo {
 
 		// Define Standard dialog events
 		virtual void EventGameDialog(VN_DIALOGS Dialog);
+		// Tear down any open standard dialog (save/load/options/halt)
+		void EventCloseDialogs();
 
 		// Loading and saving
 		virtual bool EventSaveSystem();
