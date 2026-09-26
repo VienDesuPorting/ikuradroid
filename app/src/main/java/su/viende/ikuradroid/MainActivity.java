@@ -502,9 +502,10 @@ public class MainActivity extends AppCompatActivity
                 // Redraw in place: re-sort by the new title, no storage walk
                 ra.sortByDisplayTitle();
                 ra.notifyDataSetChanged();
-                // A fresh name is also the entry point for the cover:
-                // VNDB is searched by it right away (no fetch on reset)
-                if (name.length() > 0 && !name.equals(item.getTitle())) {
+                // Any confirmed name is also the entry point for the
+                // cover: VNDB is searched by it right away, even when the
+                // name equals the folder one (no fetch on reset)
+                if (name.length() > 0) {
                         startCoverFetch(item);
                 }
         }
@@ -514,6 +515,8 @@ public class MainActivity extends AppCompatActivity
         // display title - the string "Rename" sets, so manual naming and
         // cover fetching share one source of truth. One hit downloads
         // silently, several open the pick dialog, none shows a toast.
+        // A confirmed match also latinizes the tile name when the current
+        // one carries Japanese script (a SUF startup title, say).
         // The cover caches in the app-private files area and survives
         // rescans like the rename does; re-fetching goes through the
         // same menu row.
@@ -545,7 +548,11 @@ public class MainActivity extends AppCompatActivity
                                                                         getString(R.string.cover_none, query),
                                                                         Toast.LENGTH_LONG).show();
                                                 } else if (found.size() == 1) {
-                                                        downloadCover(item, found.get(0));
+                                                        boolean renamed =
+                                                                        applyVndbTitle(item,
+                                                                                        found.get(0));
+                                                        downloadCover(item,
+                                                                        found.get(0), renamed);
                                                 } else {
                                                         showCoverPicker(item, found, thumbs);
                                                 }
@@ -584,7 +591,9 @@ public class MainActivity extends AppCompatActivity
                                         if (row.getTag() instanceof AlertDialog) {
                                                 ((AlertDialog) row.getTag()).dismiss();
                                         }
-                                        downloadCover(item, candidate);
+                                        boolean renamed = applyVndbTitle(item,
+                                                        candidate);
+                                        downloadCover(item, candidate, renamed);
                                 }
                         });
                         list.addView(row);
@@ -626,8 +635,43 @@ public class MainActivity extends AppCompatActivity
                 return sb.toString();
         }
 
+        /**
+         * A confirmed VNDB match also fixes the tile name when the
+         * current one is not latin-script (a Japanese SUF startup title,
+         * say): the VNDB main title is romanized, so a mixed-script
+         * "Crescendo〜永遠だと思っていたあの頃〜…" becomes its romaji
+         * form. Latin names stay untouched - a manually typed "Critical
+         * Point" must not grow into "Rinkaiten ~Critical Point~".
+         * Returns true when the name was changed.
+         */
+        private boolean applyVndbTitle(RunItem item,
+                        VndbCover.Candidate candidate) {
+                String title = candidate.title;
+                if (title == null) {
+                        return false;
+                }
+                title = title.trim();
+                String current = item.displayTitle();
+                if (title.length() == 0 || title.equals(current)
+                                || GameLibrary.isLatin(current)
+                                || !GameLibrary.isLatin(title)) {
+                        return false;
+                }
+                GameLibrary.setDisplayName(this, item.getTitle(), title);
+                item.setDisplayName(title);
+                // Redraw in place: re-sort by the new title, no storage walk
+                ra.sortByDisplayTitle();
+                ra.notifyDataSetChanged();
+                return true;
+        }
+
+        /**
+         * @param renamed whether applyVndbTitle changed the tile name,
+         *                so the toast can say both were saved
+         */
         private void downloadCover(final RunItem item,
-                        final VndbCover.Candidate candidate) {
+                        final VndbCover.Candidate candidate,
+                        final boolean renamed) {
                 new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -648,7 +692,8 @@ public class MainActivity extends AppCompatActivity
                                                 item.setCoverPath(cover.getAbsolutePath());
                                                 ra.notifyDataSetChanged();
                                                 Toast.makeText(MainActivity.this,
-                                                                R.string.cover_saved,
+                                                                renamed ? R.string.cover_saved_title
+                                                                                : R.string.cover_saved,
                                                                 Toast.LENGTH_SHORT).show();
                                         }
                                 });
