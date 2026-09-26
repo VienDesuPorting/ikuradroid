@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Placeholder art of a library tile without its own icon.png: a sakura
-  over a violet-to-rose dusk gradient. Vector, so one file serves every
-  density; literal colors only, so the tile reads the same in the light
-  and the dark theme.
+  over a violet-to-rose dusk gradient, drawn at the 2:3 poster
+  proportions of the tile itself (480x720 viewport), so it fills the
+  whole card instead of floating as a strip. Vector, so one file serves
+  every density; literal colors only, so the tile reads the same in the
+  light and the dark theme.
 
   This file is part of IkuraDroid.
   Copyright (C) 2026 VienDesu! Porting Team
@@ -23,13 +25,13 @@
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="240dp"
-    android:height="120dp"
+    android:height="360dp"
     android:viewportWidth="480"
-    android:viewportHeight="240">
+    android:viewportHeight="720">
 
     <!-- Dusk gradient backdrop -->
     <path
-        android:pathData="M0,0h480v240h-480z">
+        android:pathData="M0,0h480v720h-480z">
         <aapt:attr xmlns:aapt="http://schemas.android.com/aapt" name="android:fillColor">
             <gradient
                 android:startColor="#8F6FD8"
@@ -38,46 +40,68 @@
         </aapt:attr>
     </path>
 
+    <!-- Soft halo behind the flower -->
+    <path
+        android:fillColor="#14FFFFFF"
+        android:pathData="M240,180 a150,150 0 1,0 0.1,0 a150,150 0 1,0 -0.1,0 z"/>
+
     <!-- Scattered petals (behind the flower, faint) -->
     <group
-        android:translateX="62"
-        android:translateY="66"
+        android:translateX="70"
+        android:translateY="112"
         android:rotation="-38"
-        android:scaleX="0.30"
-        android:scaleY="0.30">
+        android:scaleX="0.32"
+        android:scaleY="0.32">
         <path android:fillColor="#66FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
     </group>
     <group
-        android:translateX="424"
-        android:translateY="52"
+        android:translateX="408"
+        android:translateY="86"
         android:rotation="24"
-        android:scaleX="0.24"
-        android:scaleY="0.24">
+        android:scaleX="0.26"
+        android:scaleY="0.26">
         <path android:fillColor="#59FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
     </group>
     <group
         android:translateX="398"
-        android:translateY="196"
+        android:translateY="340"
+        android:rotation="65"
+        android:scaleX="0.20"
+        android:scaleY="0.20">
+        <path android:fillColor="#4DFFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+    </group>
+    <group
+        android:translateX="80"
+        android:translateY="352"
+        android:rotation="-95"
+        android:scaleX="0.18"
+        android:scaleY="0.18">
+        <path android:fillColor="#59FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
+    </group>
+    <group
+        android:translateX="426"
+        android:translateY="608"
         android:rotation="160"
         android:scaleX="0.34"
         android:scaleY="0.34">
         <path android:fillColor="#4DFFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
     </group>
     <group
-        android:translateX="96"
-        android:translateY="200"
+        android:translateX="92"
+        android:translateY="636"
         android:rotation="-140"
-        android:scaleX="0.20"
-        android:scaleY="0.20">
+        android:scaleX="0.22"
+        android:scaleY="0.22">
         <path android:fillColor="#59FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
     </group>
 
-    <!-- Central sakura: five petals around a core disc -->
+    <!-- Central sakura: five petals around a core disc, above the
+         geometric center so the composition reads like a poster -->
     <group
         android:translateX="240"
-        android:translateY="120"
-        android:scaleX="1.15"
-        android:scaleY="1.15">
+        android:translateY="330"
+        android:scaleX="1.5"
+        android:scaleY="1.5">
         <group android:rotation="0">
             <path android:fillColor="#E6FFFFFF" android:pathData="M0,0 C-24,-19 -30,-51 -16,-74 L0,-58 L16,-74 C30,-51 24,-19 0,0 Z"/>
         </group>

@@ -144,15 +144,18 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
     /**
      * Tile image, in priority order: the cached VNDB cover (a 2:3
      * portrait, drawn full-bleed), then the game's own square icon.png
-     * (fitCenter on a neutral surface, so it never crops), then the
-     * vector placeholder. Files decode off the UI thread through
-     * BITMAP_CACHE; the wanted path rides on the view tag, so a decode
-     * finishing after a rebind (recycled tile) is dropped instead of
-     * misapplied. Scale type and background reset on every bind so
-     * nothing bleeds through recycled tiles.
+     * (fitCenter on a neutral surface, inset to about 60% of the tile
+     * width, so it never crops or stretches across the whole poster),
+     * then the 2:3 vector placeholder. Files decode off the UI thread
+     * through BITMAP_CACHE; the wanted path rides on the view tag, so a
+     * decode finishing after a rebind (recycled tile) is dropped instead
+     * of misapplied. Scale type, background and padding reset on every
+     * bind so nothing bleeds through recycled tiles.
      */
     private void bindImage(final ViewHolder holder, RunItem item) {
         final ImageView view = holder.mImageView;
+        // Recycled tiles must never keep a previous icon's inset
+        view.setPadding(0, 0, 0, 0);
         File image = null;
         boolean fullBleed = false;
         if (item.getCoverPath() != null
@@ -192,10 +195,14 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
         if (cached != null && !cached.isRecycled()) {
             view.setTag(key);
             view.setImageBitmap(cached);
+            if (!fullBleed) {
+                applyIconInset(view, key);
+            }
             return;
         }
         view.setTag(key);
         view.setImageResource(R.drawable.card_img);
+        final boolean tileFullBleed = fullBleed;
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -209,11 +216,40 @@ public class RunAdapter extends RecyclerView.Adapter<RunAdapter.ViewHolder> {
                     public void run() {
                         if (key.equals(view.getTag())) {
                             view.setImageBitmap(bitmap);
+                            if (!tileFullBleed) {
+                                applyIconInset(view, key);
+                            }
                         }
                     }
                 });
             }
         }).start();
+    }
+
+    /**
+     * A square icon.png on a 2:3 poster tile: horizontal padding of a
+     * fifth of the tile width on each side shrinks the FIT_CENTER fit
+     * to about 60% of the tile, so the icon reads as a deliberate
+     * centered piece on the underlay instead of stretching to the full
+     * poster width. Runs after layout (only then is the width known)
+     * and guards on the view tag, so a tile rebound meanwhile never
+     * receives the padding.
+     */
+    private static void applyIconInset(final ImageView view, final String key) {
+        view.post(new Runnable() {
+            @Override
+            public void run() {
+                if (!key.equals(view.getTag())) {
+                    return;
+                }
+                int width = view.getWidth();
+                if (width <= 0) {
+                    return;
+                }
+                int inset = Math.round(width * 0.20f);
+                view.setPadding(inset, 0, inset, 0);
+            }
+        });
     }
 
     /** Decodes a tile image downscaled for the grid; null on failure. */
