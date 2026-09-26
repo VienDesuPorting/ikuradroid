@@ -56,6 +56,7 @@
     <string name="ctx_cover">VNDB cover</string>
     <string name="cover_searching">Searching VNDB…</string>
     <string name="cover_saved">Cover updated</string>
+    <string name="cover_saved_title">Cover and title updated</string>
     <string name="cover_none">Nothing found for “%1$s”</string>
     <string name="cover_fail">Could not download the cover</string>
     <string name="cover_pick_title">Choose a cover</string>
