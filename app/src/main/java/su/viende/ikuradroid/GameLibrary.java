@@ -655,8 +655,12 @@ public final class GameLibrary {
         }
     }
 
-    /** True when the string is plain ASCII (no Japanese characters). */
-    private static boolean isLatin(String text) {
+    /**
+     * True when the string is plain ASCII (no Japanese characters).
+     * Package-visible: the VNDB cover flow reuses it to leave already
+     * latin tile names alone.
+     */
+    static boolean isLatin(String text) {
         for (int i = 0; i < text.length(); i++) {
             if (text.charAt(i) > 0x7f) {
                 return false;

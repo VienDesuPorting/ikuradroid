@@ -56,6 +56,7 @@
     <string name="ctx_cover">Обложка из VNDB</string>
     <string name="cover_searching">Ищу на VNDB…</string>
     <string name="cover_saved">Обложка обновлена</string>
+    <string name="cover_saved_title">Обложка и название обновлены</string>
     <string name="cover_none">По запросу «%1$s» ничего не нашлось</string>
     <string name="cover_fail">Не удалось загрузить обложку</string>
     <string name="cover_pick_title">Выберите обложку</string>
