@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity
 
         private RunAdapter ra;
         private View mEmptyState;
+        private volatile boolean autoCoverRunning;
         // Action to rerun once storage access has been granted
         private Runnable mPendingAfterGrant;
 
@@ -152,6 +153,9 @@ public class MainActivity extends AppCompatActivity
                                                 ra.swapArray(dataset);
                                                 ra.notifyDataSetChanged();
                                                 updateEmptyState();
+                                                // New tiles without a cover
+                                                // get one silent VNDB try
+                                                startAutoCoverFetch(dataset);
                                         }
                                 });
                         }
@@ -371,6 +375,18 @@ public class MainActivity extends AppCompatActivity
                                                 startCoverFetch(item);
                                         }
                                 });
+                // Removing a cover only makes sense when there is one
+                final View coverRemoveRow = content.findViewById(
+                                R.id.ctx_cover_remove_row);
+                coverRemoveRow.setVisibility(item.getCoverPath() != null
+                                ? View.VISIBLE : View.GONE);
+                coverRemoveRow.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                                popup.dismiss();
+                                removeCover(item);
+                        }
+                });
                 content.findViewById(R.id.ctx_hide_row).setOnClickListener(
                                 new View.OnClickListener() {
                                         @Override
@@ -529,12 +545,16 @@ public class MainActivity extends AppCompatActivity
                 new Thread(new Runnable() {
                         @Override
                         public void run() {
+                                // null means the request failed (its own
+                                // toast); an empty list is a genuine no-hit
                                 final ArrayList<VndbCover.Candidate> found =
                                                 VndbCover.search(query);
                                 // Pick-dialog thumbnails decode here too, so
                                 // the dialog opens with everything ready
-                                final Bitmap[] thumbs = new Bitmap[found.size()];
-                                for (int i = 0; i < found.size(); i++) {
+                                final Bitmap[] thumbs = new Bitmap[found == null
+                                                                ? 0 : found.size()];
+                                for (int i = 0; found != null
+                                                                && i < found.size(); i++) {
                                         thumbs[i] = VndbCover.thumb(found.get(i));
                                 }
                                 runOnUiThread(new Runnable() {
@@ -543,7 +563,11 @@ public class MainActivity extends AppCompatActivity
                                                 if (isFinishing() || isDestroyed()) {
                                                         return;
                                                 }
-                                                if (found.isEmpty()) {
+                                                if (found == null) {
+                                                        Toast.makeText(MainActivity.this,
+                                                                        R.string.cover_fail,
+                                                                        Toast.LENGTH_LONG).show();
+                                                } else if (found.isEmpty()) {
                                                         Toast.makeText(MainActivity.this,
                                                                         getString(R.string.cover_none, query),
                                                                         Toast.LENGTH_LONG).show();
@@ -699,6 +723,107 @@ public class MainActivity extends AppCompatActivity
                                 });
                         }
                 }).start();
+        }
+
+        // ------------------------------------------------------------------
+        // Automatic covers: every (re)scan gives each tile without a
+        // cached cover exactly one silent VNDB search by its display
+        // title. One hit downloads and applies - latinizing the tile
+        // name the same way the manual flow does. Several hits stay
+        // silent: pick dialogs would spam a fresh scan, those tiles are
+        // covered by the manual menu row instead. No-hit and multi-hit
+        // both mark the tile as tried, so rescans never hammer the API
+        // again; a failed request marks nothing and retries on the next
+        // scan.
+        // ------------------------------------------------------------------
+
+        private void startAutoCoverFetch(final ArrayList<RunItem> dataset) {
+                ArrayList<RunItem> pending = new ArrayList<>();
+                for (RunItem item : dataset) {
+                        if (item.getCoverPath() == null
+                                        && !GameLibrary.autoCoverTried(this,
+                                                        item.getTitle())
+                                        && item.displayTitle().trim().length() >= 2) {
+                                pending.add(item);
+                        }
+                }
+                if (pending.isEmpty() || autoCoverRunning) {
+                        return;
+                }
+                autoCoverRunning = true;
+                new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                                try {
+                                        for (final RunItem item : pending) {
+                                                if (isFinishing() || isDestroyed()) {
+                                                        return;
+                                                }
+                                                autoCoverOne(item);
+                                        }
+                                } finally {
+                                        autoCoverRunning = false;
+                                }
+                        }
+                }).start();
+        }
+
+        /** Searches, marks and (on a single hit) downloads for one tile. */
+        private void autoCoverOne(final RunItem item) {
+                final ArrayList<VndbCover.Candidate> found =
+                                VndbCover.search(item.displayTitle());
+                if (found == null) {
+                        // Network trouble: no mark, the next scan retries
+                        return;
+                }
+                GameLibrary.markAutoCoverTried(MainActivity.this,
+                                item.getTitle());
+                if (found.size() != 1) {
+                        // Nothing found or ambiguous: the user decides
+                        return;
+                }
+                final VndbCover.Candidate candidate = found.get(0);
+                final File cover = VndbCover.download(MainActivity.this,
+                                item.getTitle(), candidate);
+                runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                                if (isFinishing() || isDestroyed()) {
+                                        return;
+                                }
+                                applyVndbTitle(item, candidate);
+                                if (cover != null) {
+                                        item.setCoverPath(cover.getAbsolutePath());
+                                        ra.notifyDataSetChanged();
+                                }
+                        }
+                });
+                // A small pause keeps a fresh multi-game library well
+                // inside the anonymous API budget
+                try {
+                        Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                }
+        }
+
+        // ------------------------------------------------------------------
+        // "Remove cover": drops the cached poster (file + metadata) of a
+        // tile - the escape hatch for a wrong automatic match. The folder
+        // keeps its "cover was searched for" mark, so the scan never
+        // re-fetches over the user's decision; the menu row stays for a
+        // deliberate re-fetch.
+        // ------------------------------------------------------------------
+
+        private void removeCover(final RunItem item) {
+                String path = item.getCoverPath();
+                GameLibrary.setCoverMeta(this, item.getTitle(), null);
+                item.setCoverPath(null);
+                if (path != null) {
+                        // The cache file is app-private; failure is harmless
+                        new File(path).delete();
+                }
+                ra.notifyDataSetChanged();
         }
 
         // ------------------------------------------------------------------

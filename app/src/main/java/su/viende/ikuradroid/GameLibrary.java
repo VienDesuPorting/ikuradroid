@@ -88,6 +88,7 @@ public final class GameLibrary {
     private static final String KEY_HIDDEN = "hidden_titles";        // StringSet of game folder names
     private static final String KEY_DISPLAY = "display_name:";       // manual tile renames, keyed by folder name
     private static final String KEY_COVER = "cover:";                // VNDB cover metadata (JSON), keyed by folder name
+    private static final String KEY_AUTOCOVER = "autocover:";        // automatic cover search already ran, keyed by folder name
     private static final String INSTALL_DIR = "games";
 
     private GameLibrary() {
@@ -332,6 +333,23 @@ public final class GameLibrary {
         } else {
             prefs.edit().putString(KEY_COVER + folderName, json).apply();
         }
+    }
+
+    /**
+     * Whether the one-time automatic cover search already ran for a
+     * game folder (true also when VNDB had no single unambiguous match
+     * - such tiles stay on the manual menu row; a deliberately removed
+     * cover is never re-fetched by the scan either).
+     */
+    public static boolean autoCoverTried(Context context, String folderName) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        return prefs.getBoolean(KEY_AUTOCOVER + folderName, false);
+    }
+
+    /** Marks the automatic cover search as done for a game folder. */
+    public static void markAutoCoverTried(Context context, String folderName) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_AUTOCOVER + folderName, true).apply();
     }
 
     /** Absolute path of the cached cover of a game folder, or null. */
