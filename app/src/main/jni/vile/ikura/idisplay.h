@@ -39,6 +39,8 @@ class IkuraDisplay : public Hotspot {
 				int DIndex,SDL_Rect *DRect);
 		void BlendSurface(int SIndex,SDL_Rect *SRect,
 				int DIndex,SDL_Rect *DRect);
+		void BlendColorkeySurface(int SIndex,SDL_Rect *SRect,
+				int DIndex,SDL_Rect *DRect);
 
 		// Hitmap and hotspot data
 		void SetMap(SDL_Surface *Hitmap);

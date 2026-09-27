@@ -1055,6 +1055,39 @@ SDL_BlitSurface(src,&s,dst,&d);
 SDL_SetSurfaceAlphaMod(src,saved_alpha);
 }
 
+/*! \brief Checks whether a surface carries real per-pixel transparency
+ *  \param Surface Surface to inspect
+ *  \returns True if at least one pixel has an alpha value below 255
+ *
+ *  Ikura GGD 24bit images decode into fully opaque 32bit surfaces: they
+ *  have no alpha channel to blend by, their transparent color (black)
+ *  must be honored by explicit colorkey blending instead. GGA 32bit
+ *  images carry a real alpha channel and blend per pixel.
+ */
+bool EDL_SurfaceHasAlpha(SDL_Surface *Surface){
+	bool retval=false;
+	if(Surface && Surface->pixels && Surface->format &&
+				Surface->format->Amask && Surface->format->BytesPerPixel==4){
+		if(SDL_MUSTLOCK(Surface)){
+			SDL_LockSurface(Surface);
+		}
+		Uint32 amask=Surface->format->Amask;
+		for(int y=0;y<Surface->h && !retval;y++){
+			Uint32 *pixels=(Uint32*)((Uint8*)Surface->pixels+y*Surface->pitch);
+			for(int x=0;x<Surface->w;x++){
+				if((pixels[x]&amask)!=amask){
+					retval=true;
+					break;
+				}
+			}
+		}
+		if(SDL_MUSTLOCK(Surface)){
+			SDL_UnlockSurface(Surface);
+		}
+	}
+	return retval;
+}
+
 /*! \brief Sets alphachannel to a fixed value
  *  \param src Source surface
  *  \param srcrect Source rectangle

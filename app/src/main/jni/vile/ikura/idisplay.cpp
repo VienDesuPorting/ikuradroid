@@ -420,6 +420,60 @@ void IkuraDisplay::BlendSurface(int SIndex,
 	}
 }
 
+/*! \brief Blends a vram surface onto another treating black as transparent
+ *  \param SIndex Source vram index
+ *  \param SRect Rectangle to copy from source
+ *  \param DIndex Destination vram index
+ *  \param DRect Destination rectangle
+ *
+ *  Identical to BlendSurface, but the source is mapped through a black
+ *  colorkey first. This mirrors the original engine's transparent blit
+ *  (GP cmd=1/21) for sources that carry no alpha channel (GGD 24bit):
+ *  black pixels leave the destination intact, everything else is
+ *  copied opaque. Sources with real per-pixel alpha (GGA 32bit) should
+ *  use BlendSurface instead.
+ */
+void IkuraDisplay::BlendColorkeySurface(int SIndex,
+		SDL_Rect *SRect,int DIndex,SDL_Rect *DRect){
+	if(SIndex<GBSIZE && DIndex<GBSIZE && isurface[SIndex]){
+		// Assert surfaces
+		if(!isurface[DIndex]){
+			isurface[DIndex]=EDL_CreateSurface(pos.w,pos.h);
+		}
+
+		// Assert minimum size for destination
+		SDL_Rect trect={0,0,isurface[DIndex]->w,isurface[DIndex]->h};
+		if(DRect){
+			trect.x=DRect->x;
+			trect.y=DRect->y;
+			trect.w=DRect->w;
+			trect.h=DRect->h;
+		}
+		if(isurface[DIndex]->w<trect.w || isurface[DIndex]->h<trect.h){
+			SDL_Surface *ns=EDL_CreateSurface(trect.x+trect.w,trect.y+trect.h);
+			EDL_BlitSurface(isurface[DIndex],0,ns,0);
+			SDL_FreeSurface(isurface[DIndex]);
+			isurface[DIndex]=ns;
+		}
+
+		// Map black to transparency and blend the mapped copy
+		SDL_Surface *keyed=EDL_ColorkeySurface(isurface[SIndex],0,SRect);
+		if(keyed){
+			SDL_Rect srect={0,0,keyed->w,keyed->h};
+			EDL_BlendSurface(keyed,&srect,isurface[DIndex],&trect);
+			SDL_FreeSurface(keyed);
+		}
+
+		// Copy to display
+		if(DIndex==target){
+			Blit(isurface[DIndex]);
+		}
+	}
+	else{
+		LogError("Invalid keyed blend: %d -> %d",SIndex,DIndex);
+	}
+}
+
 
 /*! \brief Fills a vram surface
  *  \param Index Destination vram buffer

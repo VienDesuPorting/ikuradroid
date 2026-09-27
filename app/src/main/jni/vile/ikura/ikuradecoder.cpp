@@ -1904,7 +1904,17 @@ bool IkuraDecoder::iop_gp(const Uint8 *Data,int Length){
 			w_display->BlitSurface(src,&srcr,dst,&dstr);
 		}
 		else if(cmd==1 || cmd==21){
-			w_display->BlendSurface(src,&srcr,dst,&dstr);
+			// Transparent blit. Sources without real per-pixel alpha (GGD
+			// 24bit images) blend by colorkey: the original engine treats
+			// black as transparent there (title card headers etc). Sources
+			// with a real alpha channel (GGA 32bit) blend by alpha.
+			SDL_Surface *ssurface=w_display->GetSurface(src);
+			if(ssurface && !EDL_SurfaceHasAlpha(ssurface)){
+				w_display->BlendColorkeySurface(src,&srcr,dst,&dstr);
+			}
+			else{
+				w_display->BlendSurface(src,&srcr,dst,&dstr);
+			}
 		}
 
 

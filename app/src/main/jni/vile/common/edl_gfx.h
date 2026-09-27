@@ -41,6 +41,8 @@ extern void EDL_BlendSurface(
 		SDL_Surface *src, SDL_Rect *srcrect,
 		SDL_Surface *dst, SDL_Rect *dstrect);
 
+extern bool EDL_SurfaceHasAlpha(SDL_Surface *Surface);
+
 extern void EDL_BlitSurface(
 		SDL_Surface *src, SDL_Rect *srcrect,
 		SDL_Surface *dst, SDL_Rect *dstrect);
