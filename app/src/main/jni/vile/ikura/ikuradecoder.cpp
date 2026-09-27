@@ -28,6 +28,7 @@ IkuraDecoder::IkuraDecoder(int Width,int Height) : EngineVN(Width,Height){
 	cmdrect.w=0;
 	cmdrect.h=0;
     nameMusic = "stop";
+	speakerid=0;
 	// Create ikura widget
 	SDL_Rect bgrect={0,0,Width,Height};
 	w_display=new IkuraDisplay(bgrect);
@@ -506,9 +507,9 @@ bool IkuraDecoder::EventGameProcess(){
 			case IOP_GACLOSE:		// Close animation
 			case IOP_GADELETE:		// Delete animation
 			// Text management
+			case IOP_KIDSCAN:		r=iop_kidscan(b,l);		break;
 			case IOP_KIDFN:			// Number of lines (Read-flags)
 			case IOP_KIDMOJI:		// Set "read text" font color
-			case IOP_KIDSCAN:		// Check wether line has been read
 			case IOP_KIDCLR:		// Clear read flags?
 
 			// Cursor control
@@ -1248,6 +1249,23 @@ bool IkuraDecoder::iop_pf(const Uint8 *Data,int Length){
 }
 
 // Print text messages
+// Speaker names behind the KIDSCAN marker written by the HdeR script
+// patcher (scripts/hdr_speaker_patch.py): payload byte 1 carries the
+// id, iop_pm prefixes matching dialog lines with the name. Strings are
+// CP1251 - the dialog renderer converts them like every game string.
+// Index 0 stays empty: unpatched scripts never name a speaker.
+static const char *kSpeakerNames[]={
+	0,
+	"[\xD0\xE8\xEE]",		// 1 Rio
+	"[\xCA\xE0\xF5\xEE]",		// 2 Kaho
+	"[\xCA\xE8\xEE\xEA\xEE]",		// 3 Kyoko
+	"[\xCA\xE0\xEE\xF0\xE8]",		// 4 Kaori
+	"[\xC0\xFF\xEC\xE8]",		// 5 Ayami
+	"[\xDE\xEA\xE0]",		// 6 Yuka
+	"[\xCC\xE8\xFE]",		// 7 Miyu
+	"[\xD2\xEE\xEC\xEE\xED\xEE\xF0\xE8]"		// 8 Tomonori
+};
+
 bool IkuraDecoder::iop_pm(const Uint8 *Data,int Length){
 #ifdef IKURADROID_AUTODRIVE
     LogError("TRACE PM (text page)");
@@ -1338,6 +1356,7 @@ LogError("PM:%s",sx.c_str());
 			uString text;
 			int d=0;
 
+			Uint8 firstbyte=Data[i];
 			for(;Data[i];i++){
                 d=Data[i];
 
@@ -1351,6 +1370,18 @@ LogError("PM:%s",sx.c_str());
 			w_textview->SetVisible(true);
             w_textview->SetGlobalXY(true);
 
+			// Speaker name: dialog lines open with a quote, anything
+			// else (narration, page splits) drops a stale id
+			if(speakerid>0 && kSpeakerNames[speakerid]){
+				if(firstbyte==0x22){
+					uString prefix=kSpeakerNames[speakerid];
+					prefix+=" ";
+					text=prefix+text;
+				}
+				else{
+					speakerid=0;
+				}
+			}
 			w_textview->PrintNewline();
 			w_textview->PrintText(text.c_str());
 
@@ -1445,6 +1476,7 @@ bool IkuraDecoder::iop_sret(const Uint8 *Data,int Length){
 
 // Call a subscript
 bool IkuraDecoder::iop_lsbs(const Uint8 *Data,int Length){
+	speakerid=0;
 	RWops *blob=0;
 	if((blob=LoadScript((char*)Data,"ISF"))){
 		int tlength=blob->Seek(0,SEEK_END);
@@ -1465,6 +1497,7 @@ bool IkuraDecoder::iop_lsbs(const Uint8 *Data,int Length){
 
 // Loads a new script
 bool IkuraDecoder::iop_ls(const Uint8 *Data,int Length){
+	speakerid=0;
 #ifdef IKURADROID_AUTODRIVE
     LogError("TRACE LS: %s",(char*)Data);
 #endif
@@ -1510,6 +1543,19 @@ bool IkuraDecoder::iop_cns(const Uint8 *Data,int Length){
 	name[Length-2]=0;
 	s_names.SetString(index,name);
 	LogError("Registering character name %d=%s",index,name);
+	return false;
+}
+
+// HdeR speaker marker (IkuraDroid extension): the script patcher stores
+// a speaker id in the KIDSCAN payload byte 1. Vanilla scripts keep it
+// at 0 and other Ikura games do not reach this op, so they are inert.
+bool IkuraDecoder::iop_kidscan(const Uint8 *Data,int Length){
+	if(Length>=2 && Data[0]==0x10){
+		speakerid=Data[1];
+		if(speakerid>=(int)(sizeof(kSpeakerNames)/sizeof(kSpeakerNames[0]))){
+			speakerid=0;
+		}
+	}
 	return false;
 }
 

@@ -50,6 +50,7 @@ class IkuraDecoder : public EngineVN {
 
 		// Gamedata
 		Stringlist s_names;				//!< Character names (Newer games)
+		int speakerid;				//!< Active speaker id (HdeR KIDSCAN marker)
 		SDL_Surface **asurfaces;		//!< Loaded animation
 
 		// ISF Decrypt data
@@ -94,6 +95,7 @@ class IkuraDecoder : public EngineVN {
 		bool iop_ls(const Uint8 *Data,int Length);
 		bool iop_title(const Uint8 *Data,int Length);
 		bool iop_cns(const Uint8 *Data,int Length);
+		bool iop_kidscan(const Uint8 *Data,int Length);
 		bool iop_clk(const Uint8 *Data,int Length);
 		bool iop_setgameinfo(const Uint8 *Data,int Length);
 		bool iop_ws(const Uint8 *Data,int Length);
