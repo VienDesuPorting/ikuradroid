@@ -972,6 +972,12 @@ bool ViLE::ProbeSUF(uString Path,uString Key){
 EngineVN *g_running_engine=0;
 
 void ViLE::RunEngine(EngineVN *engine){
+    // Park the engine where the JNI bridge (ikurajni.cpp) can reach
+    // it: Java reads NativeID() as the savegame filename prefix, and
+    // without this nativeGetSavePrefix() stays empty, silently
+    // falling back to the native StdSave/StdLoad dialogs. Cleared
+    // again at the bottom of this function.
+    g_running_engine=engine;
     engine->updateRenderWindow(window);
 
 
