@@ -172,10 +172,16 @@ public final class SaveFileRepository {
     }
 
     private static String asString(byte[] data) {
-        // uString payload is UTF-8; strip at the first NUL padding byte.
+        // Engine text is stored as raw CP1251 (the RU patch keeps game
+        // strings in that codepage; EDL_RenderText converts to UTF-8
+        // only at render time, and the savegame container holds the
+        // unconverted bytes). Decoding here mirrors the renderer:
+        // ASCII passes through, high bytes map to Cyrillic, so this
+        // dialog shows exactly what the native dialogs show.
+        // The writer stores no NUL terminator; strip padding anyway.
         int end = 0;
         while (end < data.length && data[end] != 0) end++;
-        return new String(data, 0, end, java.nio.charset.StandardCharsets.UTF_8);
+        return new String(data, 0, end, java.nio.charset.Charset.forName("windows-1251"));
     }
 
     private static byte[] readFile(File f) {
