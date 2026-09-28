@@ -139,6 +139,7 @@ class IkuraDecoder : public EngineVN {
 		bool iop_gge(const Uint8 *Data,int Length);
 		bool iop_vset(const Uint8 *Data,int Length);
 		bool iop_gv(const Uint8 *Data,int Length);
+		bool iop_gscrl(const Uint8 *Data,int Length);
 		bool iop_gp(const Uint8 *Data,int Length);
 		bool iop_set(const Uint8 *Data,int Length);
 		bool iop_sep(const Uint8 *Data,int Length);

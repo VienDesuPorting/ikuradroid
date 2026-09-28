@@ -745,9 +745,11 @@ SDL_Surface *CIkura::ggd_24b(RWops *Object){
 		}
 
 		// Convert result to a 24bit surface while flipping colors
+		// Decompressed rows are padded to 4-byte boundaries; skip the padding
+		int pitch=((width*3)+3)&~3;
 		retval=EDL_CreateSurface(width,height);
-		o=0;
 		for (int y=0;y<height;y++) {
+			o=y*pitch;
 			for (int x=0;x<width;x++) {
 				Uint8 *pixels = static_cast<Uint8*>(retval->pixels)+
 					(y*retval->pitch)+(x*retval->format->BytesPerPixel);

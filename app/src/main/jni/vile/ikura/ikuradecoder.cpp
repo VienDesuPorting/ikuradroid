@@ -375,6 +375,7 @@ bool IkuraDecoder::EventGameProcess(){
 			case IOP_GGE:			r=iop_gge(b,l);				break;
 			case IOP_VSET:			r=iop_vset(b,l);			break;
 			case IOP_GV:			r=iop_gv(b,l);				break;
+			case IOP_GSCRL:		r=iop_gscrl(b,l);			break;
 			case IOP_GP:			r=iop_gp(b,l);				break;
 			case IOP_JP:			r=iop_jp(b,l);				break;
 			case IOP_JS:			r=iop_js(b,l);				break;
@@ -1900,6 +1901,52 @@ bool IkuraDecoder::iop_gv(const Uint8 *Data,int Length){
 		for(int i=0;i<count;i++){
 				AddAnimation(new Slide(source,srect,erect,duration/2));
 		}
+	}
+	return true;
+}
+
+// Scroll handler (GSCRL)
+/* Pans the viewport across an oversized vram surface (loaded with
+ * VSET+GL) and leaves the final view in the display plane. Parameter
+ * block is 57 bytes: index, source size, viewport size, start and end
+ * scroll offsets plus the duration in milliseconds. Used by the impact
+ * cg animation in Heart de Roommate as well as scene pans elsewhere.
+ */
+bool IkuraDecoder::iop_gscrl(const Uint8 *Data,int Length){
+	if(Length>=53){
+		int index=parser.DecodeValue(GETDWORD(Data+1));
+		int dstx=parser.DecodeValue(GETDWORD(Data+21));
+		int dsty=parser.DecodeValue(GETDWORD(Data+25));
+		int dstw=parser.DecodeValue(GETDWORD(Data+29));
+		int dsth=parser.DecodeValue(GETDWORD(Data+33));
+		int sx=parser.DecodeValue(GETDWORD(Data+37));
+		int sy=parser.DecodeValue(GETDWORD(Data+41));
+		int ex=parser.DecodeValue(GETDWORD(Data+45));
+		int ey=parser.DecodeValue(GETDWORD(Data+49));
+		int duration=parser.DecodeValue(GETDWORD(Data+53));
+		SDL_Surface *source=w_display->GetSurface(index);
+		if(source && dstw>0 && dsth>0 && duration>0){
+			// Keep the viewport within the source bitmap
+			if(sx>source->w-dstw)	sx=source->w-dstw;
+			if(sy>source->h-dsth)	sy=source->h-dsth;
+			if(ex>source->w-dstw)	ex=source->w-dstw;
+			if(ey>source->h-dsth)	ey=source->h-dsth;
+			if(sx<0)	sx=0;
+			if(sy<0)	sy=0;
+			if(ex<0)	ex=0;
+			if(ey<0)	ey=0;
+			// Persist the end frame in the display plane so the
+			// graphics remain once the animation widget is gone
+			SDL_Rect erect={ex,ey,dstw,dsth};
+			w_display->BlitSurface(index,&erect,0,0);
+			// Animate the pan
+			SDL_Rect drect={dstx,dsty,dstw,dsth};
+			SDL_Rect srect={sx,sy,dstw,dsth};
+			AddAnimation(new Scroll(drect,source,srect,erect,duration));
+		}
+	}
+	else{
+		LogError("Illegal GSCRL length: %d",Length);
 	}
 	return true;
 }
