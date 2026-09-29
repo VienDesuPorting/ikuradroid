@@ -2012,17 +2012,30 @@ bool IkuraDecoder::iop_gp(const Uint8 *Data,int Length){
 
 
 		// Effects to copy things to display surface
-		else if(cmd==15){
-			// Some kind of vertical effect -- Destination is duration
+		else if(cmd==15 || cmd==16 || cmd==17){
+			// Animated wipes -- Destination is duration
 			w_display->BlitSurface(src,&srcr,0,&dstr);
-		}
-		else if(cmd==16){
-			// Some kind of horizontal effect -- Destination is duration
-			w_display->BlitSurface(src,&srcr,0,&dstr);
-		}
-		else if(cmd==17){
-			// Move effect -- Destination is duration
-			w_display->BlitSurface(src,&srcr,0,&dstr);
+			if(dst>0){
+				SDL_Surface *surface=w_display->GetSurface(src);
+				if(surface){
+					// Slats color is packed as 6-bit channels
+					Uint8 r=(color&0x3F)*4;
+					Uint8 g=((color>>6)&0x3F)*4;
+					Uint8 b=((color>>12)&0x3F)*4;
+					if(cmd==15){
+						// Horizontal slats sweeping top-down
+						AddAnimation(new Blinds(dstr,surface,srcr,dst,false,0,r,g,b));
+					}
+					else if(cmd==16){
+						// Vertical slats sweeping left-to-right
+						AddAnimation(new Blinds(dstr,surface,srcr,dst,true,0,r,g,b));
+					}
+					else{
+						// Single sweeping slat
+						AddAnimation(new Blinds(dstr,surface,srcr,dst,true,srcr.w,r,g,b));
+					}
+				}
+			}
 		}
 		else if(cmd==19 || cmd==7){
 			// Fade effect -- Destination is duration
