@@ -5,6 +5,7 @@
 #define _IDISPLAY_H_
 
 #include "../widgets/fade.h"
+#include "../widgets/blinds.h"
 #include "../widgets/hotspot.h"
 #include "../widgets/group.h"
 
