@@ -92,7 +92,36 @@ Stringlist EDL_Expandname(uString Filemask){
 #elif VILE_ARCH_NDS
 //#error "File enumeration not supported"
 #else
-//#error "File enumeration not supported"
+	// POSIX fallback for environments without wordexp (Android):
+	// scan the folder ourselves and match every entry against the
+	// full mask. Both sides are lowercased so that matching does
+	// not depend on FNM_CASEFOLD support in the target libc.
+	uString mask=Filemask;
+	uString folder;
+	int lastsep=-1;
+	for(unsigned int i=0;i<mask.length();i++){
+		if(mask[i]=='/'){
+			lastsep=i;
+		}
+	}
+	if(lastsep>=0){
+		folder=mask.substr(0,lastsep+1);
+	}
+	DIR *dir=opendir(folder.length()?folder.c_str():".");
+	if(dir){
+		struct dirent *entry;
+		while((entry=readdir(dir))!=0){
+			uString filename=entry->d_name;
+			if(filename=="." || filename==".."){
+				continue;
+			}
+			uString pathname=folder+filename;
+			if(!fnmatch(EDL_Lower(mask).c_str(),EDL_Lower(pathname).c_str(),0)){
+				retval.AddString(pathname);
+			}
+		}
+		closedir(dir);
+	}
 #endif
 	return retval;
 }
@@ -153,7 +182,25 @@ uString EDL_Realname(uString Path,uString Filename){
 #elif VILE_ARCH_NDS
 //#error "File case-ignoring not supported"
 #else
-//#error "File case-ignoring not supported"
+	// POSIX fallback for environments without wordexp (Android):
+	// resolve the real casing of Filename as listed in Path.
+	uString folder=Path;
+	if(folder.length() && folder[folder.length()-1]!='/'){
+		folder+="/";
+	}
+	DIR *dir=opendir(folder.length()?folder.c_str():".");
+	if(dir){
+		uString lower=EDL_Lower(Filename);
+		struct dirent *entry;
+		while((entry=readdir(dir))!=0){
+			uString filename=entry->d_name;
+			if(filename!="." && filename!=".." && EDL_Lower(filename)==lower){
+				Filename=filename;
+				break;
+			}
+		}
+		closedir(dir);
+	}
 #endif
 	return Path+Filename;
 }

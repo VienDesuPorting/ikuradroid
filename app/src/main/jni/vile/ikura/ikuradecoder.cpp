@@ -2151,9 +2151,16 @@ bool IkuraDecoder::iop_avip(const Uint8 *Data,int Length){
 	int srch=parser.DecodeValue(GETDWORD(Data+4));
 	int dstw=parser.DecodeValue(GETDWORD(Data+8));
 	int dsth=parser.DecodeValue(GETDWORD(Data+12));
-	LogError("Play video: %d %d %d %d",srcw,srch,dstw,dsth);
+	LogVerbose("Play video: %d %d %d %d",srcw,srch,dstw,dsth);
 
-	PlayVideo((char*)Data+16);
+	// The script carries display dimensions only; centre the
+	// picture on the game screen, like the original player does.
+	SDL_Rect rect;
+	rect.w=dstw;
+	rect.h=dsth;
+	rect.x=(NativeWidth()-dstw)/2;
+	rect.y=(NativeHeight()-dsth)/2;
+	PlayVideo((char*)Data+16,&rect);
 	return true;
 }
 

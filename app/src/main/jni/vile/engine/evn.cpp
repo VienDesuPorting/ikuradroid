@@ -14,6 +14,7 @@
  */
 
 #include "evn.h"
+#include "../media/vplmpeg.h"
 
 EngineVN::EngineVN(int Width,int Height) : EngineVideo(Width,Height){
 	// Set default values
@@ -265,15 +266,20 @@ bool EngineVN::QueueMusic(RWops *Music){
 
 /*! \brief Play video resource
  *  \param Name Name of video resource
+ *  \param Rect Destination on the game screen, NULL covers it all
  *  \return True if resource was accepted
  */
-bool EngineVN::PlayVideo(uString Name){
-	// Try to load video resource
+bool EngineVN::PlayVideo(uString Name,SDL_Rect *Rect){
+	// Try to load video resource. Scripts may omit the extension,
+	// so fall back to the standard MPEG extension before giving up.
 	RWops *ops=r_videos.GetResource(Name);
+	if (!ops){
+		ops=r_videos.GetResource(EDL_DefaultExtension(Name,"mpg"));
+	}
 	bool retval=false;
 	if(ops){
 		LogVerbose("Playing video: %s",Name.c_str());
-		//retval=EngineVideo::PlayVideo(ops);
+		retval=VideoPLMPEG_Play(ops,Rect,NativeWidth(),NativeHeight());
 		delete ops;
 	}
 	else{
@@ -287,8 +293,10 @@ bool EngineVN::PlayVideo(uString Name){
  *  \return True if resource was accepted
  */
 bool EngineVN::PlayVideo(RWops *Video){
-
-	return false;//EngineVideo::PlayVideo(Video);
+	if(!Video){
+		return false;
+	}
+	return VideoPLMPEG_Play(Video,0,NativeWidth(),NativeHeight());
 }
 
 /*! \brief Play music resource by name
