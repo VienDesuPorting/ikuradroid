@@ -109,6 +109,56 @@ bool Selection::MouseLeftDown(int X,int Y){
 	return retval;
 }
 
+/*! \brief Highlights the pressed item without activating it
+ *
+ *  Touch presses emulate the leading mouse motion of a PC click: the
+ *  item under the finger takes the dialog focus (which paints its
+ *  hover state) while activation waits for MouseLeftUp, so a choice
+ *  can be previewed and cancelled by sliding off it.
+ */
+bool Selection::MouseLeftDown(Widget *Object,int X,int Y){
+	if(Object && Object->GetVisible() && Object->GetHittable()){
+		if(Object!=focus){
+			if(!FocusEnter(Object)){
+				Object->FocusEnter();
+			}
+			if(CheckWidget(focus)){
+				if(!FocusLeave(focus)){
+					focus->FocusLeave();
+				}
+			}
+			focus=Object;
+		}
+		return true;
+	}
+	return false;
+}
+
+/*! \brief Activates the item the finger was released over
+ *
+ *  Completing the click on release matches the PC originals, where
+ *  the hover state was always visible before a click landed. The
+ *  item is refocused first so a caption dragged between press and
+ *  release highlights the row that actually fires.
+ */
+bool Selection::MouseLeftUp(Widget *Object,int X,int Y){
+	if(Object && Object->GetVisible() && Object->GetHittable()){
+		if(Object!=focus){
+			if(!FocusEnter(Object)){
+				Object->FocusEnter();
+			}
+			if(CheckWidget(focus)){
+				if(!FocusLeave(focus)){
+					focus->FocusLeave();
+				}
+			}
+			focus=Object;
+		}
+		return InputOk(Object);
+	}
+	return false;
+}
+
 
 
 /*! \brief Registers two graphical surfaces as a item

@@ -45,6 +45,8 @@ class Selection : public DialogBase {
 
 		// Hook into user input
 		bool MouseLeftDown(int X,int Y);
+		bool MouseLeftDown(Widget *Object,int X,int Y);
+		bool MouseLeftUp(Widget *Object,int X,int Y);
 		bool InputOk(Widget* Object);
 };
 
