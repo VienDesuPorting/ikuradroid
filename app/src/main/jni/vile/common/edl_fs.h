@@ -20,6 +20,7 @@
 #else
 #include <unistd.h>
 #include <dirent.h>
+#include <fnmatch.h>
 #endif
 #include <sys/stat.h>
 #ifdef HAVE_WORDEXP_H

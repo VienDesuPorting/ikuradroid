@@ -27,8 +27,10 @@ Heartdr::Heartdr(uString Path) : IkuraDecoder(640,480){
     AddBGM(new ArchiveViLE(Path+"WMSC"));
 
 	AddBGM(new ArchiveIkura(Path+"MIDI"));
-	AddVideo(new ArchiveFiles(Path+"dologo.mpg"));
-	AddVideo(new ArchiveFiles(Path+"DOLOGO.MPG"));
+	// Register whatever dologo.* is on disk: releases differ
+	// between DOLOGO.MPG and DOLOGO.AVI holding an MPEG-1 system
+	// stream; the script's bare name matches via SORT_NOEXT.
+	AddVideo(new ArchiveFiles(Path+"dologo.*"));
 	AddOther(new ArchiveFiles(Path+"*.suf"));
 
 	// Skinned selection items (PC style: plain white captions with a

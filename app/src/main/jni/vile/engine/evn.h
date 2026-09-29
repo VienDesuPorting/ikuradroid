@@ -91,7 +91,7 @@ class EngineVN : public EngineVideo {
 		SDL_Surface **LoadAnimation(uString N,uString E="");
 
 		// Media handling
-		virtual bool PlayVideo(uString Name);
+		virtual bool PlayVideo(uString Name,SDL_Rect *Rect=0);
 		virtual bool PlayVideo(RWops *Video);
 		virtual bool QueueVideo(uString Name);
 		virtual bool QueueVideo(RWops *Video);

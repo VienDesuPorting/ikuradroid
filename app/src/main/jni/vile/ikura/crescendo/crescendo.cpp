@@ -23,8 +23,11 @@ Crescendo::Crescendo(uString Path) : IkuraDecoder(640,480){
 	AddSE(new ArchiveIkura(Path+"SE"));
 	AddBGM(new ArchiveIkura(Path+"WMSC"));
 	AddBGM(new ArchiveIkura(Path+"MIDI"));
-	AddVideo(new ArchiveFiles(Path+"dologo.mpg"));
-	AddVideo(new ArchiveFiles(Path+"DOLOGO.MPG"));
+	// The splash ships as DOLOGO.MPG in most releases, but the
+	// Macho Studio RU release stores an MPEG-1 system stream as
+	// DOLOGO.AVI. Register whatever dologo.* is on disk; the
+	// script's bare name matches through the SORT_NOEXT lookup.
+	AddVideo(new ArchiveFiles(Path+"dologo.*"));
 	AddOther(new ArchiveFiles(Path+"*.suf"));
 
 	// Load standard boot script
