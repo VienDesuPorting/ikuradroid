@@ -132,52 +132,69 @@ bool IkuraDisplay::TestMouse(int X,int Y){
 	return retval;
 }
 
-bool IkuraDisplay::MouseMove(int X,int Y){
-	bool retval=false;
+/*! \brief Retrieves the hotspot id under the given position
+ *  \param X coordinate relative to native resolution
+ *  \param Y coordinate relative to native resolution
+ *  \return Hotspot id or -1 when the position is outside every hotspot
+ */
+int IkuraDisplay::SpotAt(int X,int Y){
 	if(hitmap){
 		 // Find hotspots in preloaded hitmap
-		Uint8 *pixel = static_cast<Uint8*>(hitmap->pixels)+
-		(Y*hitmap->pitch)+(X*hitmap->format->BytesPerPixel);
-		if(pixel[1]!=0xFF){
-			selected=pixel[1];
-			retval=true;
+		if(X>=0 && Y>=0 && X<hitmap->w && Y<hitmap->h){
+			Uint8 *pixel = static_cast<Uint8*>(hitmap->pixels)+
+			(Y*hitmap->pitch)+(X*hitmap->format->BytesPerPixel);
+			if(pixel[1]!=0xFF){
+				return pixel[1];
+			}
 		}
 	}
 	else{
 		// Find hotspot represented by widgets
 		Widget *wptr=spots->GetWidget(X,Y);
 		if(wptr){
-			selected=wptr->GetTag();
-			retval=true;
+			return wptr->GetTag();
 		}
 	}
-
-	return retval;
+	return -1;
 }
 
-bool IkuraDisplay::MouseLeftDown(int X,int Y){
+/*! \brief Tracks the pointer across the hotspots
+ *
+ *  IG reports this state as the hovered item while the scripts keep
+ *  polling, which is what paints the alternate menu graphics on the
+ *  PC originals. Moving off every hotspot clears the selection so a
+ *  stale id can not keep a highlight alive.
+ */
+bool IkuraDisplay::MouseMove(int X,int Y){
+	selected=SpotAt(X,Y);
+	return selected!=-1;
+}
 
-	bool retval=false;
-	if(hitmap){
-		 // Find hotspots in preloaded hitmap
-		Uint8 *pixel = static_cast<Uint8*>(hitmap->pixels)+
-		(Y*hitmap->pitch)+(X*hitmap->format->BytesPerPixel);
-		if(pixel[1]!=0xFF){
-			selected=pixel[1];
-			result=selected;
-			retval=true;
-		}
+/*! \brief Presses a hotspot (hover only)
+ *
+ *  Touch presses emulate the leading mouse motion of a PC click: the
+ *  pressed hotspot becomes the hovered selection while the actual
+ *  activation is deferred to MouseLeftUp, so scripts get one or more
+ *  IG polls showing the hover state before the click flag arrives.
+ */
+bool IkuraDisplay::MouseLeftDown(int X,int Y){
+	selected=SpotAt(X,Y);
+	return selected!=-1;
+}
+
+/*! \brief Releases a hotspot
+ *
+ *  The click is committed only when the finger is released over a
+ *  hotspot, mirroring how a PC click ends inside the pressed item.
+ *  Releasing elsewhere just drops the hover state.
+ */
+bool IkuraDisplay::MouseLeftUp(int X,int Y){
+	selected=SpotAt(X,Y);
+	if(selected!=-1){
+		result=selected;
+		return true;
 	}
-	else{
-		// Find hotspot represented by widgets
-		Widget *wptr=spots->GetWidget(X,Y);
-		if(wptr){
-			selected=wptr->GetTag();
-			result=selected;
-			retval=true;
-		}
-	}
-	return retval;
+	return false;
 }
 
 bool IkuraDisplay::KeyDown(SDL_Keycode Key){

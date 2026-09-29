@@ -58,8 +58,10 @@ class IkuraDisplay : public Hotspot {
 		virtual bool FocusEnter();
 		virtual bool FocusLeave();
 		virtual bool TestMouse(int X,int Y);
+		int SpotAt(int X,int Y);
 		virtual bool MouseMove(int X,int Y);
 		virtual bool MouseLeftDown(int X,int Y);
+		virtual bool MouseLeftUp(int X,int Y);
 		virtual bool KeyDown(SDL_Keycode Key);
 
 		// Export savegame data

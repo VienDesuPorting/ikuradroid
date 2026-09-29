@@ -600,6 +600,19 @@ void EngineBase::EventHostMouseLeftDown(SDL_Surface *Screen,int X,int Y){
 		// Pass event to widgets
 		Widget *wptr=GetWidgetAt(X,Y);
 		LOGCAT("ikuradroid input: left down (%d,%d) hit=%p",X,Y,(void*)wptr);
+		// Touch taps carry no leading motion event, so track the
+		// hover focus here exactly like EventHostMouseMove does:
+		// pressed items light up their hover state before the
+		// click is dispatched.
+		if(wptr!=widget_focus){
+			if(widget_head->CheckWidget(widget_focus)){
+				widget_focus->FocusLeave();
+			}
+			widget_focus=wptr;
+			if(widget_focus){
+				widget_focus->FocusEnter();
+			}
+		}
 		if(!wptr || !wptr->MouseLeftDown(X,Y)){
 			EventBackgroundMouseLeftDown(X,Y);
 		}
@@ -619,6 +632,18 @@ void EngineBase::EventHostMouseLeftUp(SDL_Surface *Screen,int X,int Y){
 	if(!animations->GetWidgetCount()){
 		// Pass event to widgets
 		Widget *wptr=GetWidgetAt(X,Y);
+		// Mirror the motion-event focus tracking so releasing the
+		// finger off every item drops the pressed item's highlight
+		// (touch screens emit no trailing motion event on release).
+		if(wptr!=widget_focus){
+			if(widget_head->CheckWidget(widget_focus)){
+				widget_focus->FocusLeave();
+			}
+			widget_focus=wptr;
+			if(widget_focus){
+				widget_focus->FocusEnter();
+			}
+		}
 		if(!wptr || !wptr->MouseLeftUp(X,Y)){
 			EventBackgroundMouseLeftUp(X,Y);
 		}

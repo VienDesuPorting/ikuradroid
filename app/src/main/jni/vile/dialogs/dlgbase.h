@@ -39,13 +39,15 @@ class EngineVN;
 class DialogBase : public Widget {
 	private:
 		bool block;
-		Widget *focus;
 		Group *layer;
 		int defindex;
 	protected:
 		// Protected constructors
 		DialogBase(EngineVN *Engine,bool Blockinput);
 		~DialogBase();
+
+		// Currently focused item (managed by SetFocus/MouseMove)
+		Widget *focus;
 
 		// Configure widgets
 		Widget *AddWidget(Widget *WidgetPtr);

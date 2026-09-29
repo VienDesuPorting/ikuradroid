@@ -31,9 +31,11 @@ Heartdr::Heartdr(uString Path) : IkuraDecoder(640,480){
 	AddVideo(new ArchiveFiles(Path+"DOLOGO.MPG"));
 	AddOther(new ArchiveFiles(Path+"*.suf"));
 
-	// Skinned selection items (PC style: white captions with a drop
-	// shadow inside the message frame, hovered rows on a pink strip)
-	w_select->SetColors(0xF8A0B0FF,0xFFFFFFFF,0x00000000,0xFFFFFFFF);
+	// Skinned selection items (PC style: plain white captions with a
+	// drop shadow inside the message frame, hovered rows on an
+	// opaque #FFA0B0 strip - the CPS palette color of the original)
+	w_select->SetColors(0xFFA0B0FF,0xFFFFFFFF,0x00000000,0xFFFFFFFF);
+	w_select->SetBackgroundFill(false);
 	w_select->SetAlignment(HA_LEFT,VA_CENTER);
 	w_select->SetFontSize(18);
 	w_select->SetShadow(true);
