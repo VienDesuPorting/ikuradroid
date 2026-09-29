@@ -253,11 +253,6 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_DOWN:
-                    // Diagnostics: proves the tap reached SDLSurface and was
-                    // forwarded into the native SDL queue.
-                    Log.i("ikuradroid", "SDLSurface touch: action=" + action
-                            + " x=" + (event.getX(0) / mWidth)
-                            + " y=" + (event.getY(0) / mHeight));
                     // Primary pointer up/down, the index is always zero
                     i = 0;
                     /* fallthrough */

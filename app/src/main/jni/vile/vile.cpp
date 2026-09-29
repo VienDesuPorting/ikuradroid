@@ -1278,7 +1278,6 @@ void ViLE::RunEngine(EngineVN *engine){
 					// parked by the script (iop_opsl) is torn down: the
 					// Java dialog replaces it.
 					int slot=(int)(intptr_t)event.user.data1;
-					LOGCAT("ikuradroid saveload: java event code=%d slot=%d",event.user.code,slot);
 					engine->EventCloseDialogs();
 					if(event.user.code==VILE_JAVA_EVENT_LOAD){
 						if(engine->EventLoad(slot)){

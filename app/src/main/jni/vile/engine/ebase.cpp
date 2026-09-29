@@ -599,7 +599,6 @@ void EngineBase::EventHostMouseLeftDown(SDL_Surface *Screen,int X,int Y){
 	else{
 		// Pass event to widgets
 		Widget *wptr=GetWidgetAt(X,Y);
-		LOGCAT("ikuradroid input: left down (%d,%d) hit=%p",X,Y,(void*)wptr);
 		// Touch taps carry no leading motion event, so track the
 		// hover focus here exactly like EventHostMouseMove does:
 		// pressed items light up their hover state before the

@@ -700,18 +700,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     public boolean dispatchTouchEvent(MotionEvent ev) {
         final int action = ev.getActionMasked();
 
-        // Diagnostics: the Will engines used to receive no clicks at all
-        // even though the view hierarchy consumed the events - this log
-        // shows whether the activity dispatch layer sees the taps and
-        // whether the swipe tracker claims them.
-        if (action == MotionEvent.ACTION_DOWN
-                || action == MotionEvent.ACTION_UP) {
-            Log.i("ikuradroid", "dispatchTouch: action=" + action
-                    + " x=" + (int) ev.getX() + " y=" + (int) ev.getY()
-                    + " tracking=" + mSwipeTracking
-                    + " passed=" + mSwipePassed);
-        }
-
         // A stream that was handed back mid-gesture keeps flowing through
         // the normal view path until the finger lifts.
         if (mSwipePassed) {
