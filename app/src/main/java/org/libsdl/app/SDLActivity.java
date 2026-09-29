@@ -91,6 +91,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private BottomSheetDialog mGameMenuSheet;
     private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted, mSwipePassed;
     private float mSwipeStartX, mSwipeStartY;
+    // True while a captured gesture has already handed its ACTION_DOWN
+    // to the engine live and no UP/cancel has been sent yet (see
+    // dispatchTouchEvent and sendLiveTouch/cancelEngineTouch).
+    private boolean mEngineDownLive;
     // The vertical gestures may start anywhere on the screen, edges
     // included. The system keeps its own narrow bands - the gesture-nav
     // pill at the bottom edge and the notification shade behind the top
@@ -667,16 +671,21 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // mouse button - input the touch screen has no equivalent for. Both
     // swipes are invisible and never collide with engine input:
     //
-    //  * a gesture starting anywhere is captured at ACTION_DOWN - the
-    //    engine sees NOTHING if it turns out to be a swipe (the whole
-    //    stream is consumed);
-    //  * a plain tap is replayed to the engine as a clean DOWN+UP pair
-    //    once the finger lifts (forwardTapToEngine), so clicks anywhere
-    //    in the game keep working;
+    //  * a gesture starting anywhere is captured at ACTION_DOWN, but
+    //    the DOWN is forwarded to the engine live right away, so the
+    //    hover states light up on plain taps and while a finger rests
+    //    on a menu item;
+    //  * a plain tap is completed with a real UP the moment the finger
+    //    lifts (sendLiveTouch), so clicks anywhere in the game keep
+    //    working with no added latency;
+    //  * a confirmed vertical swipe, a second finger or a system cancel
+    //    releases the captured stream by sending a zero-pressure
+    //    synthetic UP (cancelEngineTouch) that the native pump reads as
+    //    "drop the hover, commit nothing";
     //  * a horizontal drag is handed back live from the slop point
-    //    (replayTouchToEngine), so drag-hover keeps working; vertical
-    //    runs that never reach the travel threshold are dropped on
-    //    purpose;
+    //    without a second DOWN (the engine already has it), so
+    //    drag-hover keeps working; vertical runs that never reach the
+    //    travel threshold are cancelled, not clicked, on purpose;
     //  * every edge is captured: the gesture-nav pill at the bottom and
     //    the notification shade at the top keep their own narrow bands,
     //    and those touches either never reach the app or end in
@@ -709,6 +718,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             if (action == MotionEvent.ACTION_UP
                     || action == MotionEvent.ACTION_CANCEL) {
                 mSwipePassed = false;
+                mSwipeTracking = false;
             }
             return super.dispatchTouchEvent(ev);
         }
@@ -723,6 +733,12 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 mSwipeAborted = false;
                 mSwipeStartX = ev.getX();
                 mSwipeStartY = ev.getY();
+                // Hand the DOWN to the engine the moment the finger
+                // lands: hover states light up on plain taps instead of
+                // only after the lift. The gesture can still claim the
+                // stream later - a confirmed swipe sends a zero-pressure
+                // synthetic UP that the engine reads as a cancel.
+                sendLiveTouch(ev, MotionEvent.ACTION_DOWN);
                 return true; // hold the stream until intent is clear
             }
         } else {
@@ -738,6 +754,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                                 && Math.abs(dy) > 1.5f * Math.abs(dx);
                         if (upward && -dy >= menuDp(MENU_SWIPE_TRAVEL_DP)) {
                             mSwipeConsumed = true;
+                            cancelEngineTouch(ev);
                             showGameMenu();
                         } else if (downward
                                 && dy >= menuDp(MENU_SWIPE_TRAVEL_DP)) {
@@ -745,16 +762,17 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                             // counterpart of the PC original's Escape /
                             // right click (see sendGameCancel).
                             mSwipeConsumed = true;
+                            cancelEngineTouch(ev);
                             sendGameCancel();
                         } else if (travel >= menuDp(MENU_SWIPE_SLOP_DP)
                                 && !upward && !downward) {
-                            // Proven not a vertical gesture: replay the
-                            // touch from its current position and hand the
-                            // rest of the stream back, so drag-hover keeps
-                            // working.
+                            // Proven not a vertical gesture: hand the rest
+                            // of the stream back, so drag-hover keeps
+                            // working. The DOWN already reached the engine
+                            // live, so no second DOWN is injected here.
                             mSwipeAborted = true;
                             mSwipePassed = true;
-                            replayTouchToEngine(ev);
+                            mEngineDownLive = false;
                         }
                     }
                     if (mSwipePassed) {
@@ -764,8 +782,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
                 case MotionEvent.ACTION_POINTER_DOWN:
                     // A second finger joined: neither menu nor replay,
-                    // but keep consuming so the stream is not split.
+                    // but keep consuming so the stream is not split. The
+                    // live first-finger DOWN is cancelled so no hover
+                    // state survives the dead stream.
                     mSwipeAborted = true;
+                    cancelEngineTouch(ev);
                     return true;
 
                 case MotionEvent.ACTION_UP:
@@ -777,11 +798,22 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                         float dy = ev.getY() - mSwipeStartY;
                         float travel = (float) Math.sqrt(dx * dx + dy * dy);
                         if (travel < menuDp(MENU_SWIPE_SLOP_DP)) {
-                            forwardTapToEngine(ev);
+                            // Plain tap: the DOWN already went live, so
+                            // completing it with a real UP keeps the
+                            // hover visible for the whole tap.
+                            sendLiveTouch(ev, MotionEvent.ACTION_UP);
+                        } else {
+                            // Travel past the slop that never got
+                            // classified (a fizzled vertical run): drop
+                            // the live DOWN, never click - replaying it
+                            // as a tap would click wherever the finger
+                            // happened to start.
+                            cancelEngineTouch(ev);
                         }
-                        // Short fizzled vertical runs are dropped on
-                        // purpose: replaying them as taps would click
-                        // wherever the finger happened to start.
+                    } else {
+                        // Swipe confirmations already cancelled the live
+                        // DOWN; system cancels drop it here.
+                        cancelEngineTouch(ev);
                     }
                     return true;
             }
@@ -791,8 +823,13 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         return super.dispatchTouchEvent(ev);
     }
 
-    /** Replays a captured tap as one clean engine click. */
-    private void forwardTapToEngine(MotionEvent ev) {
+    /**
+     * Hands one touch event to the engine live: the DOWN the moment the
+     * finger lands, the UP when a tracked gesture resolves as a plain
+     * tap. Live forwarding is what makes the engine hover states light
+     * up on touch instead of only after the finger lifts.
+     */
+    private void sendLiveTouch(MotionEvent ev, int action) {
         // SDLSurface.mWidth/mHeight are instance fields in the 2.30 glue
         if (mSurface == null || mSurface.mWidth <= 0f || mSurface.mHeight <= 0f) {
             return;
@@ -804,35 +841,31 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         }
         float x = ev.getX() / mSurface.mWidth;
         float y = ev.getY() / mSurface.mHeight;
-        float p = ev.getPressure();
         onNativeTouch(ev.getDeviceId(), ev.getPointerId(0),
-                MotionEvent.ACTION_DOWN, x, y, p);
-        onNativeTouch(ev.getDeviceId(), ev.getPointerId(0),
-                MotionEvent.ACTION_UP, x, y, p);
+                action, x, y, ev.getPressure());
+        mEngineDownLive = (action == MotionEvent.ACTION_DOWN);
     }
 
     /**
-     * Replays a captured stream as a live touch starting at the current
-     * position: used when a gesture that was held back turns out to be an
-     * ordinary drag rather than the menu swipe. Only the DOWN is injected
-     * here - the remaining MOVE/UP events of the same gesture flow through
-     * the normal view path (see the mSwipePassed branch above), so the
-     * engine sees one continuous, well-formed touch stream.
+     * Cancels a live touch without clicking: a zero-pressure synthetic
+     * UP that the native pump reads as "drop the hover state, commit
+     * nothing". Used when the gesture tracker claims a stream whose
+     * DOWN already reached the engine (menu/cancel swipe, second
+     * finger, system cancel, fizzled vertical run).
      */
-    private void replayTouchToEngine(MotionEvent ev) {
-        if (mSurface == null || mSurface.mWidth <= 0f || mSurface.mHeight <= 0f) {
+    private void cancelEngineTouch(MotionEvent ev) {
+        if (!mEngineDownLive) {
             return;
         }
-        // Parity with SDLSurface.onTouch: any game touch cancels auto-skip
-        if (skip) {
-            onNativeKeyUp(KeyEvent.KEYCODE_CTRL_LEFT);
-            skip = false;
+        if (mSurface == null || mSurface.mWidth <= 0f || mSurface.mHeight <= 0f) {
+            mEngineDownLive = false;
+            return;
         }
         float x = ev.getX() / mSurface.mWidth;
         float y = ev.getY() / mSurface.mHeight;
-        float p = ev.getPressure();
         onNativeTouch(ev.getDeviceId(), ev.getPointerId(0),
-                MotionEvent.ACTION_DOWN, x, y, p);
+                MotionEvent.ACTION_UP, x, y, 0f);
+        mEngineDownLive = false;
     }
 
     /**

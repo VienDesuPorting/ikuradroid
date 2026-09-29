@@ -650,6 +650,29 @@ void EngineBase::EventHostMouseLeftUp(SDL_Surface *Screen,int X,int Y){
 	}
 }
 
+/*! \brief Drops a live touch without committing a click
+ *      \param Screen Screen surface
+ *      \param X Screen X coordinate
+ *      \param Y Screen Y coordinate
+ *
+ *  The Java gesture layer forwards ACTION_DOWN the moment a finger
+ *  lands so the hover states light up on touch, but a gesture that
+ *  turns into a menu/cancel swipe, a second finger or a system
+ *  cancel must never click. The synthetic zero-pressure UP lands
+ *  here: only the tracked hover focus is dropped, the widgets see
+ *  no press/release pair at all.
+ */
+void EngineBase::EventHostTouchCancel(SDL_Surface *Screen,int X,int Y){
+	X=GetRelativeX(Screen,X);
+	Y=GetRelativeY(Screen,Y);
+	mx = X;
+	my = Y;
+	if(widget_head->CheckWidget(widget_focus)){
+		widget_focus->FocusLeave();
+	}
+	widget_focus=0;
+}
+
 /*! \brief Passes mouse click events into the engine
  *	\param Screen Screen surface
  *	\param X Screen X coordinate

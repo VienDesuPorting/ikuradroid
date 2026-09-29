@@ -125,6 +125,7 @@ class EngineBase {
 		virtual void EventHostMouseLeftDown(SDL_Surface *Screen,int X,int Y);
 		virtual void EventHostMouseRightDown(SDL_Surface *Screen,int X,int Y);
 		virtual void EventHostMouseLeftUp(SDL_Surface *Screen,int X,int Y);
+		virtual void EventHostTouchCancel(SDL_Surface *Screen,int X,int Y);
 		virtual void EventHostMouseRightUp(SDL_Surface *Screen,int X,int Y);
 		virtual void EventHostKeyDown(SDL_Keycode Key);
 		virtual void EventHostKeyUp(SDL_Keycode Key);
