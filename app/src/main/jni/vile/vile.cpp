@@ -1011,15 +1011,14 @@ void ViLE::RunEngine(EngineVN *engine){
 	float xdown = 0;
 	float ydown = 0;
 
-	// The renderer letterboxes the game picture through
-	// SDL_RenderSetLogicalSize, but SDL input events keep arriving in raw
-	// window coordinates (screenSurface is NULL, so GetRelativeX/Y pass
-	// them through untouched). Map window coordinates into the engine's
-	// logical (native) space right here, mirroring the renderer's math.
-	// The scale/offset are recomputed for every single event instead of
-	// being captured once: a window or logical-viewport change after the
-	// capture (surface resize, recreated renderer, a second session) used
-	// to leave the input mapped with stale numbers.
+	// Under SDL 2.30 the renderer's own event watch (registered by
+	// SDL_CreateRenderer) already remaps MOUSE events from window
+	// pixels into logical coordinates, so this macro is an identity
+	// on the desktop (window == logical size) and is only kept for
+	// the synthetic autodrive clicks; on Android no mouse stream
+	// exists at all (touch->mouse synthesis is disabled above).
+	// The values are recomputed for every single event instead of
+	// being captured once, so a viewport change never goes stale.
 	#define VILE_MAP_INPUT(ix,iy,gx,gy) do{ \
 		int logicalw_=0,logicalh_=0,winw_=0,winh_=0; \
 		SDL_RenderGetLogicalSize(EDLRenderer,&logicalw_,&logicalh_); \
@@ -1045,13 +1044,34 @@ void ViLE::RunEngine(EngineVN *engine){
 		(gy)=(int)fy_; \
 	}while(0)
 
-	// Finger events arrive normalised against the window; the window
-	// size is taken live right here as well, so no captured state is
-	// involved anywhere in the touch path
+	// Finger events arrive normalised against the letterboxed game
+	// picture, not the window: SDL 2.30's renderer event watch
+	// (SDL_RendererEventWatch, registered by SDL_CreateRenderer)
+	// rewrites tfinger into viewport-relative 0..1 before this loop
+	// polls it - on a 2412x1080 window with a 640x480 picture spanning
+	// window x=[486..1926] a touch at window pixel X arrives as
+	// (X-486)/1440. Stripping the letterbox here a second time
+	// stretched engine X by 2412/1440 and parked every click ~100
+	// logical pixels right of the finger. Map the norm straight into
+	// the logical picture instead; sizes are queried live per event.
 	#define VILE_MAP_INPUT_FINGER(nx,ny,gx,gy) do{ \
-		int winfw_=0,winfh_=0; \
+		int logicalw_=0,logicalh_=0,winfw_=0,winfh_=0; \
+		SDL_RenderGetLogicalSize(EDLRenderer,&logicalw_,&logicalh_); \
 		SDL_GetWindowSize(window,&winfw_,&winfh_); \
-		VILE_MAP_INPUT((nx)*winfw_,(ny)*winfh_,gx,gy); \
+		float fx_=(nx),fy_=(ny); \
+		if(logicalw_>=1 && logicalh_>=1){ \
+			fx_=(fx_)*(float)logicalw_; \
+			fy_=(fy_)*(float)logicalh_; \
+			if(fx_>logicalw_-1)fx_=logicalw_-1; \
+			if(fy_>logicalh_-1)fy_=logicalh_-1; \
+		}else{ \
+			fx_=(fx_)*(float)winfw_; \
+			fy_=(fy_)*(float)winfh_; \
+		} \
+		if(fx_<0)fx_=0; \
+		if(fy_<0)fy_=0; \
+		(gx)=(int)fx_; \
+		(gy)=(int)fy_; \
 	}while(0)
 
 #ifdef IKURADROID_AUTODRIVE
@@ -1204,22 +1224,41 @@ void ViLE::RunEngine(EngineVN *engine){
 				// synthesise a mouse stream from them, but that stream is
 				// what kept getting lost between the Java layer and this
 				// loop on some devices. Touch stays touch end to end now.
+				//
+				// The DOWN is hover-only: it paints the pressed item but
+				// must not advance text (keyok) or skip animations, or
+				// every captured swipe would click before the gesture
+				// tracker can claim it. The press/release pair is
+				// collapsed onto the FINGERUP coordinates instead.
 				int gx,gy;
 				VILE_MAP_INPUT_FINGER(event.tfinger.x,
 				                event.tfinger.y,gx,gy);
-                                LOGCAT("ikuradroid input: finger down norm=(%.3f,%.3f) logical=(%d,%d)",event.tfinger.x,event.tfinger.y,gx,gy);
 				engine->EventHostMouseMove(
-				                        screenSurface,gx,gy);
-				engine->EventHostMouseLeftDown(
 				                        screenSurface,gx,gy);
 			}
 			else if(event.type==SDL_FINGERUP){
 				int gx,gy;
 				VILE_MAP_INPUT_FINGER(event.tfinger.x,
 				                event.tfinger.y,gx,gy);
-                                LOGCAT("ikuradroid input: finger up norm=(%.3f,%.3f) logical=(%d,%d)",event.tfinger.x,event.tfinger.y,gx,gy);
-				engine->EventHostMouseLeftUp(
-				                        screenSurface,gx,gy);
+				if(event.tfinger.pressure<=0.0f){
+					// The Java gesture tracker consumed the touch after
+					// the live DOWN already reached the engine (menu/
+					// cancel swipe confirmed, second finger, system
+					// cancel). Zero pressure marks the synthetic UP as a
+					// cancel: drop the hover state, never commit a click.
+					engine->EventHostTouchCancel(
+					                        screenSurface,gx,gy);
+				}
+				else{
+					// The click lands here: a tracked touch sent the live
+					// DOWN as hover-only motion, so the press/release pair
+					// collapses onto the release coordinates. The hover
+					// was already painted at touch-down time.
+					engine->EventHostMouseLeftDown(
+					                        screenSurface,gx,gy);
+					engine->EventHostMouseLeftUp(
+					                        screenSurface,gx,gy);
+				}
 			}
 			else if(event.type==SDL_KEYDOWN){
 				engine->EventHostKeyDown(event.key.keysym.sym);

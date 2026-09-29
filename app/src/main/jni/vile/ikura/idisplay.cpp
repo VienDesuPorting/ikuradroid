@@ -106,6 +106,10 @@ bool IkuraDisplay::FocusEnter(){
 }
 
 bool IkuraDisplay::FocusLeave(){
+	// A cancelled live touch drops the widget focus: the hovered
+	// spot must not survive the gesture (menu/cancel swipes,
+	// second finger and system cancels all land here).
+	selected=-1;
 	Refresh();
 	return true;
 }
