@@ -28,4 +28,12 @@
 // atomic on every supported ABI and NativeID() itself is stateless.
 extern EngineVN *g_running_engine;
 
+// Asks the Java UI to open the slot dialog (SDLActivity::
+// openSaveLoadFromEngine). Must run on the engine thread - the caller
+// is EventGameDialog, with the engine parked in g_running_engine.
+// Returns false when the Java side cannot be reached (host builds, a
+// torn-down activity, a broken bridge), so the caller can fall back
+// to the native StdSave/StdLoad widgets.
+bool BridgeRequestSaveLoadDialog(bool Save);
+
 #endif

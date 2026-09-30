@@ -408,23 +408,10 @@ void Nocturnal::EventGameDialog(VN_DIALOGS Dialog){
 		main->SetVisible(true);
 		PlayMusic("02");
 	}
-	else if(Dialog==VD_SAVE){
-		StdSave *dlg=new StdSave(this);
-		SDL_Surface *sback=LoadImage("omabg.ggd");
-		if(sback){
-			dlg->Blit(sback);
-			SDL_FreeSurface(sback);
-		}
-		AddWidget(dlg,VL_DIALOG);
-	}
-	else if(Dialog==VD_LOAD){
-		StdLoad *dlg=new StdLoad(this);
-		SDL_Surface *sback=LoadImage("omabg.ggd");
-		if(sback){
-			dlg->Blit(sback);
-			SDL_FreeSurface(sback);
-		}
-		AddWidget(dlg,VL_DIALOG);
+	else if(Dialog==VD_SAVE || Dialog==VD_LOAD){
+		// The Java slot dialog (base router) replaces the native
+		// StdSave/StdLoad widgets, matching every other engine
+		EngineVN::EventGameDialog(Dialog);
 	}
 	else if(Dialog==VD_CREDITS){
 		// Scroll staffroll

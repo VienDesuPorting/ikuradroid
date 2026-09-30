@@ -159,8 +159,9 @@ bool MCMain::InputOk(Widget *Object){
 		retval=true;
 	}
 	else if(Object==w_button_loadgame){
-		// Load dialog on top of this one
-		engine->AddWidget(new MCLoad((Mayclub*)engine),VL_DIALOG);
+		// Java slot dialog via the base router - on top of this
+		// one, matching every other save/load entry point
+		engine->EventGameDialog(VD_LOAD);
 		retval=true;
 	}
 	else if(Object==w_button_album){

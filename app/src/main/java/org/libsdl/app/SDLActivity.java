@@ -655,7 +655,36 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             onNativeKeyDown(saveMode ? KeyEvent.KEYCODE_F6 : KeyEvent.KEYCODE_F5);
             return;
         }
+        showSaveLoadDialog(saveMode, prefix);
+    }
+
+    /** Mounts the slot dialog with an already resolved prefix. Split
+     *  from openSaveLoadDialog so engine-initiated requests can skip
+     *  the F5/F6 hotkey fallback above: that fallback bounces back
+     *  into the engine and would resurface as another dialog request
+     *  instead of a dialog. */
+    private void showSaveLoadDialog(boolean saveMode, String prefix) {
         new SaveLoadDialog(this, saveMode, gCurrentSavePath, prefix).show();
+    }
+
+    /** JNI callback from the engine thread: the engines' own title and
+     *  menu Load/Save buttons (StdTitle, StdMenu, Textview, Options,
+     *  the F5/F6 hotkeys, the Ikura iop_opsl and Will OP83 opcodes)
+     *  funnel into EngineVN::EventGameDialog, which now asks here for
+     *  the Java slot dialog instead of mounting the native
+     *  StdSave/StdLoad widgets. Runs off the UI thread, so hop over
+     *  before touching any views; dropped silently when the activity
+     *  is already going away - the engine keeps its state untouched. */
+    public static void openSaveLoadFromEngine(final boolean saveMode) {
+        final SDLActivity activity = mSingleton;
+        if (activity == null || gCurrentSavePath == null) {
+            return;
+        }
+        final String prefix = nativeGetSavePrefix();
+        if (prefix == null || prefix.length() == 0) {
+            return;
+        }
+        activity.runOnUiThread(() -> activity.showSaveLoadDialog(saveMode, prefix));
     }
 
     // ------------------------------------------------------------------
