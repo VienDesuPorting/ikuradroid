@@ -113,6 +113,13 @@ void Textview::SetTextInterval(Uint32 Milliseconds){
 	}
 }
 
+/*! \brief Pins the dialog row pitch (see Printer::SetLeading) */
+void Textview::SetLeading(int Leading){
+	if(w_text){
+		w_text->SetLeading(Leading);
+	}
+}
+
 void Textview::CompleteText(){
 	if(w_text){
 		w_text->SkipScreen();

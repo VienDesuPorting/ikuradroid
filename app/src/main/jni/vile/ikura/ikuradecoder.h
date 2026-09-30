@@ -204,6 +204,10 @@ class IkuraDecoder : public EngineVN {
 		void SetKey(char *Buffer,int Size);
 		void DecodeScript(Uint8 *Buffer,int Size);
 		bool RunScript(uString Name);
+		void LoadNameTable();
+#ifdef IKURADROID_AUTODRIVE
+		void TestNamePage();
+#endif
 };
 
 #endif

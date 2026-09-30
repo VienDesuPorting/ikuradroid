@@ -5,7 +5,7 @@
       "tested": true,
       "titles": [
         { "name": "Crescendo", "tested": true },
-        { "name": "Heart de Roommate", "tested": false },
+        { "name": "Heart de Roommate", "tested": true },
         { "name": "Cat Girl Alliance", "tested": false },
         { "name": "Hitomi -My Stepsister-", "tested": false },
         { "name": "Idols Galore!", "tested": false },
