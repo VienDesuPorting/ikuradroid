@@ -33,9 +33,13 @@ Heartdr::Heartdr(uString Path) : IkuraDecoder(640,480){
     AddBGM(new ArchiveViLE(Path+"WMSC"));
 
 	AddBGM(new ArchiveIkura(Path+"MIDI"));
-	// Register whatever dologo.* is on disk: releases differ
-	// between DOLOGO.MPG and DOLOGO.AVI holding an MPEG-1 system
-	// stream; the script's bare name matches via SORT_NOEXT.
+	// Openings and the splash live loose in the game folder; the
+	// script names them with their extension (hr_op1.mpg etc).
+	// Releases differ between .mpg and MPEG-1 data stored in a
+	// .avi (the RU Crescendo splash), so register both masks and
+	// keep dologo.* covering any odd splash name on top.
+	AddVideo(new ArchiveFiles(Path+"*.mpg"));
+	AddVideo(new ArchiveFiles(Path+"*.avi"));
 	AddVideo(new ArchiveFiles(Path+"dologo.*"));
 	AddOther(new ArchiveFiles(Path+"*.suf"));
 
