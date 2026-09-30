@@ -43,8 +43,10 @@ CriticalPoint::CriticalPoint(uString Path) : EngineWill(640,480) {
 	AddScripts(new ArchiveWillARC(Path+"Rio.arc"));
 	AddImages(new ArchiveWillARC(Path+"Chip.arc"));
 	AddOther(new ArchiveWillARC(Path+"Chip.arc"));
-	//AddVideo(new ArchiveWillARC(Path+"ENDING.dat"));
-	//AddVideo(new ArchiveFiles(Path+"peach.dat"));
+	// CP videos are plain MPEG system streams that merely carry a .dat
+	// extension (peach.dat etc.) - pick them all up like the *.mpg
+	// wildcard in Heartdr
+	AddVideo(new ArchiveFiles(Path+"*.dat"));
 
 	// Configure textview
 	DestroyWidget(textview);
