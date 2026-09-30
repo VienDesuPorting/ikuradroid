@@ -1307,9 +1307,14 @@ LogError("PM:%s",sx.c_str());
 			i+=2;
 		}
 		else if(cmd==0x04){
-			// ???
-			Uint8 x=GETBYTE(Data+i);
+			// Print character name (1-byte id into the CNS table)
+			Uint16 index=GETBYTE(Data+i);
 			i++;
+			uString name;
+			if(s_names.GetString(index,&name)){
+				w_textview->PrintText(name);
+				w_textview->CompleteText();
+			}
 		}
 		else if(cmd==0x06){
 			// ???
@@ -1393,6 +1398,13 @@ LogError("PM:%s",sx.c_str());
 			LogError("Unknown inline command: 0x%02X",cmd);
 		}
 	}
+#ifdef IKURADROID_AUTODRIVE
+	static bool nametest=getenv("IKURADROID_NAMETEST")!=0;
+	if(nametest){
+		nametest=false;
+		TestNamePage();
+	}
+#endif
 	return true;
 }
 
@@ -1550,6 +1562,76 @@ bool IkuraDecoder::iop_cns(const Uint8 *Data,int Length){
 	LogError("Registering character name %d=%s",index,name);
 	return false;
 }
+
+// Loads the NAME.ISF speaker table (RU HdeR release). The table ships
+// as a standalone script of CNS ops that no scenario ever loads, so
+// the ops are walked straight from the archive: same decrypt chain as
+// RunScript (XOR flavor via DecodeScript, then the ROT6 pass
+// IkuraScript::Load applies) and every CNS payload feeds iop_cns.
+// Games without a NAME.ISF keep an empty table.
+void IkuraDecoder::LoadNameTable(){
+	if(s_names.GetCount()){
+		return;
+	}
+	RWops *blob=0;
+	if((blob=LoadScript("NAME.ISF","ISF"))){
+		int tlength=blob->Seek(0,SEEK_END);
+		if(tlength>(int)0){
+			blob->Seek(0,SEEK_SET);
+			Uint8 *tbuffer=new Uint8[tlength];
+			if(blob->Read(tbuffer,tlength)>(int)0){
+				DecodeScript(tbuffer,tlength);
+				for(int i=8;i<tlength;i++){
+					tbuffer[i]=(((tbuffer[i]<<6)|(tbuffer[i]>>2))&0xFF);
+				}
+				Uint32 pos=tbuffer[0]|(tbuffer[1]<<8)|(tbuffer[2]<<16)|(tbuffer[3]<<24);
+				while(pos+2<=(Uint32)tlength){
+					Uint8 lb=tbuffer[pos+1];
+					int hdr=(lb&0x80)?3:2;
+					int length=(lb&0x80)?(((lb&0x7F)<<8)|tbuffer[pos+2])-3:lb-2;
+					if((lb&0x80)&&pos+2>=(Uint32)tlength){
+						break;
+					}
+					if(length<0||pos+hdr+length>(Uint32)tlength){
+						break;
+					}
+					if(tbuffer[pos]==IOP_CNS){
+						iop_cns(tbuffer+pos+hdr,length);
+					}
+					pos+=hdr+length;
+				}
+			}
+			delete [] tbuffer;
+		}
+		delete blob;
+	}
+}
+
+#ifdef IKURADROID_AUTODRIVE
+// Headless verification: feeds a synthetic PM page (clear, cmd 0x04
+// speaker id 0, text) through the real iop_pm with the real NAME.ISF
+// table data, reproducing the exact production rendering path.
+void IkuraDecoder::TestNamePage(){
+	if(!s_names.GetCount()){
+		LogError("NAMETEST: table empty");
+		return;
+	}
+	LogError("NAMETEST: entries=%d",s_names.GetCount());
+	// A dialog page: CLEAR, speaker id 0 (the NAME.ISF first entry),
+	// then the CP1251 quote text exactly how the scripts store it
+	Uint8 page[]={
+		0x00,		// window
+		0x03,		// clear
+		0x04, 0x00,	// speaker: NAME.ISF entry 0
+		0x06,		// (no-op)
+		0xFF, 0x22, 0xCC, 0xE0, 0xF2, 0xFC, 0x20,
+		0xE5, 0xE3, 0xEE, 0x20, 0xF2, 0xE0, 0xEA, 0x2E,
+		0x00
+	};
+	iop_pm(page,sizeof(page));
+	LogError("NAMETEST: page rendered");
+}
+#endif
 
 // HdeR speaker marker (IkuraDroid extension): the script patcher stores
 // a speaker id in the KIDSCAN payload byte 1. Vanilla scripts keep it

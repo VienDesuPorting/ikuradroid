@@ -29,6 +29,7 @@ class Printer : public Widget {
 		SDL_Rect crect;			//!< Client rect relative to widget
 		SDL_Rect trect;			//!< Current print position
 		int charcount;			//!< Number of printed characters
+		int leading;			//!< Row pitch override (0 = font height)
 		bool wordwrap;			//!< Wether or not to wrap text lines
 		bool clearscreen;		//!< Clear screen at next pass (wordwrap only)
 		bool printnext();
@@ -51,6 +52,7 @@ class Printer : public Widget {
 		void Clear();
 		void ClearScreen();
 		void SetWordwrap(bool Enable);
+		void SetLeading(int Leading);
 		void SetBackgroundColor(Uint32 Color);
 		void SetFontFace(string Filename);
 		void SetFontSize(int Size);

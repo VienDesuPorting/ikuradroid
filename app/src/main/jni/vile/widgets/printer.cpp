@@ -19,9 +19,12 @@ Printer::Printer(int X,int Y,int Width,int Height) : Widget(X,Y,Width,Height){
 	// Preset values
 	stext=0;
 	stexturetext=0;
+	trect.x=0;
+	trect.y=0;
 	index=0;
 	interval=50;
 	charcount=0;
+	leading=0;
 	wordwrap=true;
 	clearscreen=false;
 	shadow_x=0;
@@ -40,9 +43,12 @@ Printer::Printer(SDL_Rect Pos) : Widget(Pos){
 	// Preset values
 	stext=0;
 	stexturetext=0;
+	trect.x=0;
+	trect.y=0;
 	index=0;
 	interval=50;
 	charcount=0;
+	leading=0;
 	wordwrap=true;
 	clearscreen=false;
 	shadow_x=0;
@@ -61,9 +67,12 @@ Printer::Printer() : Widget(){
 	// Preset values
 	stext=0;
 	stexturetext=0;
+	trect.x=0;
+	trect.y=0;
 	index=0;
 	interval=50;
 	charcount=0;
+	leading=0;
 	wordwrap=true;
 	clearscreen=false;
 	shadow_x=0;
@@ -94,6 +103,17 @@ Printer::~Printer(){
 
 void Printer::SetWordwrap(bool Enable){
 	wordwrap=Enable;
+}
+
+/*! \brief Pins the row pitch (leading) between text rows
+ *  \param Leading Row pitch in pixels (0 restores the font height)
+ *
+ *  Rows advance by the height of the font's "A" glyph by default.
+ *  Engines that space dialog rows on a fixed grid (Ikura: 28px) pin
+ *  the pitch with this override instead.
+ */
+void Printer::SetLeading(int Leading){
+	leading=Leading;
 }
 
 void Printer::SetFontFace(string Name){
@@ -230,6 +250,10 @@ void Printer::Clear(){
 	text="";
 	curtext="";
 	charcount=0;
+	// Define the carriage: printnext no longer resets it when
+	// it recreates the text surface
+	trect.x=0;
+	trect.y=0;
 }
 
 /*! \brief Clear display only
@@ -259,7 +283,9 @@ void Printer::ClearScreen(){
 	}
 	curtext="";
 	charcount=0;
-	trect.y=0;
+	// Continuation pages resume on the body origin: row 2 of
+	// a pinned grid (leading), row 1 on the legacy font grid
+	trect.y=(leading>0?leading:0);
 	trect.x=0;
 }
 
@@ -294,7 +320,7 @@ void Printer::Newline(){
 			int w,h;
 			if(!EDL_SizeUTF8(font_ttf,"A",&w,&h)){
 				trect.x=0;
-				trect.y+=h;
+				trect.y+=(leading>0?leading:h);
 			}
 		}
 		Refresh();
@@ -375,9 +401,10 @@ bool Printer::printnext(){
 
 	if(font_ttf && text.length()){
 		if(!stext){
+			// The carriage is already positioned by the Clear,
+			// ClearScreen and Newline paths; resetting it here would
+			// wipe a pre-stream row advance (the ikura quote-row skip)
 			stext=EDL_CreateSurface(pos.w,pos.w);
-			trect.x=0;
-			trect.y=0;
 		}
 
 		if(!stexturetext){
@@ -397,7 +424,7 @@ bool Printer::printnext(){
 				int w,h;
 				if(!EDL_SizeUTF8(font_ttf,"A",&w,&h)){
 					trect.x=0;
-					trect.y+=h;
+					trect.y+=(leading>0?leading:h);
 				}
 			}
 			else if(text[index]=='\t'){
@@ -419,7 +446,7 @@ bool Printer::printnext(){
 				if(trect.x && trect.x+w>pos.w){
 					// Wrap text and drop whitespace
 					trect.x=0;
-					trect.y+=h;
+					trect.y+=(leading>0?leading:h);
 					index++;
 				}
 			}

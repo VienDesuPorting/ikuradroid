@@ -57,6 +57,9 @@ Heartdr::Heartdr(uString Path) : IkuraDecoder(640,480){
 	cset_batch=true;
 	cset_basey=cset_lasty=0;
 
+	// Register the NAME.ISF speaker table before any scenario runs;
+	// PM cmd 0x04 prints these names on the dialog first row
+	LoadNameTable();
 	// Load standard boot script
 	RunScript("START.ISF");
 }
@@ -79,9 +82,18 @@ const uString Heartdr::NativeName(){
  */
 bool Heartdr::iop_wp(const Uint8 *Data,int Length){
 	bool retval=IkuraDecoder::iop_wp(Data,Length);
-	// Body lines start 45px below the window top on the PC original;
-	// the printer leading accounts for the remaining few pixels.
-	w_textview->SetTextPosition(18,41,574,95);
+	// The PC original prints the dialog on a fixed 28px row grid anchored
+	// to the window skin (measured off the RU release): the name row's
+	// caps land 22px below the skin top - overlapping the body frame -
+	// and the quote row 50px below. The printer derives its row pitch
+	// from the font height (~23px at the script's size), so both the
+	// anchor and the pitch are pinned here: origin (22,17) puts the
+	// first row's ink at +22 (the glyph adds ~5px of headroom inside
+	// the rendered surface) and leading 28 spaces the quote onto +50.
+	// The 130px client height keeps the original's 4-row paging depth
+	// on the wider pitch (a 5th row overflows into the next page).
+	w_textview->SetTextPosition(22,17,574,130);
+	w_textview->SetLeading(28);
 	return retval;
 }
 
@@ -97,7 +109,7 @@ bool Heartdr::iop_wp(const Uint8 *Data,int Length){
  *    highlight strips touch and finger taps never land between
  *    items; a new batch starts when the script returns to an
  *    upper row than the previous item
- *  - captions start level with the message text (abs x=30) and
+ *  - captions start at abs x=30 (4px left of the dialog ink) and
  *    reach the inner right edge of the frame; TextButton shrinks
  *    oversized captions to fit instead of clipping them
  */
