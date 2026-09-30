@@ -10,19 +10,37 @@ Interface: English / Russian. License: GPLv3.
 
 ## Compatibility
 
-Every engine module from the table is compiled into the app, but far from all games have been tested. Verified on a real device: **Crescendo**, **Critical Point** and **Little My Maid**. Little My Maid is still in the works. Treat the remaining titles as untested.
+Every engine module from the table is compiled into the app. A title earns the tested mark only after it has been checked end to end on a real device; what exactly has been reworked is visible in the [changelog](CHANGELOG.en.md).
 
 Current statuses also live in `app/src/main/assets/engines.json` and are shown on the in-app **Engines** screen.
 
-| Engine | Titles | Status |
+| Engine | Title | Status |
 | --- | --- | --- |
-| Ikura GDL | Crescendo, Heart de Roommate, Cat Girl Alliance, Hitomi -My Stepsister-, Idols Galore!, Kana ... Okaeri!, Kana ~ Little Sister, The Sagara Family, Snow, Virgin | verified (Crescendo) |
-| Will | Critical Point, Princess Waltz, Starry Sky, Yume Miru Kusuri, Little My Maid | Critical Point — runs and is completable; Little My Maid — work in progress; rest untested |
-| Crowd | Tokimeki Check-in!, XChange 1, XChange 3 | untested |
-| C-Ware | DiviDead | untested |
-| JAST | Season of the Sakura, 3 Sisters Story, Runaway City | untested |
-| Windy | Mayclub VR Dating SX, Nocturnal Illusion Renewal | untested |
-| T-Love | True Love | untested |
+| Ikura GDL | Crescendo | tested |
+| Ikura GDL | Heart de Roommate | tested |
+| Ikura GDL | Cat Girl Alliance | not tested |
+| Ikura GDL | Hitomi -My Stepsister- | not tested |
+| Ikura GDL | Idols Galore! | not tested |
+| Ikura GDL | Kana ... Okaeri! | not tested |
+| Ikura GDL | Kana ~ Little Sister | not tested |
+| Ikura GDL | The Sagara Family | not tested |
+| Ikura GDL | Snow | not tested |
+| Ikura GDL | Virgin | not tested |
+| Will | Critical Point | tested |
+| Will | Princess Waltz | not tested |
+| Will | Starry Sky | not tested |
+| Will | Yume Miru Kusuri | not tested |
+| Will | Little My Maid | not tested |
+| Crowd | Tokimeki Check-in! | not tested |
+| Crowd | XChange 1 | not tested |
+| Crowd | XChange 3 | not tested |
+| C-Ware | DiviDead | not tested |
+| JAST | Season of the Sakura | not tested |
+| JAST | 3 Sisters Story | not tested |
+| JAST | Runaway City | not tested |
+| Windy | Mayclub VR Dating SX | not tested |
+| Windy | Nocturnal Illusion Renewal | not tested |
+| T-Love | True Love | not tested |
 
 ## Known issues
 

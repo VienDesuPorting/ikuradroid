@@ -10,18 +10,36 @@ English version: [README.en.md](README.en.md)
 
 ## Совместимость
 
-Все модули из таблицы уже собраны в приложении, но проверены далеко не все игры. На реальном устройстве сейчас проверены **Crescendo**, **Critical Point** и **Little My Maid**. Little My Maid пока в доработке. Остальные тайтлы следует считать непроверенными.
+Все модули из таблицы уже собраны в приложении. Статус «проверен» получает тайтл, проверенный на реальном устройстве от начала до конца; что именно доработано в каждом тайтле — видно в [чейнджлоге](CHANGELOG.md).
 
 Актуальные статусы также хранятся в `app/src/main/assets/engines.json` и показываются на экране **«Движки»**.
 
-| Движок | Тайтлы | Статус |
+| Движок | Тайтл | Статус |
 | --- | --- | --- |
-| Ikura GDL | Crescendo, Heart de Roommate, Cat Girl Alliance, Hitomi -My Stepsister-, Idols Galore!, Kana ... Okaeri!, Kana ~ Little Sister, The Sagara Family, Snow, Virgin | проверен (Crescendo) |
-| Will | Critical Point, Princess Waltz, Starry Sky, Yume Miru Kusuri, Little My Maid | Critical Point — работает и проходим; Little My Maid — в доработке; остальное не проверено |
-| Crowd | Tokimeki Check-in!, XChange 1, XChange 3 | не проверен |
+| Ikura GDL | Crescendo | проверен |
+| Ikura GDL | Heart de Roommate | проверен |
+| Ikura GDL | Cat Girl Alliance | не проверен |
+| Ikura GDL | Hitomi -My Stepsister- | не проверен |
+| Ikura GDL | Idols Galore! | не проверен |
+| Ikura GDL | Kana ... Okaeri! | не проверен |
+| Ikura GDL | Kana ~ Little Sister | не проверен |
+| Ikura GDL | The Sagara Family | не проверен |
+| Ikura GDL | Snow | не проверен |
+| Ikura GDL | Virgin | не проверен |
+| Will | Critical Point | проверен |
+| Will | Princess Waltz | не проверен |
+| Will | Starry Sky | не проверен |
+| Will | Yume Miru Kusuri | не проверен |
+| Will | Little My Maid | не проверен |
+| Crowd | Tokimeki Check-in! | не проверен |
+| Crowd | XChange 1 | не проверен |
+| Crowd | XChange 3 | не проверен |
 | C-Ware | DiviDead | не проверен |
-| JAST | Season of the Sakura, 3 Sisters Story, Runaway City | не проверен |
-| Windy | Mayclub VR Dating SX, Nocturnal Illusion Renewal | не проверен |
+| JAST | Season of the Sakura | не проверен |
+| JAST | 3 Sisters Story | не проверен |
+| JAST | Runaway City | не проверен |
+| Windy | Mayclub VR Dating SX | не проверен |
+| Windy | Nocturnal Illusion Renewal | не проверен |
 | T-Love | True Love | не проверен |
 
 ## Известные баги
