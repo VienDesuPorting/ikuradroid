@@ -17,11 +17,13 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.hardware.Sensor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.text.Editable;
 import android.text.InputType;
@@ -49,6 +51,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -89,6 +92,12 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // The in-game menu lives in exactly one dialog instance; the
     // full-screen swipe gesture tracking state (see dispatchTouchEvent).
     private BottomSheetDialog mGameMenuSheet;
+    // The settings stub floats a timed notice over the menu; the
+    // popup and its hide callback are tracked so a repeat tap
+    // restarts the 5 second window instead of stacking notices.
+    private PopupWindow mSettingsNotice;
+    private Runnable mSettingsNoticeHide;
+    private final Handler mUiHandler = new Handler(Looper.getMainLooper());
     private boolean mSwipeTracking, mSwipeConsumed, mSwipeAborted, mSwipePassed;
     private float mSwipeStartX, mSwipeStartY;
     // True while a captured gesture has already handed its ACTION_DOWN
@@ -528,10 +537,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // ------------------------------------------------------------------
     // The in-game menu. BACK, MENU or the bottom-up swipe opens a
     // Material 3 bottom sheet; every engine item maps to the virtual key
-    // the engine listens for (the F5/F6/F7/F8 + CTRL mapping of the
+    // the engine listens for (the F5/F6/F8 + CTRL mapping of the
     // original build is kept as is) - except Quit, which tears the game
     // down from the app side and never shows the engine's own
-    // "Exit game?" dialog.
+    // "Exit game?" dialog, and Settings, which is a disabled stub
+    // floating a timed notice.
     // ------------------------------------------------------------------
 
     private void showGameMenu() {
@@ -546,16 +556,16 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 .inflate(R.layout.sheet_ingame, null);
         LinearLayout items = (LinearLayout) root.findViewById(R.id.ingame_items);
 
-        addMenuRow(sheet, items, R.drawable.ic_ingame_title, R.string.menu_title, 0,
+        addMenuRow(sheet, items, R.drawable.ic_ingame_title, R.string.menu_title, 0, true,
                 () -> onNativeKeyDown(KeyEvent.KEYCODE_F8));
-        addMenuRow(sheet, items, R.drawable.ic_ingame_save, R.string.menu_save, 0,
+        addMenuRow(sheet, items, R.drawable.ic_ingame_save, R.string.menu_save, 0, true,
                 // Java slot dialog replaces the old F6 -> native StdSave
                 // detour; the engine still does the actual save.
                 () -> openSaveLoadDialog(true));
-        addMenuRow(sheet, items, R.drawable.ic_ingame_load, R.string.menu_load, 0,
+        addMenuRow(sheet, items, R.drawable.ic_ingame_load, R.string.menu_load, 0, true,
                 () -> openSaveLoadDialog(false));
         addMenuRow(sheet, items, R.drawable.ic_ingame_skip, R.string.menu_skip,
-                skip ? R.string.skip_on : R.string.skip_off,
+                skip ? R.string.skip_on : R.string.skip_off, true,
                 () -> {
                     // Skip toggle: hold/release CTRL.
                     if (skip) {
@@ -565,12 +575,17 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                     }
                     skip = !skip;
                 });
-        addMenuRow(sheet, items, R.drawable.ic_ingame_settings, R.string.menu_settings, 0,
-                () -> onNativeKeyDown(KeyEvent.KEYCODE_F7));
-        addMenuRow(sheet, items, R.drawable.ic_ingame_quit, R.string.menu_quit, 0,
+        // Settings is a stub for now: the row renders disabled and a
+        // tap only floats a timed notice - no native options dialog.
+        addMenuRow(sheet, items, R.drawable.ic_ingame_settings, R.string.menu_settings, 0, false,
+                () -> showSettingsStubNotice());
+        addMenuRow(sheet, items, R.drawable.ic_ingame_quit, R.string.menu_quit, 0, true,
                 () -> quitGame());
 
-        sheet.setOnDismissListener(d -> mGameMenuSheet = null);
+        sheet.setOnDismissListener(d -> {
+            hideSettingsStubNotice();
+            mGameMenuSheet = null;
+        });
         mGameMenuSheet = sheet;
         sheet.setContentView(root);
         sheet.show();
@@ -598,7 +613,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     }
 
     private void addMenuRow(final BottomSheetDialog sheet, LinearLayout items,
-                            int iconRes, int labelRes, int subRes,
+                            int iconRes, int labelRes, int subRes, boolean enabled,
                             final Runnable action) {
         View row = getLayoutInflater().inflate(R.layout.sheet_ingame_item, items, false);
         ImageView icon = (ImageView) row.findViewById(R.id.ingame_icon);
@@ -617,11 +632,79 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             sub.setText(subRes);
             sub.setVisibility(View.VISIBLE);
         }
+        if (!enabled) {
+            // M3 disabled content sits at 38% opacity. The tap
+            // target stays live on purpose: the action decides what
+            // tapping an inactive row does (the settings stub floats
+            // a notice and keeps the menu open).
+            final float disabledAlpha = 0.38f;
+            icon.setAlpha(disabledAlpha);
+            text.setAlpha(disabledAlpha);
+            if (subRes != 0) {
+                sub.setAlpha(disabledAlpha);
+            }
+        }
         row.setOnClickListener(v -> {
-            sheet.dismiss();
+            if (enabled) {
+                sheet.dismiss();
+            }
             action.run();
         });
         items.addView(row);
+    }
+
+    /** The settings sheet item is a placeholder: a tap leaves the
+     *  menu open and floats a small notice for five seconds instead
+     *  of mounting any dialog. The card is built in code (no layout
+     *  resource) in the M3 snackbar look - inverse surface, rounded
+     *  corners. It is shown from the sheet's own window token, so it
+     *  lands above the sheet and its scrim, and it dies with the
+     *  sheet (the dismiss listener tears it down explicitly). */
+    private void showSettingsStubNotice() {
+        final BottomSheetDialog sheet = mGameMenuSheet;
+        if (sheet == null || !sheet.isShowing()) {
+            return;
+        }
+        hideSettingsStubNotice();
+
+        float density = getResources().getDisplayMetrics().density;
+        TextView note = new TextView(this);
+        note.setText(R.string.menu_settings_stub);
+        note.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        note.setTextColor(themeColor(
+                com.google.android.material.R.attr.colorOnSurfaceInverse));
+        int padH = (int) (16 * density);
+        int padV = (int) (12 * density);
+        note.setPadding(padH, padV, padH, padV);
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(themeColor(
+                com.google.android.material.R.attr.colorSurfaceInverse));
+        background.setCornerRadius(16 * density);
+        note.setBackground(background);
+
+        mSettingsNotice = new PopupWindow(note,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        mSettingsNotice.setElevation(6 * density);
+        // Centered over the menu window: the anchor view carries the
+        // sheet's window token, so the notice floats above the scrim.
+        mSettingsNotice.showAtLocation(sheet.getWindow().getDecorView(),
+                Gravity.CENTER, 0, 0);
+        mSettingsNoticeHide = mSettingsNotice::dismiss;
+        mUiHandler.postDelayed(mSettingsNoticeHide, 5000);
+    }
+
+    /** Tears the stub notice down - the 5 second timer and the
+     *  menu's dismiss listener both land here. */
+    private void hideSettingsStubNotice() {
+        if (mSettingsNoticeHide != null) {
+            mUiHandler.removeCallbacks(mSettingsNoticeHide);
+            mSettingsNoticeHide = null;
+        }
+        if (mSettingsNotice != null) {
+            mSettingsNotice.dismiss();
+            mSettingsNotice = null;
+        }
     }
 
     /** Resolves a theme attribute color (M3 roles come from the activity theme). */
