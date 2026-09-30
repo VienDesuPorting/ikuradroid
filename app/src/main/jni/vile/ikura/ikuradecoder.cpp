@@ -1420,15 +1420,19 @@ bool IkuraDecoder::iop_das(const Uint8 *Data,int Length){
 // Load CDDA music track
 bool IkuraDecoder::iop_dap(const Uint8 *Data,int Length){
 	int channel=parser.DecodeValue(GETDWORD(Data));
-	if(!PlayMusic(EDL_Format("TK%02d",channel))){
-		if(!PlayMusic(EDL_Format("TK_%02d",channel))){
-			if(!PlayMusic(EDL_Format("TK-%02d",channel))){
-				LogError("CDDA playback not supported!");
-			}
-		}
-	}
-    LogError("Load CDDA music track %s",(char*)Data);
-	PlayMusic((char*)Data);
+	// The PC engine pulled track N straight off the game CD.
+	// Harddisk installs ship the very same tracks as files under
+	// several naming schemes: TK## rips sit loose in the game
+	// folder while the SM2MPX WMSC cabinet indexes them as
+	// MUSIC##.WAV. Poll the known bases (ArchiveItem matching is
+	// case-insensitive) before giving up.
+	if(PlayMusic(EDL_Format("TK%02d",channel))) return false;
+	if(PlayMusic(EDL_Format("TK_%02d",channel))) return false;
+	if(PlayMusic(EDL_Format("TK-%02d",channel))) return false;
+	if(PlayMusic(EDL_Format("MUSIC%02d",channel))) return false;
+	if(PlayMusic(EDL_Format("MUSIC%d",channel))) return false;
+	if(PlayMusic(EDL_Format("%02d",channel))) return false;
+	LogError("CDDA track %d has no matching BGM file",channel);
 	return false;
 }
 

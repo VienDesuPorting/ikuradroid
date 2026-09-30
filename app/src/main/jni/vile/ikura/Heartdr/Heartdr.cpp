@@ -23,7 +23,13 @@ Heartdr::Heartdr(uString Path) : IkuraDecoder(640,480){
     //AddVoices(new ArchiveViLE("VOICE3"));
 
 	AddSE(new ArchiveIkura(Path+"SE"));
-	//AddBGM(new ArchiveIkura(Path+"WMSC2"));
+	// BGM: WMSC ships as a plain SM2MPX10 cabinet indexing
+	// MUON.WAV plus MUSIC01..MUSIC23.WAV (the harddisk install's
+	// copy of the CD-DA tracks). ArchiveViLE expected a converted
+	// ViLEPACK and indexed nothing here, silencing every DAP
+	// track; index the real file first and keep the converted
+	// pack loader as a fallback.
+	AddBGM(new ArchiveIkura(Path+"WMSC"));
     AddBGM(new ArchiveViLE(Path+"WMSC"));
 
 	AddBGM(new ArchiveIkura(Path+"MIDI"));
