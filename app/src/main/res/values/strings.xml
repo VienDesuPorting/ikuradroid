@@ -43,7 +43,7 @@
 
     <!-- Library -->
     <string name="library_empty_title">Library is empty</string>
-    <string name="library_empty_body">Choose the folder with your visual novels. Each game lives in its own subfolder containing vilevn.pck; picking a game folder directly works too. Folders are added one by one, games are read from their folders in place, and your savegames stay in the app storage.</string>
+    <string name="library_empty_body">Choose the folder with your visual novels. Each game lives in its own subfolder; picking a game folder directly works too. Folders are added one by one, games are read from their folders in place, and your savegames stay in the app storage.</string>
     <string name="library_pick_folder">Choose folder</string>
     <string name="library_added_title">Folder added</string>
     <string name="library_added_message">“%1$s” is now in the library. Add another folder?</string>

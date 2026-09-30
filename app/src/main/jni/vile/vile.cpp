@@ -663,10 +663,8 @@ int main(int argc,char **argv){
 				LogVerbose("Widget graphics: %s",Cfg::Path::resource.c_str());
 			}
 			else{
-				// Widget graphics ship inside the binary; games no longer
-				// need to carry a vilevn.pck in their folder
-				LogVerbose("No vilevn.pck - using the embedded widget "
-						"graphics pack");
+				// Widget graphics ship inside the binary - the normal
+				// case since the games were decoupled from vilevn.pck
 			}
 			// Autodetect size if with or height is invalid
 			if(!Cfg::Display::Width || !Cfg::Display::Height){
