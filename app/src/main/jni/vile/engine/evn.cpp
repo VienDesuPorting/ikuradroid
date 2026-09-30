@@ -532,8 +532,21 @@ void EngineVN::EventGameDialog(VN_DIALOGS Dialog){
 		AddWidget(opt,VL_DIALOG);
 	}
 	else if(Dialog==VD_SHUTDOWN){
+#ifdef __ANDROID__
+                // Android skips the desktop-style "Exit game?"
+                // prompt: every in-game exit (the ikura ED opcode,
+                // engine menus, the options dialog) funnels into
+                // EventGameDialog, and tapping the game's own exit
+                // button already is the confirmation. Push the
+                // shutdown signal straight away - the very same one
+                // the app's swipe menu quit uses - so the pump saves
+                // and leaves without another dialog. StdHalt stays
+                // for host builds.
+                EventGameShutdown();
+#else
         Halt = new StdHalt(this);
 		AddWidget(Halt,VL_DIALOG);
+#endif
 	}
 	else if(Dialog==VD_SAVE){
 		// The Java slot dialog replaces the native StdSave widget
