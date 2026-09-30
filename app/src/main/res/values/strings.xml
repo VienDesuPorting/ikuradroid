@@ -95,9 +95,9 @@
     <string name="game_gone">The game folder is no longer accessible</string>
 
     <!-- Engines screen. Titles mirror the NativeName() strings of the
-         compiled engine modules (jni/vile); statuses are honest: only
-         Ikura GDL has been run on a real device so far. -->
-    <string name="engines_note">Script engines implemented by ViLE and compiled into this build. Ikura GDL is verified - Crescendo runs end to end; every other engine and title is marked "not tested" until it has been checked on a real device.</string>
+         compiled engine modules (jni/vile); the tested mark is earned
+         only by a real-device run. -->
+    <string name="engines_note">Script engines implemented by ViLE and compiled into this build. A title earns the tested mark only after it has been checked end to end on a real device; what exactly has been reworked is visible in the changelog. Everything else stays marked as not tested for now.</string>
     <string name="engine_status_tested">tested</string>
     <string name="engine_status_not_tested">not tested</string>
     <string name="engines_data_error">The engine list (engines.json) is missing or malformed.</string>
