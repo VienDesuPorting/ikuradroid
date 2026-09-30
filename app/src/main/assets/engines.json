@@ -24,7 +24,7 @@
         { "name": "Princess Waltz", "tested": false },
         { "name": "Starry Sky", "tested": false },
         { "name": "Yume Miru Kusuri", "tested": false },
-        { "name": "Little My Maid", "tested": true }
+        { "name": "Little My Maid", "tested": false }
       ]
     },
     {
