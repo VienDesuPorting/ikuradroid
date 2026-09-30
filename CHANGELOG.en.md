@@ -2,6 +2,8 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
+All releases older than 2.5.0 have been removed from GitHub Releases: after the rework that went into 2.5.0, the old builds are obsolete and no longer make sense. The current version is 2.5.0.
+
 ## 2.5.0 — 2026-10-01
 
 - Heart de Roommate: a real textbox with the graphics from the game files, and choices that actually work. The text is drawn with the font bundled with the app instead of the engine's built-in one. The textbox renders without distortion, and the scenario no longer stalls on an empty screen.
