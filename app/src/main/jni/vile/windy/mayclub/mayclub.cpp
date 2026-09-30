@@ -291,11 +291,10 @@ void Mayclub::EventGameDialog(VN_DIALOGS Dialog){
 		main->SetVisible(true);
 		PlayMusic("01");
 	}
-	else if(Dialog==VD_SAVE){
-		AddWidget(new MCSave(this),VL_DIALOG);
-	}
-	else if(Dialog==VD_LOAD){
-		AddWidget(new MCLoad(this),VL_DIALOG);
+	else if(Dialog==VD_SAVE || Dialog==VD_LOAD){
+		// The Java slot dialog (base router) replaces the native
+		// MCSave/MCLoad widgets, matching every other engine
+		EngineVN::EventGameDialog(Dialog);
 	}
 	else if(Dialog==VD_LOG){
 		AddWidget(new MCBack(this,w_tv),VL_DIALOG);

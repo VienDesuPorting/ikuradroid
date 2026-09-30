@@ -15,6 +15,7 @@
 
 #include "evn.h"
 #include "../media/vplmpeg.h"
+#include "../javabridge.h"
 
 EngineVN::EngineVN(int Width,int Height) : EngineVideo(Width,Height){
 	// Set default values
@@ -535,12 +536,20 @@ void EngineVN::EventGameDialog(VN_DIALOGS Dialog){
 		AddWidget(Halt,VL_DIALOG);
 	}
 	else if(Dialog==VD_SAVE){
-        Sav =new StdSave(this);
-		AddWidget(Sav,VL_DIALOG);
+		// The Java slot dialog replaces the native StdSave widget
+		// wherever the bridge is up - the in-engine buttons must not
+		// surface the native UI. The native dialog stays only as the
+		// no-bridge fallback (host builds)
+		if(!BridgeRequestSaveLoadDialog(true)){
+			Sav =new StdSave(this);
+			AddWidget(Sav,VL_DIALOG);
+		}
 	}
 	else if(Dialog==VD_LOAD){
-        Loa = new StdLoad(this);
-		AddWidget(Loa,VL_DIALOG);
+		if(!BridgeRequestSaveLoadDialog(false)){
+			Loa = new StdLoad(this);
+			AddWidget(Loa,VL_DIALOG);
+		}
 	}
 }
 
