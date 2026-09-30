@@ -5,8 +5,9 @@
 
     <string name="app_name">IkuraDroid</string>
 
-    <!-- In-game menu. SDLActivity maps the items to the F5/F6/F7/F8 and
-         CTRL hotkeys of the engine; Quit exits from the app side. -->
+    <!-- In-game menu. SDLActivity maps the items to the F5/F6/F8 and
+         CTRL hotkeys of the engine; Quit exits from the app side and
+         Settings is a disabled stub for now. -->
     <string name="ingame_menu">Game menu</string>
     <string name="skip_on">Auto-skip enabled</string>
     <string name="skip_off">Auto-skip off</string>
@@ -15,6 +16,7 @@
     <string name="menu_load">Load</string>
     <string name="menu_skip">Skip</string>
     <string name="menu_settings">Settings</string>
+    <string name="menu_settings_stub">Will be improved in the next version</string>
     <string name="menu_quit">Quit</string>
 
     <!-- Java save/load UI. The slot list is read from disk

@@ -5,8 +5,9 @@
 
     <string name="app_name">IkuraDroid</string>
 
-    <!-- Внутриигровое меню. SDLActivity проецирует пункты на F5–F8 и CTRL
-         движка; «Выйти» завершает игру с самой стороны приложения. -->
+    <!-- Внутриигровое меню. SDLActivity проецирует пункты на F5, F6 и F8,
+         а также CTRL движка; «Выйти» завершает игру с самой стороны
+         приложения, «Настройки» пока заглушка. -->
     <string name="ingame_menu">Меню игры</string>
     <string name="skip_on">Автопропуск включён</string>
     <string name="skip_off">Автопропуск выключен</string>
@@ -15,6 +16,7 @@
     <string name="menu_load">Загрузить</string>
     <string name="menu_skip">Пропуск</string>
     <string name="menu_settings">Настройки</string>
+    <string name="menu_settings_stub">Будет доработано в следующей версии</string>
     <string name="menu_quit">Выйти</string>
 
     <!-- Java-экран сохранений/загрузки. Список слотов читается с диска
