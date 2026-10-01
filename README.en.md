@@ -126,7 +126,7 @@ The bundled SDL 2.0.3 was already upgraded to 2.30.x in 1.9.8: SDL 2.30.12 is in
 
 - **ViLE (2010–2012)** — the desktop interpreter by the ViLE Team, lead developer BaSF. Development stopped in 2012; the original project is available on SourceForge.
 - **Vile (2015–2016)** — an Android port of ViLE 0.4.13, versions 0.5–0.54. It was published in the «Визуальные новеллы для Android» VK community, then abandoned and the sources disappeared. That community and the «Визуальные новеллы для Android» Telegram channel of the VienDesu! Porting Team are different projects.
-- **IkuraDroid (2026)** — the Android port sources were recovered from an archive saved in 2024. Since then the toolchain and dependencies were updated, the libraries were rebuilt for AArch64 and the launcher moved to Material 3. Development is continued by the VienDesu! Porting Team.
+- **IkuraDroid (2026)** — the Android port sources were recovered from an archive saved in 2024. Since then the toolchain and dependencies were updated, the libraries were rebuilt for AArch64 and the launcher moved to Material 3. The engine core has seen a major rework as well: skinned text windows with speaker names, MPEG-1 video and CD-DA playback, a new save system and a library with cover art. Development is continued by the VienDesu! Porting Team.
 
 The core directories and files (`jni/vile/`, `vile.cpp`) still keep the old ViLE names. This makes it easier to compare the code against the SourceForge upstream without breaking the historical structure.
 
