@@ -44,8 +44,7 @@ Current statuses also live in `app/src/main/assets/engines.json` and are shown o
 
 ## Known issues
 
-- The Exit button in the save/load menu does not work yet.
-- The Settings button does not work and/or misbehaves in certain titles — it will be polished in future updates.
+- The menu audio may crackle very faintly, but it disappears later during gameplay. This will be fixed in the next version.
 
 ## Additional modules
 
