@@ -54,7 +54,7 @@ Still planned: speaker name plates and an extra playthrough check on real saves.
 
 ## Installation
 
-1. Grab an APK from the [Releases](https://github.com/christopher-vn/ikuradroid/releases) page and install it. `arm64-v8a` and `armeabi-v7a` are supported.
+1. Grab an APK from the Releases page and install it. `arm64-v8a` and `armeabi-v7a` are supported.
 2. Put each game into its own folder. For example:
 
    ```text
