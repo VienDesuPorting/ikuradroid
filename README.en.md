@@ -75,7 +75,7 @@ Files are read from the storage in place, nothing is copied. Saves are stored in
 
 The in-game menu opens with a bottom-up swipe from anywhere on the screen.
 
-Closing game windows with a top-down swipe (the counterpart of Escape and the right mouse button on PC) is still in the works. From any window, the in-game menu's Title row leads back to the main menu.
+Saving and loading use a dedicated slot screen: 40 slots, each showing a screenshot, the date and the scene caption; long-press an occupied slot to delete its save. The menu also has auto-skip and quit, while Settings is a stub for now.
 
 Games run in landscape orientation, and the screen stays awake while playing.
 
