@@ -54,7 +54,7 @@ English version: [README.en.md](README.en.md)
 
 ## Запуск
 
-1. Скачайте APK со [страницы релизов](https://github.com/christopher-vn/ikuradroid/releases) и установите его. Поддерживаются `arm64-v8a` и `armeabi-v7a`.
+1. Скачайте APK со страницы релизов и установите его. Поддерживаются `arm64-v8a` и `armeabi-v7a`.
 2. Положите каждую игру в отдельную папку. Например:
 
    ```text
