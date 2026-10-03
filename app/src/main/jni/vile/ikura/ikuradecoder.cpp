@@ -1426,6 +1426,28 @@ bool IkuraDecoder::iop_ml(const Uint8 *Data,int Length){
 // Stop CDDA music
 bool IkuraDecoder::iop_das(const Uint8 *Data,int Length){
 	StopMusic();
+	nameMusic="stop";
+	return false;
+}
+
+/*! \brief Polls the known CDDA file naming schemes and starts the track
+ *  \param channel Numeric CD track index
+ *  \param MusicName Receives the file name that actually started
+ *  \return True if a matching BGM file was found and started
+ *
+ *  The resolved file name is handed back so iop_dap can record it in
+ *  nameMusic and savegames can replay the same track on load.
+ */
+bool IkuraDecoder::PlayCDDAFiles(int channel,uString *MusicName){
+	static const char *bases[]={"TK%02d","TK_%02d","TK-%02d",
+	                "MUSIC%02d","MUSIC%d","%02d"};
+	for(unsigned int i=0;i<sizeof(bases)/sizeof(bases[0]);i++){
+		uString name=EDL_Format(bases[i],channel);
+		if(PlayMusic(name)){
+			if(MusicName)*MusicName=name;
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -1438,12 +1460,11 @@ bool IkuraDecoder::iop_dap(const Uint8 *Data,int Length){
 	// folder while the SM2MPX WMSC cabinet indexes them as
 	// MUSIC##.WAV. Poll the known bases (ArchiveItem matching is
 	// case-insensitive) before giving up.
-	if(PlayMusic(EDL_Format("TK%02d",channel))) return false;
-	if(PlayMusic(EDL_Format("TK_%02d",channel))) return false;
-	if(PlayMusic(EDL_Format("TK-%02d",channel))) return false;
-	if(PlayMusic(EDL_Format("MUSIC%02d",channel))) return false;
-	if(PlayMusic(EDL_Format("MUSIC%d",channel))) return false;
-	if(PlayMusic(EDL_Format("%02d",channel))) return false;
+	uString name;
+	if(PlayCDDAFiles(channel,&name)){
+		nameMusic=name;
+		return false;
+	}
 	LogError("CDDA track %d has no matching BGM file",channel);
 	return false;
 }
