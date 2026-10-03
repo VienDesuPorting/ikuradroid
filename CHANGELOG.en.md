@@ -2,7 +2,11 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
-All releases older than 2.5.0 have been removed from GitHub Releases: after the rework that went into 2.5.0, the old builds are obsolete and no longer make sense. The current version is 2.5.0.
+All releases older than 2.5.0 have been removed from GitHub Releases: after the rework that went into 2.5.0, the old builds are obsolete and no longer make sense. The current version is 2.5.1.
+
+## 2.5.1 — 2026-10-03
+
+- Heart de Roommate: background music plays again after loading a save — the same track that was playing when it was saved. The track is written into the save, and music stopped before saving stays off after the load. Old saves work as before.
 
 ## 2.5.0 — 2026-10-01
 
