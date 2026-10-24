@@ -52,14 +52,20 @@ static bool ons_contains(const unsigned char *hay, size_t len, const char *needl
 /* Sniff the script encoding: Russian fan translations mark the define
  * block with "language english" and carry CP1251 text; vanilla Japanese
  * scripts stay CP932. nscript.dat/pscript.dat are stored XOR 0x84
- * (readScript encrypt_mode 1), plain-text scripts are 0.txt/00.txt. */
+ * (readScript encrypt_mode 1), plain-text scripts are 0.txt/00.txt.
+ * The marker normally sits near the head of the define block, but
+ * translations vary, so scan a generous window. When no marker turns
+ * up, fall back to the heuristic inherited from the ONScripterRU lineage:
+ * Russian translations ship a default.ttf next to the script, vanilla Japanese
+ * games do not. Every decision is logged - the logcat line "encoding
+ * probe" is the first thing to check when text renders as mojibake. */
 static int ons_detect_encoding(const char *dir)
 {
     static const char *const names[] = {
         "nscript.dat", "pscript.dat", "0.txt", "00.txt"
     };
     static const int name_mode[] = { 1, 1, 0, 0 };  /* XOR 0x84? */
-    unsigned char buf[16384];
+    static unsigned char buf[262144];
     for (unsigned i = 0; i < sizeof(names)/sizeof(names[0]); i++) {
         char path[1024];
         if (dir && dir[0])
@@ -73,14 +79,27 @@ static int ons_detect_encoding(const char *dir)
         if (name_mode[i]) {
             for (size_t j = 0; j < len; j++) buf[j] ^= 0x84;
         }
-        int code = ons_contains(buf, len, "language english")
-                       ? Encoding::CODE_CP1251
-                       : Encoding::CODE_CP932;
+        int code;
+        const char *how;
+        if (ons_contains(buf, len, "language english")) {
+            code = Encoding::CODE_CP1251;
+            how = "marker 'language english'";
+        }
+        else if (ons_readable(dir, "default.ttf")) {
+            code = Encoding::CODE_CP1251;
+            how = "default.ttf heuristic";
+        }
+        else {
+            code = Encoding::CODE_CP932;
+            how = "fallback";
+        }
         __android_log_print(ANDROID_LOG_INFO, "ONS",
-            "encoding probe via %s: %s", names[i],
-            code == Encoding::CODE_CP1251 ? "cp1251" : "cp932");
+            "encoding probe via %s (%zu bytes): %s <- %s", names[i], len,
+            code == Encoding::CODE_CP1251 ? "cp1251" : "cp932", how);
         return code;
     }
+    __android_log_print(ANDROID_LOG_WARN, "ONS",
+        "encoding probe: no script file found, defaulting to cp932");
     return Encoding::CODE_CP932;
 }
 
@@ -109,7 +128,12 @@ int ONScripterRun(const char *dir)
         ons->setArchivePath(dir);
         ons->setSaveDir(dir);
     }
-    ons->setEncoding(ons_detect_encoding(dir));
+    int enc_code = ons_detect_encoding(dir);
+    ons->setEncoding(enc_code);
+    __android_log_print(ANDROID_LOG_INFO, "ONS",
+        "setEncoding -> %d (%s)", enc_code,
+        enc_code == Encoding::CODE_CP1251 ? "cp1251" :
+        enc_code == Encoding::CODE_UTF8 ? "utf-8" : "cp932");
 
     if (ons->openScript()) {
         __android_log_print(ANDROID_LOG_ERROR, "ONS", "openScript failed");
