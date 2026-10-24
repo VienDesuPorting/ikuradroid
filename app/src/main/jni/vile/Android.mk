@@ -9,6 +9,7 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(APP_SUBDIR) \
 	$(LOCAL_PATH) \
 	$(LOCAL_PATH)/../sdl/include \
 	$(LOCAL_PATH)/nscr/onscripter \
+	$(LOCAL_PATH)/nscr \
 	$(LOCAL_PATH)/nscr/sdl_compat \
 	$(LOCAL_PATH)/../sdl_ttf/include \
 	$(LOCAL_PATH)/../sdl_image \
@@ -69,3 +70,9 @@ LOCAL_CFLAGS := -DVILE_ARCH_LINUX
 include $(BUILD_SHARED_LIBRARY)
 
 
+
+# ONScripter-Droid: the nscr/bzip2/sdl12_compat module definitions live
+# in nscr/Android.mk, two levels below jni/. all-subdir-makefiles only
+# walks one level and never reaches them, so include explicitly. Keep
+# this AFTER BUILD_SHARED_LIBRARY: the included file resets LOCAL_PATH.
+include $(LOCAL_PATH)/nscr/Android.mk

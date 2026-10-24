@@ -45,7 +45,8 @@ import java.util.Set;
 public final class GameLibrary {
 
     // Engine signatures mirrored from the native probes (ViLE::Probe* in
-    // jni/vile/vile.cpp): a folder counts as a game when it contains all
+    // jni/vile/vile.cpp, ONScripterProbe in jni/vile/nscr/ons_glue.cpp):
+    // a folder counts as a game when it contains all
     // files of one row. Names are compared case-insensitively - game data
     // comes from Windows installs where the on-disk case varies. The Will
     // family shares one signature; the exact title is picked natively by
@@ -63,6 +64,11 @@ public final class GameLibrary {
             {"eff", "mrs", "datg"},                 // T-Love: True Love (alt. data set)
             {"mug0.dat", "mug0.lst"},               // Windy: Nocturnal Illusion
             {"may0.dat", "may0.lst"},               // Windy: Mayclub
+            {"nscript.dat"},                        // NScripter/ONScripter: compiled script (Higanbana, Umineko)
+            {"nscr_sec.dat"},                       // NScripter: encrypted script variant
+            {"nscript.___"},                        // NScripter: legacy encrypted script
+            {"0.txt"},                              // ONScripter: plain-text script
+            {"00.txt"},                             // ONScripter: plain-text script (split pages)
     };
 
     // Engine family display names, index-aligned with GAME_SIGNATURES;
@@ -81,6 +87,11 @@ public final class GameLibrary {
             "T-Love",                               // T-Love: True Love (alt. data set)
             "Windy",                                // Windy: Nocturnal Illusion
             "Windy",                                // Windy: Mayclub
+            "NScripter",                            // NScripter/ONScripter: compiled script (Higanbana, Umineko)
+            "NScripter",                            // NScripter: encrypted script variant
+            "NScripter",                            // NScripter: legacy encrypted script
+            "NScripter",                            // ONScripter: plain-text script
+            "NScripter",                            // ONScripter: plain-text script (split pages)
     };
 
     private static final String PREFS_FILE = "library";

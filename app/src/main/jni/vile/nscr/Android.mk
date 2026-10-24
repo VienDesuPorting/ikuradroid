@@ -40,7 +40,7 @@ LOCAL_MODULE := sdl12_compat
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/sdl_compat \
-	$(LOCAL_PATH)/../sdl/include
+	$(LOCAL_PATH)/../../sdl/include
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/sdl_compat
 
@@ -59,16 +59,17 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/$(ONS_DIR) \
 	$(LOCAL_PATH)/sdl_compat \
 	$(LOCAL_PATH)/bzip2 \
-	$(LOCAL_PATH)/../sdl/include \
-	$(LOCAL_PATH)/../sdl_image \
-	$(LOCAL_PATH)/../sdl_mixer \
-	$(LOCAL_PATH)/../sdl_ttf
+	$(LOCAL_PATH)/../../sdl/include \
+	$(LOCAL_PATH)/../../sdl_image \
+	$(LOCAL_PATH)/../../sdl_mixer \
+	$(LOCAL_PATH)/../../sdl_ttf
 
 LOCAL_EXPORT_C_INCLUDES := \
 	$(LOCAL_PATH)/$(ONS_DIR) \
 	$(LOCAL_PATH)/sdl_compat
 
 LOCAL_SRC_FILES := \
+	ons_glue.cpp \
 	$(ONS_DIR)/ONScripter.cpp \
 	$(ONS_DIR)/ONScripter_animation.cpp \
 	$(ONS_DIR)/ONScripter_command.cpp \

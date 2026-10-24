@@ -17,6 +17,7 @@
 #include "common/edl_texture.h"
 #include "javabridge.h"
 #include <SDL.h>
+#include "nscr/ons_glue.h"
 #include <stdint.h>
 
 #ifdef __ANDROID__
@@ -547,6 +548,26 @@ int main(int argc,char **argv){
 		else{
 			LogMessage("Unknown parameter: %s",argv[i]);
 			return ERROR_PARAMETER;
+		}
+	}
+
+	// NScripter titles are handed over to the embedded ONScripter-Droid
+	// runtime before ViLE claims SDL: ONScripter brings up its own
+	// window/renderer under USE_SDL_RENDERER, and only one engine owns
+	// the screen at a time. The probe checks the configured game
+	// directory and falls back to the process cwd, which the SDL bridge
+	// has already pointed at the launched game on Android.
+	{
+		char onscwd[1024];
+		onscwd[0]='\0';
+		if(Cfg::Path::game.length()==0){
+			getcwd(onscwd,sizeof(onscwd));
+		}
+		const char *onsdir=(Cfg::Path::game.length())?Cfg::Path::game.c_str():onscwd;
+		if(ONScripterProbe(onsdir)){
+			VILE_STAGE("main: NScripter script detected, ONScripter-Droid takes over");
+			retval=ONScripterRun(onsdir);
+			return retval;
 		}
 	}
 
