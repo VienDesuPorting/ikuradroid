@@ -55,7 +55,7 @@ Compile definitions: `LINUX`, `ANDROID`, `USE_SDL_RENDERER`,
 `SDL_JAVA_PACKAGE_PATH=su_viende_ikuradroid`. The SDL 1.2 shim header is
 force-included before any SDL header (`-include`).
 
-The runtime is not driven by `onscripter_main.cpp`'s `main()`; ViLE's
+`onscripter_main.cpp` is intentionally not compiled: its `SDL_main` would collide with the single `SDL_main` exported by `libikuradroid.so`, so its option parsing moves into the dispatch glue. The runtime is not driven by `onscripter_main.cpp`'s `main()`; ViLE's
 `main()` (vile.cpp) probes the game directory and hands NScripter titles
 over to the ONScripter runtime. SMPEG video support (`USE_SMPEG`,
 AVIWrapper) is intentionally not built yet — OP playback is a separate

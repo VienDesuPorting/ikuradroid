@@ -8,6 +8,8 @@ LOCAL_MODULE := ikuradroid
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(APP_SUBDIR) \
 	$(LOCAL_PATH) \
 	$(LOCAL_PATH)/../sdl/include \
+	$(LOCAL_PATH)/nscr/onscripter \
+	$(LOCAL_PATH)/nscr/sdl_compat \
 	$(LOCAL_PATH)/../sdl_ttf/include \
 	$(LOCAL_PATH)/../sdl_image \
 	$(LOCAL_PATH)/../sdl_gfx \
@@ -60,7 +62,7 @@ LOCAL_SRC_FILES := \
 	$(wildcard $(LOCAL_PATH)/windy/mayclub/*.cpp)\
 	$(wildcard $(LOCAL_PATH)/windy/nocturnal/*.cpp))
 
-LOCAL_STATIC_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_gfx SDL2_mixer
+LOCAL_STATIC_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_gfx SDL2_mixer nscr
 LOCAL_LDLIBS := -ldl -llog -lz -lGLESv1_CM -lGLESv2
 LOCAL_CFLAGS := -DVILE_ARCH_LINUX
 
