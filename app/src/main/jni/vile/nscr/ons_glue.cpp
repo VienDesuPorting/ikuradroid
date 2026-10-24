@@ -86,6 +86,19 @@ static int ons_detect_encoding(const char *dir)
 
 int ONScripterRun(const char *dir)
 {
+    /* ViLE turns SDL2's touch-to-mouse synthesis off process-wide
+     * (SDL_HINT_TOUCH_MOUSE_EVENTS "0" in vile.cpp): ViLE feeds its own
+     * widgets from FINGER events directly and the extra mouse stream
+     * double-processed its input. ONScripter only reads mouse events on
+     * Android - its SDL_FINGER* branch is iOS-only - so with the
+     * synthesis disabled no tap ever reaches mousePressEvent and the
+     * game is unclickable. Turn the synthesis back on while this
+     * runtime owns the event loop; mousePressEvent rescales the
+     * synthesized window coordinates into game space via
+     * deviceToGameX/Y. Restored on the way out so a follow-up ViLE run
+     * in the same process keeps its assumption. */
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
+
     /* Fresh instance per run: main() can be re-entered in the same
      * process after a game quits, and ONScripter keeps engine-wide
      * state in its members. */
@@ -107,6 +120,7 @@ int ONScripterRun(const char *dir)
         return -2;
     }
     ons->executeLabel();
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
     __android_log_print(ANDROID_LOG_INFO, "ONS", "executeLabel returned");
     return 0;
 }
