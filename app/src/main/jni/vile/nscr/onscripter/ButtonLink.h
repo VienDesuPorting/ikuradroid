@@ -20,23 +20,6 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-/*
- *  IkuraDroid modification notice - 2026
- *
- *  This file is modified for ONScripter-Droid, the NScripter/ONScripter
- *  engine module of IkuraDroid (su.viende.ikuradroid) - the ViLE-based
- *  Android visual novel player.
- *
- *  Base: ONScripter 20230825 by Ogapee. This fork was made with
- *  reference to the outdated ONScripterRU Android build and carries
- *  CP1251 changes for Russian fan translations.
- *  Modified for IkuraDroid by Christopher_VN <github.com/christopher-vn>
- *  as part of the VienDesuPorting/ikuradroid project
- *  <github.com/VienDesuPorting/ikuradroid>.
- *
- *  Distributed under the same GNU GPL (v2 or later) as the original
- *  ONScripter; this notice supplements the original copyright above.
- */
 
 #ifndef __BUTTON_LINK_H__
 #define __BUTTON_LINK_H__
@@ -59,12 +42,6 @@ struct ButtonLink {
     SDL_Rect image_rect;
     AnimationInfo* anim[2];
     int show_flag; // 0...show nothing, 1... show anim[0], 2 ... show anim[1]
-    /* IkuraDroid: the cell the sprite had before the engine's hover
-     * mutation (vanilla setCell(1)); -1 = no mutation is active. The
-     * pre-hover cell is what the transbtn alpha hit test must read, and
-     * also what un-hover has to put back - the script may have parked
-     * the sprite on another cell (RGD keeps Start on cell 1). */
-    int pre_hover_cell;
 
     ButtonLink()
     {
@@ -73,7 +50,6 @@ struct ButtonLink {
         exbtn_ctl[0] = exbtn_ctl[1] = exbtn_ctl[2] = NULL;
         anim[0] = anim[1] = NULL;
         show_flag = 0;
-        pre_hover_cell = -1;
     };
 
     ~ButtonLink()

@@ -8,9 +8,7 @@ SJIS/UTF-8 scripts keep working through the same encoding layer.
 
 Upstream: ONScripter 20230825 by Ogapee, GPLv2 (`onscripter/COPYING`
 is preserved untouched). The fork name only covers the patches below;
-everything else stays byte-identical to upstream. The fork was made
-with reference to the outdated ONScripterRU Android build; no code from
-it is included — its behavior guided the CP1251 work below.
+everything else stays byte-identical to upstream.
 
 ## Layout
 
@@ -47,17 +45,6 @@ ONScripterRU Android build (2026):
 Local adjustments on top of the initial port: the shim includes
 `<SDL.h>` instead of `<SDL2/SDL.h>` to match the flat in-tree SDL 2.30
 header layout.
-
-## Tested with
-
-- **Higanbana no Saku Yoru ni** (RU fan translation, both parts) —
-  CP1251 text and speaker names, the text window, the script cursor,
-  menus, the game's own save/load screens; verified on a 2412x1080
-  device.
-- **Rose Guns Days: The Best** (RU fan translation) — launch, menus and
-  navigation; the unknown-effect crash after the intro is gone.
-- **Umineko no Naku Koro ni Hane** (RU fan translation) — checked on the device.
-- **Umineko no Naku Koro ni**, the remaining parts — the next target.
 
 ## Build
 

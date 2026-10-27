@@ -20,23 +20,6 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-/*
- *  IkuraDroid modification notice - 2026
- *
- *  This file is modified for ONScripter-Droid, the NScripter/ONScripter
- *  engine module of IkuraDroid (su.viende.ikuradroid) - the ViLE-based
- *  Android visual novel player.
- *
- *  Base: ONScripter 20230825 by Ogapee. This fork was made with
- *  reference to the outdated ONScripterRU Android build and carries
- *  CP1251 changes for Russian fan translations.
- *  Modified for IkuraDroid by Christopher_VN <github.com/christopher-vn>
- *  as part of the VienDesuPorting/ikuradroid project
- *  <github.com/VienDesuPorting/ikuradroid>.
- *
- *  Distributed under the same GNU GPL (v2 or later) as the original
- *  ONScripter; this notice supplements the original copyright above.
- */
 
 #include "ONScripter.h"
 #ifdef ANDROID
@@ -259,8 +242,7 @@ void ONScripter::openFont(FontInfo* fi)
 {
     if (fi->ttf_font[0] == NULL) {
         if (fi->openFont(font_file, screen_ratio1, screen_ratio2) == NULL) {
-            __android_log_print(ANDROID_LOG_ERROR, "ONS",
-                                "can't open font file: %s", font_file);
+            fprintf(stderr, "can't open font file: %s\n", font_file);
             quit();
             exit(-1);
         }

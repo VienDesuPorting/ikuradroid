@@ -20,23 +20,6 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-/*
- *  IkuraDroid modification notice - 2026
- *
- *  This file is modified for ONScripter-Droid, the NScripter/ONScripter
- *  engine module of IkuraDroid (su.viende.ikuradroid) - the ViLE-based
- *  Android visual novel player.
- *
- *  Base: ONScripter 20230825 by Ogapee. This fork was made with
- *  reference to the outdated ONScripterRU Android build and carries
- *  CP1251 changes for Russian fan translations.
- *  Modified for IkuraDroid by Christopher_VN <github.com/christopher-vn>
- *  as part of the VienDesuPorting/ikuradroid project
- *  <github.com/VienDesuPorting/ikuradroid>.
- *
- *  Distributed under the same GNU GPL (v2 or later) as the original
- *  ONScripter; this notice supplements the original copyright above.
- */
 
 #include "ONScripter.h"
 #if defined(LINUX) || defined(MACOSX) || defined(IOS)
@@ -316,37 +299,9 @@ int ONScripter::texecCommand()
         processEOT();
         page_enter_status = 0;
     }
-    else if ( textgosub_clickstr_state == CLICK_WAIT &&
-              script_h.enc.getEncoding() == Encoding::CODE_CP1251 &&
-              sentence_font.old_xy[1] < sentence_font.y(false) ){
-        /* Mid-line '@' handled by a textgosub (07th Expansion *text_cw):
-         * while the game's click-wait routine was running, the text
-         * pipeline could move the pen to the next line, so the text after
-         * the click resumed one row below ONScripter-RU. Put the pen back
-         * onto the row of the last drawn glyph, one hankaku past it — the
-         * continuation then draws on the same line, like the reference.
-         * Only fires when the pen actually left the glyph row; an inline
-         * pen is untouched. */
-        __android_log_print(ANDROID_LOG_INFO, "ONS",
-                            "texec CLICK_WAIT: pen left the glyph row "
-                            "(xy %d,%d hankaku, last glyph at %d,%d px) - restored inline",
-                            sentence_font.xy[0], sentence_font.xy[1],
-                            sentence_font.old_xy[0], sentence_font.old_xy[1]);
-        sentence_font.restorePenFromOldXY();
-        /* Resume one hankaku right of the last glyph (the cell the live pen
-         * would occupy had it stayed on the row), so a continuation that
-         * starts with a space keeps that space in its own cell instead of
-         * dropping it onto the last glyph's cell (measured on Rose Guns
-         * Days: "ладно," @ " больше..." - ONScripter-RU renders the gap
-         * and draws "б..." one advance right of where we did). */
-        sentence_font.advanceCharInHankaku(1);
-        /* A mid-line '@' must not newline the continuation: drop any
-         * deferred end-of-line newline left over from the text pipeline. */
-        pending_newline = false;
-    }
 
     saveon_flag = true;
-
+    
     return RET_CONTINUE;
 }
 
@@ -765,13 +720,6 @@ void ONScripter::setwindowCore()
         sentence_font.window_color[0] = sentence_font.window_color[1] = sentence_font.window_color[2] = 0xff;
     }
 
-    /* NScripter semantics (ONScripter-RU behaves the same): setwindow
-     * re-initializes the text window and resets the output cursor to the
-     * window origin. Without the reset the first text line after a scene's
-     * `window N` could start on a line left over from before the scene
-     * (RGD dialogue drew one line pitch below ONScripter-RU). */
-    sentence_font.clear();
-    pending_newline = false;
     sentence_font.old_xy[0] = sentence_font.x(false);
     sentence_font.old_xy[1] = sentence_font.y(false);
 }
@@ -2824,7 +2772,7 @@ int ONScripter::getcursorposCommand()
     }
 
     script_h.readInt();
-    int cursor_x = fi.x(false);
+    script_h.setInt( &script_h.current_variable, fi.x(false) );
 
     /* CP1251: our glyphs are centered in the font cell (drawGlyph lifts them
      * by font_size/3), so the pen Y (cell top) sits higher above the text
@@ -2835,31 +2783,8 @@ int ONScripter::getcursorposCommand()
      * sprite aligns with the glyph band like ONScripter-RU does.
      * CP932 keeps the original pen Y — its glyph placement is untouched. */
     int cursor_y = fi.y(false);
-    if ( script_h.enc.getEncoding() == Encoding::CODE_CP1251 ){
-        /* ONScripter-RU anchors the script-drawn click cursor to the cell
-         * AFTER the last drawn glyph, not to the live pen: measured on Rose
-         * Guns Days, its cursor sprite ink starts one advance right of the
-         * final glyph ("ладно," ends at cell 180, sprite ink at 193 = pen
-         * 190 + bitmap padding; "жалоб." ends at cell 350, sprite ink at
-         * 364 = pen 360 + padding). By the time the game's *text_cw runs
-         * getcursorpos, our pen can already sit on the NEXT line
-         * (end-of-line newline from the text pipeline), and the sprite
-         * landed on an empty row below the text. When the pen left the last
-         * glyph's row, report the cell following the glyph drawChar()
-         * stored in old_xy[] — one hankaku (pitch/2) right of it, i.e. the
-         * same spot the live pen would occupy had it stayed on the row. */
-        if ( fi.old_xy[1] < fi.y(false) ){
-            __android_log_print(ANDROID_LOG_INFO, "ONS",
-                                "getcursorpos: pen left the glyph row "
-                                "(xy %d,%d hankaku) - reporting past the last glyph",
-                                fi.xy[0], fi.xy[1]);
-            cursor_x = fi.old_xy[0] + fi.pitch_xy[0] / 2;
-            cursor_y = fi.old_xy[1];
-        }
+    if ( script_h.enc.getEncoding() == Encoding::CODE_CP1251 )
         cursor_y += fi.font_size_xy[1] / 13;
-    }
-
-    script_h.setInt( &script_h.current_variable, cursor_x );
 
     script_h.readInt();
     script_h.setInt( &script_h.current_variable, cursor_y );
@@ -3120,13 +3045,6 @@ int ONScripter::erasetextwindowCommand()
 
 int ONScripter::endCommand()
 {
-    /* `end` tears the whole game process down (exit -> atexit(SDL_Quit)),
-     * which used to look exactly like a crash in logcat: audio stop, then
-     * the surface disconnect. Log the script location so a script-driven
-     * exit is always distinguishable from a real fault. */
-    __android_log_print(ANDROID_LOG_WARN, "ONS",
-                        "script executed 'end' at %s:%d - exiting the game process",
-                        current_label_info.name, current_line);
     quit();
     stopSMPEG();
     exit(0);

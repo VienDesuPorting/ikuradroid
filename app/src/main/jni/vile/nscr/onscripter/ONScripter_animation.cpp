@@ -20,23 +20,6 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-/*
- *  IkuraDroid modification notice - 2026
- *
- *  This file is modified for ONScripter-Droid, the NScripter/ONScripter
- *  engine module of IkuraDroid (su.viende.ikuradroid) - the ViLE-based
- *  Android visual novel player.
- *
- *  Base: ONScripter 20230825 by Ogapee. This fork was made with
- *  reference to the outdated ONScripterRU Android build and carries
- *  CP1251 changes for Russian fan translations.
- *  Modified for IkuraDroid by Christopher_VN <github.com/christopher-vn>
- *  as part of the VienDesuPorting/ikuradroid project
- *  <github.com/VienDesuPorting/ikuradroid>.
- *
- *  Distributed under the same GNU GPL (v2 or later) as the original
- *  ONScripter; this notice supplements the original copyright above.
- */
 
 #include "ONScripter.h"
 #ifdef ANDROID
@@ -206,63 +189,7 @@ void ONScripter::setupAnimationInfo(AnimationInfo* anim, FontInfo* info)
 
         SDL_Rect pos;
         if (anim->is_tight_region) {
-            /* The measure pass below advances f_info.xy. That cursor must
-             * never leak back into the caller's FontInfo through the
-             * copy-back at the end: getSelectableSentence passes the LIVE
-             * sentence font, so after the first select item the stale
-             * measurement cursor reset the line counter and the second item
-             * was placed near the top of the screen (RGD battle-mode select
-             * drew "Автоматический режим" over the film strip). */
-            int measure_xy[2] = {(int)f_info.xy[0], (int)f_info.xy[1]};
             drawString(anim->file_name, anim->color_list[anim->current_cell], &f_info, false, NULL, &pos);
-
-            /* A single-line string sprite has no second line to show: when
-             * the measured text ran past the line capacity (num_xy), the
-             * tail wrapped and the sprite box clipped it away - the Higanbana
-             * save slots lost the trailing "..." of their captions exactly
-             * like that. setLineArea already sizes the CP1251 capacity to
-             * strlen + 1 full-width units, but the real advance depends on
-             * the on-device font metrics, so instead of trusting any
-             * estimate: if the measure pass wrapped (xy[1] left the first
-             * line), widen the capacity and re-measure until it fits. */
-            int widen_rounds = 0;
-            while (f_info.xy[1] != 0 && widen_rounds < 4) {
-                f_info.num_xy[0] *= 2;
-                f_info.clear();
-                drawString(anim->file_name, anim->color_list[anim->current_cell], &f_info, false, NULL, &pos);
-                widen_rounds++;
-            }
-            if (widen_rounds > 0) {
-                __android_log_print(ANDROID_LOG_WARN, "ONS_SPRITE",
-                                    "single-line string sprite wrapped: capacity x%d after %d widen round(s), text '%s'",
-                                    f_info.num_xy[0], widen_rounds, anim->file_name);
-            }
-
-            /* A tight sprite is sized by calcUpdatedArea to whole text lines
-             * (pitch_y each), but drawGlyph blits the glyph surface (which is
-             * TTF_FontHeight tall, taller than font_size for real fonts) at
-             * font_size/6 below the cell top. The ink bottom therefore lands
-             * below the sprite edge and the sprite clips it: RGD's name plate
-             * lost the lower half of "Лео", the select items were beheaded.
-             * Extend the sprite downward - the ink position does not move. */
-            if (f_info.ttf_font[0]) {
-                int measured_lines = f_info.xy[1] / 2 + 1;
-                int glyph_bottom = (measured_lines - 1) * f_info.pitch_xy[1] +
-                                   f_info.font_size_xy[1] / 6 +
-                                   TTF_FontHeight((TTF_Font*)f_info.ttf_font[0]) + 2;
-                if (pos.h < glyph_bottom) pos.h = glyph_bottom;
-            }
-
-            /* Restore the entry cursor: the measurement is side-effect free
-             * for the caller's font state. */
-            f_info.xy[0] = measure_xy[0];
-            f_info.xy[1] = measure_xy[1];
-
-            if (anim->visible) {
-                __android_log_print(ANDROID_LOG_INFO, "ONS_SPRITE",
-                                    "string sprite '%s': measured %dx%d, capacity %d units",
-                                    anim->file_name, pos.w, pos.h, f_info.num_xy[0]);
-            }
         }
         else {
             int xy_bak[2];

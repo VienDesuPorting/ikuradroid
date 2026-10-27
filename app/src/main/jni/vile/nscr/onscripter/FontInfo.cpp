@@ -20,23 +20,6 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-/*
- *  IkuraDroid modification notice - 2026
- *
- *  This file is modified for ONScripter-Droid, the NScripter/ONScripter
- *  engine module of IkuraDroid (su.viende.ikuradroid) - the ViLE-based
- *  Android visual novel player.
- *
- *  Base: ONScripter 20230825 by Ogapee. This fork was made with
- *  reference to the outdated ONScripterRU Android build and carries
- *  CP1251 changes for Russian fan translations.
- *  Modified for IkuraDroid by Christopher_VN <github.com/christopher-vn>
- *  as part of the VienDesuPorting/ikuradroid project
- *  <github.com/VienDesuPorting/ikuradroid>.
- *
- *  Distributed under the same GNU GPL (v2 or later) as the original
- *  ONScripter; this notice supplements the original copyright above.
- */
 
 #include "FontInfo.h"
 #include <stdio.h>
@@ -80,10 +63,7 @@ FontInfo::FontInfo()
 
     color[0] = color[1] = color[2] = 0xff;
     on_color[0] = on_color[1] = on_color[2] = 0xff;
-    /* Selectable-sentence (select/rmenu) unhighlighted color. ONScripter-RU
-     * renders select items at ~#cccccc (measured on RGD screenshots); our
-     * old 0xaa made them visibly darker than the reference engine. */
-    off_color[0] = off_color[1] = off_color[2] = 0xcc;
+    off_color[0] = off_color[1] = off_color[2] = 0xaa;
     nofile_color[0] = 0x55;
     nofile_color[1] = 0x55;
     nofile_color[2] = 0x99;
@@ -244,21 +224,6 @@ void FontInfo::newLine()
     line_offset_xy[0] = line_offset_xy[1] = 0;
 }
 
-void FontInfo::restorePenFromOldXY()
-{
-    /* Put the pen back onto the cell of the last drawn glyph. drawChar()
-     * stores that cell in old_xy[] (pixels) before rendering every glyph,
-     * so the inverse of x()/y() recovers the hankaku coordinates. Used when
-     * a textgosub click-wait (07th Expansion *text_cw) ends: the script
-     * continuation must resume right after the last glyph, on the SAME
-     * line, even if the pen was meanwhile moved to the next line. */
-    if (tateyoko_mode != YOKO_MODE) return;
-    if (pitch_xy[0] <= 0 || pitch_xy[1] <= 0) return;
-
-    xy[0] = (old_xy[0] - top_xy[0] - line_offset_xy[0]) * 2 / pitch_xy[0];
-    xy[1] = (old_xy[1] - top_xy[1] - line_offset_xy[1]) * 2 / pitch_xy[1];
-}
-
 void FontInfo::setLineArea(const char* buf)
 {
     if (enc->getEncoding() == Encoding::CODE_UTF8) {
@@ -275,18 +240,6 @@ void FontInfo::setLineArea(const char* buf)
             buf += n;
         }
         num_xy[tateyoko_mode] = w * 2 / pitch_xy[tateyoko_mode] + 1;
-    }
-    else if (enc->getEncoding() == Encoding::CODE_CP1251) {
-        /* CP1251 is single-byte: strlen IS the character count. The SJIS
-         * "strlen / 2" assumption halved the line capacity for Russian
-         * text, and drawChar's proportional advance (~1 hankaku per
-         * char) then overflowed it mid-string: isEndOfLine wrapped the
-         * tail onto a second line that a single-line sprite box clips
-         * away. Observed on the Higanbana save screen: the slot caption
-         * is built as mid($textlog,0,16) + "..." and lost its trailing
-         * dots over the slot edge. Capacity of strlen + 1 full-width
-         * units leaves headroom for any proportional advance. */
-        num_xy[tateyoko_mode] = strlen(buf) + 1;
     }
     else {
         num_xy[tateyoko_mode] = strlen(buf) / 2 + 1;
