@@ -1020,6 +1020,43 @@ bool ONScripter::keyPressEvent(SDL_KeyboardEvent* event)
 
     if (event->type == SDL_KEYDOWN) return false;
 
+    /* IkuraDroid M3 menu bridge: the Java side drives the engine's own
+     * system screens with synthetic F-keys (KEYDOWN+KEYUP pairs sent
+     * through the SDL key channel). Vanilla ONScripter leaves F5..F8
+     * unused unless the script requests them via getfunction (the
+     * F1..F12 branch further below), so they are repurposed as direct
+     * systemcall triggers - the exact screens the game's menu reaches
+     * with `systemcall`: F5 load, F6 save, F7 lookback, F8 reset (title).
+     * Gameplay waits park inside waitEvent(), which picks the set mode
+     * up after the wait and runs executeSystemCall() by itself, so no
+     * wait loop needs patching; ret==0 resumes the same wait (save made
+     * or dialog cancelled), ret==1 lets the parse continue from the
+     * position the load/reset installed. The guard keeps injections
+     * from nesting into an already open built-in screen and from
+     * stealing the keys of scripts that use getfunction buttons. */
+    if (system_menu_mode == SYSTEM_NULL && !getfunction_flag) {
+        switch (event->keysym.sym) {
+        case SDLK_F5:
+            /* 07th-style scripts draw their own save/load screens and
+             * reach them through the right-click pause menu; prefer
+             * those over the built-in slot lists (falls back to the
+             * built-in screens when the script has no such labels). */
+            if (!setupScriptSystemMenu(false)) system_menu_mode = SYSTEM_LOAD;
+            return true;
+        case SDLK_F6:
+            if (!setupScriptSystemMenu(true)) system_menu_mode = SYSTEM_SAVE;
+            return true;
+        case SDLK_F7:
+            system_menu_mode = SYSTEM_LOOKBACK;
+            return true;
+        case SDLK_F8:
+            system_menu_mode = SYSTEM_RESET;
+            return true;
+        default:
+            break;
+        }
+    }
+
     if ((event_mode & (WAIT_INPUT_MODE | WAIT_BUTTON_MODE)) &&
         (autoclick_time == 0 || (event_mode & WAIT_BUTTON_MODE))) {
         if (!useescspc_flag && event->keysym.sym == SDLK_ESCAPE) {

@@ -389,8 +389,14 @@ void ONScripter::drawString(const char* str, uchar3 color, FontInfo* info, bool 
     for (i = 0; i < 3; i++) info->color[i] = color[i];
 
     bool skip_whitespace_flag = true;
-    if (script_h.enc.getEncoding() == Encoding::CODE_UTF8)
+    if (script_h.enc.getEncoding() == Encoding::CODE_UTF8 ||
+        script_h.enc.getEncoding() == Encoding::CODE_CP1251)
         skip_whitespace_flag = false;
+    /* NOTE: for CP1251 this flag MUST be off. The game's backlog renders
+     * strings via logsp -> drawString, and a lookback page never contains
+     * the '`' text marker (processText toggles 1-byte mode without storing
+     * it), so the flag would otherwise stay true and swallow EVERY space of
+     * the Russian backlog text ("Полнаялунатайтвсебе..."). */
     char text[8] = {};
     while (*str) {
         while (*str == ' ' && skip_whitespace_flag) str++;
@@ -1300,9 +1306,15 @@ bool ONScripter::processText()
 
         return true;
     }
-    else if ((script_h.enc.getEncoding() == Encoding::CODE_UTF8 ||
-              script_h.enc.getEncoding() == Encoding::CODE_CP1251) &&
+    else if (script_h.enc.getEncoding() == Encoding::CODE_UTF8 &&
              ch == '~') {
+        /* NOTE: CP1251 must NOT enter this branch. This is the UTF-8 inline
+         * italic/bold markup (~i...~, ~b...~). In CP1251 scripts '~' is a
+         * literal character (e.g. "Ага-а~" in HiganbanaRus): the branch
+         * swallowed the tilde (never drawn, never typed out), and in builds
+         * without ENABLE_1BYTE_CHAR — where backticks reach this loop as
+         * plain text — it would also eat the rest of the line up to the
+         * next '~' or EOL, including the '@' click-wait. */
         current_page->add('~');
         while (1) {
             ch = script_h.getStringBuffer()[++string_buffer_offset];

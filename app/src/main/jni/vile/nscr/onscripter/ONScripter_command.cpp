@@ -30,6 +30,10 @@
 #endif
 #include "version.h"
 
+#if defined(ANDROID)
+#include <android/log.h>
+#endif
+
 #if defined(MACOSX) && (SDL_COMPILEDVERSION >= 1208)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
@@ -991,7 +995,13 @@ int ONScripter::savescreenshotCommand()
     resizeSurface( screenshot_surface, surface );
 
     const char *buf = script_h.readStr();
-    if (script_h.enc.getEncoding() == Encoding::CODE_UTF8){
+
+    /* IkuraDroid: make sure the target folder exists before writing,
+     * whatever the script encoding is - a game folder may ship without
+     * screenshot/, and a failed fopen would silently drop the preview
+     * (the slot would then keep showing the stale file it already
+     * had, e.g. a full-size thumbnail from the pre-capture builds). */
+    {
         char *dir = new char[strlen(archive_path) + strlen(buf) + 1];
         sprintf(dir, "%s%s", archive_path, buf);
         for (int i=strlen(dir)-1; i>=0; i--){
@@ -1007,12 +1017,26 @@ int ONScripter::savescreenshotCommand()
         }
         delete[] dir;
     }
-    
+
     FILE *fp = fopen(buf, "wb");
     if (fp){
         SDL_RWops *rwops = SDL_RWFromFP(fp, SDL_TRUE);
+#if defined(ANDROID)
+        /* IkuraDroid: log the thumbnail size the save routine asked for
+         * together with the file it lands in - the direct proof of the
+         * capture state (a 640x480 line here means screenshot_w/h were
+         * never narrowed, i.e. no 80x60 capture ran before the save). */
+        __android_log_print(ANDROID_LOG_INFO, "ONS_M3",
+                            "savescreenshot: %s (%dx%d)", buf, surface->w, surface->h);
+#endif
         SDL_SaveBMP_RW(surface, rwops, 1);
     }
+#if defined(ANDROID)
+    else {
+        __android_log_print(ANDROID_LOG_ERROR, "ONS_M3",
+                            "savescreenshot: fopen failed for %s", buf);
+    }
+#endif
     SDL_FreeSurface(surface);
 
     return RET_CONTINUE;
@@ -2466,8 +2490,22 @@ int ONScripter::getsevolCommand()
 int ONScripter::getscreenshotCommand()
 {
     int w = script_h.readInt();
-    if (disable_rescale_flag) w = w * screen_ratio1 / screen_ratio2;
     int h = script_h.readInt();
+
+    captureScreenshot(w, h);
+
+    return RET_CONTINUE;
+}
+
+/* Shared body of `getscreenshot w, h`: reads the rendered frame into
+ * screenshot_surface and remembers the target size that
+ * savescreenshot(2) squeezes the shot down to. Also used by the M3
+ * script-menu bridge, which enters the game's save screen without the
+ * script's own right-click path and therefore has to reproduce its
+ * capture (executeSystemScriptMenu). */
+void ONScripter::captureScreenshot(int w, int h)
+{
+    if (disable_rescale_flag) w = w * screen_ratio1 / screen_ratio2;
     if (disable_rescale_flag) h = h * screen_ratio1 / screen_ratio2;
     if ( w == 0 ) w = 1;
     if ( h == 0 ) h = 1;
@@ -2475,7 +2513,7 @@ int ONScripter::getscreenshotCommand()
     screenshot_w = w;
     screenshot_h = h;
 #ifdef USE_SDL_RENDERER
-    SDL_Rect rect = {(device_width -screen_device_width)/2, 
+    SDL_Rect rect = {(device_width -screen_device_width)/2,
                      (device_height-screen_device_height)/2,
                      screen_device_width, screen_device_height};
     SDL_LockSurface(screenshot_surface);
@@ -2484,8 +2522,6 @@ int ONScripter::getscreenshotCommand()
 #else
     SDL_BlitSurface(screen_surface, NULL, screenshot_surface, NULL);
 #endif
-
-    return RET_CONTINUE;
 }
 
 int ONScripter::getsavestrCommand()
@@ -2728,7 +2764,7 @@ int ONScripter::getcursorpos2Command()
 int ONScripter::getcursorposCommand()
 {
     FontInfo fi = sentence_font;
-    
+
     if ( fi.isEndOfLine() ){
         fi.newLine();
         for (int i=0 ; i<indent_offset ; i++)
@@ -2737,10 +2773,22 @@ int ONScripter::getcursorposCommand()
 
     script_h.readInt();
     script_h.setInt( &script_h.current_variable, fi.x(false) );
-    
+
+    /* CP1251: our glyphs are centered in the font cell (drawGlyph lifts them
+     * by font_size/3), so the pen Y (cell top) sits higher above the text
+     * band than in the reference renderer. Games draw their own click cursor
+     * via textgosub (e.g. 07th Expansion *text_cw: getcursorpos %x,%y +
+     * amsp of cursor0.bmp), so the sprite landed one notch above the text
+     * line. Drop the reported Y by ~2 game units (font_size/13) so the
+     * sprite aligns with the glyph band like ONScripter-RU does.
+     * CP932 keeps the original pen Y — its glyph placement is untouched. */
+    int cursor_y = fi.y(false);
+    if ( script_h.enc.getEncoding() == Encoding::CODE_CP1251 )
+        cursor_y += fi.font_size_xy[1] / 13;
+
     script_h.readInt();
-    script_h.setInt( &script_h.current_variable, fi.y(false) );
-    
+    script_h.setInt( &script_h.current_variable, cursor_y );
+
     return RET_CONTINUE;
 }
 

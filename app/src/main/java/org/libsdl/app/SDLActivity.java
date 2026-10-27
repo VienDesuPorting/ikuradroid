@@ -540,9 +540,23 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // the engine listens for (the F5/F6/F8 + CTRL mapping of the
     // original build is kept as is) - except Quit, which tears the game
     // down from the app side and never shows the engine's own
-    // "Exit game?" dialog, and Settings, which is a disabled stub
-    // floating a timed notice.
+    // "Exit game?" dialog. ONScripter titles get a shaped sheet: the
+    // Save/Load rows jump straight into the engine's built-in screens
+    // (synthetic F6/F5), a History row sends the wheel-up protocol key
+    // that opens the in-game journal, and the dead Settings stub is
+    // hidden - it stays for the ViLE engines.
     // ------------------------------------------------------------------
+
+    /** True while an ONScripter title owns the engine thread. Shapes the
+     *  M3 sheet for nscr (History row, no Settings stub). Old .so builds
+     *  without the hook keep the ViLE layout. */
+    private boolean isOnscripterActive() {
+        try {
+            return nativeIsOnscripterActive();
+        } catch (UnsatisfiedLinkError ignored) {
+            return false;
+        }
+    }
 
     private void showGameMenu() {
         // Never stack a second sheet over a live one: the dialog is
@@ -556,14 +570,32 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 .inflate(R.layout.sheet_ingame, null);
         LinearLayout items = (LinearLayout) root.findViewById(R.id.ingame_items);
 
+        final boolean nscrActive = isOnscripterActive();
         addMenuRow(sheet, items, R.drawable.ic_ingame_title, R.string.menu_title, 0, true,
-                () -> onNativeKeyDown(KeyEvent.KEYCODE_F8));
+                () -> {
+                    // Title: F8 is StdTitle for ViLE and systemcall reset
+                    // for ONScripter; both engines act on the keydown, the
+                    // matching keyup is a no-op for them.
+                    onNativeKeyDown(KeyEvent.KEYCODE_F8);
+                    onNativeKeyUp(KeyEvent.KEYCODE_F8);
+                });
         addMenuRow(sheet, items, R.drawable.ic_ingame_save, R.string.menu_save, 0, true,
                 // Java slot dialog replaces the old F6 -> native StdSave
                 // detour; the engine still does the actual save.
                 () -> openSaveLoadDialog(true));
         addMenuRow(sheet, items, R.drawable.ic_ingame_load, R.string.menu_load, 0, true,
                 () -> openSaveLoadDialog(false));
+        if (nscrActive) {
+            // In-game journal via the wheel-up protocol key: textgosub
+            // titles (07th Expansion) open their own styled history on
+            // WHEELUP (-2), classic titles fall back to the engine's
+            // built-in lookback - the same thing a PC wheel-up does.
+            addMenuRow(sheet, items, R.drawable.ic_ingame_history, R.string.menu_history, 0, true,
+                    () -> {
+                        onNativeKeyDown(KeyEvent.KEYCODE_H);
+                        onNativeKeyUp(KeyEvent.KEYCODE_H);
+                    });
+        }
         addMenuRow(sheet, items, R.drawable.ic_ingame_skip, R.string.menu_skip,
                 skip ? R.string.skip_on : R.string.skip_off, true,
                 () -> {
@@ -575,10 +607,14 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                     }
                     skip = !skip;
                 });
-        // Settings is a stub for now: the row renders disabled and a
-        // tap only floats a timed notice - no native options dialog.
-        addMenuRow(sheet, items, R.drawable.ic_ingame_settings, R.string.menu_settings, 0, false,
-                () -> showSettingsStubNotice());
+        if (!nscrActive) {
+            // Settings is a stub for now: the row renders disabled and a
+            // tap only floats a timed notice - no native options dialog.
+            // nscr titles don't see it at all: their options live in the
+            // game's own menu, and the dead stub only eats a row.
+            addMenuRow(sheet, items, R.drawable.ic_ingame_settings, R.string.menu_settings, 0, false,
+                    () -> showSettingsStubNotice());
+        }
         addMenuRow(sheet, items, R.drawable.ic_ingame_quit, R.string.menu_quit, 0, true,
                 () -> quitGame());
 
@@ -723,11 +759,30 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // Java save/load UI. The slot dialog reads the savegames from disk
     // itself (SaveFileRepository, no JNI in the read path); the actual
     // save/load lands on the engine thread through an SDL_USEREVENT
-    // pushed by nativeSendSaveLoadEvent. Falls back to the classic
-    // F5/F6 hotkeys when the engine bridge is not up (no engine running,
-    // or the save root is unknown) - the native dialogs still work.
+    // pushed by nativeSendSaveLoadEvent. ONScripter titles take their
+    // own branch (the engine opens its in-game menu, see below). Falls
+    // back to the classic F5/F6 hotkeys when the engine bridge is not
+    // up (no engine running, or the save root is unknown) - the native
+    // dialogs still work.
     // ------------------------------------------------------------------
     private void openSaveLoadDialog(boolean saveMode) {
+        try {
+            if (nativeIsOnscripterActive()) {
+                // ONScripter titles drive their own save/load screens and
+                // their state machine must be the one opening them, so the
+                // native slot dialog is bypassed: F6/F5 are answered by the
+                // engine's keyPressEvent and open the built-in save or load
+                // screen directly - the same systemcall screens the game's
+                // own menu reaches, without the pause-menu detour.
+                onNativeKeyDown(saveMode ? KeyEvent.KEYCODE_F6
+                                         : KeyEvent.KEYCODE_F5);
+                onNativeKeyUp(saveMode ? KeyEvent.KEYCODE_F6
+                                       : KeyEvent.KEYCODE_F5);
+                return;
+            }
+        } catch (UnsatisfiedLinkError ignored) {
+            // Old .so without the nscr hook - fall through to the prefix path.
+        }
         String prefix = null;
         try {
             prefix = nativeGetSavePrefix();
@@ -1505,6 +1560,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // Java save/load bridge (jni/vile/ikurajni.cpp)
     public static native String nativeGetSavePrefix();
     public static native void nativeSendSaveLoadEvent(int mode, int slot);
+    // ONScripter runtime hook (jni/vile/nscr/ons_glue.cpp): true while an
+    // ONScripter game owns the screen - Save/Load then go through the
+    // engine's own menu instead of the native slot dialog.
+    public static native boolean nativeIsOnscripterActive();
     public static native void nativeQuit();
     public static native void nativePause();
     public static native void nativeResume();

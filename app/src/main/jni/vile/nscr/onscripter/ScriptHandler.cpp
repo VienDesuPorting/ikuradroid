@@ -914,6 +914,27 @@ struct ScriptHandler::LabelInfo ScriptHandler::lookupLabelNext(const char* label
     return label_info[num_of_labels];
 }
 
+/* IkuraDroid: non-fatal label existence check for the system menu
+ * bridge; lookupLabel errors out when the label is missing, which is
+ * correct for script-driven jumps but not for probing whether a game
+ * ships its own save/load screens. Mirrors findLabel's lowercasing. */
+bool ScriptHandler::hasLabel(const char* label)
+{
+    char buf[256];
+
+    unsigned int len = strlen(label);
+    if (len >= sizeof(buf)) return false;
+    for (unsigned int i = 0; i < len + 1; i++) {
+        buf[i] = label[i];
+        if ('A' <= buf[i] && buf[i] <= 'Z') buf[i] += 'a' - 'A';
+    }
+    for (int i = num_of_labels - 1; i >= 0; --i) {
+        if (strcmp(label_info[i].name, buf) == 0) return true;
+    }
+
+    return false;
+}
+
 ScriptHandler::LogLink* ScriptHandler::findAndAddLog(LogInfo& info, const char* name, bool add_flag)
 {
     char capital_name[256];

@@ -228,6 +228,7 @@ public:
     int getspmodeCommand();
     int getsevolCommand();
     int getscreenshotCommand();
+    void captureScreenshot(int w, int h);
     int getsavestrCommand();
     int getretCommand();
     int getregCommand();
@@ -620,6 +621,8 @@ private:
     void enterSystemCall();
     void leaveSystemCall(bool restore_flag = true);
     int executeSystemCall();
+    bool setupScriptSystemMenu(bool save);
+    void executeSystemScriptMenu(bool save);
 
     void executeSystemMenu();
     void executeSystemSkip();

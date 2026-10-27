@@ -185,6 +185,7 @@ public:
 
     LabelInfo lookupLabel(const char* label);
     LabelInfo lookupLabelNext(const char* label);
+    bool hasLabel(const char* label);
     void errorAndExit(const char* str);
 
     ArrayVariable* getRootArrayVariable();

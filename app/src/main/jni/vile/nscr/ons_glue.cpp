@@ -15,6 +15,13 @@
 #include <errno.h>
 
 #include <android/log.h>
+#include <jni.h>
+
+/* Java save/load bridge: the M3 menu needs to know that the ONScripter
+ * runtime owns the screen. ViLE engines report through the parked engine
+ * pointer (javabridge.h), but ONScripter never creates one, so the glue
+ * keeps its own flag around the executeLabel() run. */
+bool g_ons_runtime_active = false;
 
 static bool ons_readable(const char *dir, const char *name)
 {
@@ -143,7 +150,9 @@ int ONScripterRun(const char *dir)
         __android_log_print(ANDROID_LOG_ERROR, "ONS", "init failed");
         return -2;
     }
+    g_ons_runtime_active = true;
     ons->executeLabel();
+    g_ons_runtime_active = false;
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
     __android_log_print(ANDROID_LOG_INFO, "ONS", "executeLabel returned");
     return 0;
@@ -161,4 +170,14 @@ extern "C" void playVideoAndroid(const char* filename)
     __android_log_print(ANDROID_LOG_WARN, "ONS",
         "playVideoAndroid: video playback not supported yet (filename='%s')",
         filename ? filename : "(null)");
+}
+
+/* True while an ONScripter game is on screen. SDLActivity's M3 menu
+ * consults it before the ViLE prefix path: for these titles Save/Load
+ * cannot open the native slot dialog, because ONScripter owns its own
+ * save/load screens and its state machine must drive them. */
+extern "C" JNIEXPORT jboolean JNICALL
+Java_org_libsdl_app_SDLActivity_nativeIsOnscripterActive(JNIEnv *, jclass)
+{
+    return g_ons_runtime_active ? JNI_TRUE : JNI_FALSE;
 }

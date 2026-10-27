@@ -23,6 +23,21 @@
 
 #include "ONScripter.h"
 
+#include <dirent.h>
+#ifndef WIN32
+#include <unistd.h>
+#endif
+
+/* IkuraDroid: M3 bridge diagnostics - which branch armed the F5/F6
+ * injection (the game's own script screens vs the built-in slot lists)
+ * and why a fallback fired. Filter logcat with ONS_M3. */
+#if defined(ANDROID)
+#include <android/log.h>
+#define M3_LOG(...) __android_log_print(ANDROID_LOG_INFO, "ONS_M3", __VA_ARGS__)
+#else
+#define M3_LOG(...) do {} while (0)
+#endif
+
 #define DIALOG_W 241
 #define DIALOG_H 167
 #define DIALOG_HEADER 32
@@ -30,28 +45,33 @@
 #define DIALOG_BUTTON_W 96
 #define DIALOG_BUTTON_H 42
 
-#if defined(ENABLE_1BYTE_CHAR) && defined(FORCE_1BYTE_CHAR)
-#define MESSAGE_SAVE_EXIST "`%s%s    Date %s/%s    Time %s:%s"
+/* IkuraDroid: this fork is a 1-byte build serving CP1251 scripts only,
+ * so the built-in system screens speak Russian. Cyrillic literals are
+ * hex-escaped to stay independent of the source file encoding; the
+ * leading backtick is the half-width marker the upstream strings carry -
+ * drawString strips it under ENABLE_1BYTE_CHAR. */
+#if defined(ENABLE_1BYTE_CHAR)
+#define MESSAGE_SAVE_EXIST "`%s%s    \xC4\xE0\xF2\xE0 %s/%s    \xC2\xF0\xE5\xEC\xFF %s:%s"
 #define MESSAGE_SAVE_EMPTY "`%s%s    ------------------------"
-#define MESSAGE_SAVE_CONFIRM "`Save in slot %s%s?"
-#define MESSAGE_LOAD_CONFIRM "`Load from slot %s%s?"
-#define MESSAGE_RESET_CONFIRM "`Return to Title Menu?"
-#define MESSAGE_END_CONFIRM "`Quit?"
-#define MESSAGE_YES "Yes"
-#define MESSAGE_NO "No"
+#define MESSAGE_SAVE_CONFIRM "`\xC7\xE0\xEF\xE8\xF1\xE0\xF2\xFC \xE2 %s%s?"
+#define MESSAGE_LOAD_CONFIRM "`\xC7\xE0\xE3\xF0\xF3\xE7\xE8\xF2\xFC \xE8\xE7 %s%s?"
+#define MESSAGE_RESET_CONFIRM "`\xC2\xE5\xF0\xED\xF3\xF2\xFC\xF1\xFF \xED\xE0 \xF2\xE8\xF2\xF3\xEB\xFC\xED\xFB\xE9 \xFD\xEA\xF0\xE0\xED?"
+#define MESSAGE_END_CONFIRM "`\xC2\xFB\xE9\xF2\xE8 \xE8\xE7 \xE8\xE3\xF0\xFB?"
+#define MESSAGE_YES "\xC4\xE0"
+#define MESSAGE_NO "\xCD\xE5\xF2"
 #define MESSAGE_OK "OK"
-#define MESSAGE_CANCEL "Cancel"
+#define MESSAGE_CANCEL "\xCE\xF2\xEC\xE5\xED\xE0"
 #else
-#define MESSAGE_SAVE_EXIST "%s%s@%sŒ%s“ú%s%s•ª"
-#define MESSAGE_SAVE_EMPTY "%s%s@||||||||||||"
-#define MESSAGE_SAVE_CONFIRM "%s%s‚ÉƒZ[ƒu‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H"
-#define MESSAGE_LOAD_CONFIRM "%s%s‚ğƒ[ƒh‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H"
-#define MESSAGE_RESET_CONFIRM "ƒŠƒZƒbƒg‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H"
-#define MESSAGE_END_CONFIRM "I—¹‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H"
-#define MESSAGE_YES "‚Í‚¢"
-#define MESSAGE_NO "‚¢‚¢‚¦"
-#define MESSAGE_OK "‚n‚j"
-#define MESSAGE_CANCEL "ƒLƒƒƒ“ƒZƒ‹"
+#define MESSAGE_SAVE_EXIST "%s%sÂ@%sÂŒÂ%sÂ“Ãº%sÂÂ%sÂ•Âª"
+#define MESSAGE_SAVE_EMPTY "%s%sÂ@Â|Â|Â|Â|Â|Â|Â|Â|Â|Â|Â|Â|"
+#define MESSAGE_SAVE_CONFIRM "%s%sÂ‚Ã‰ÂƒZÂ[ÂƒuÂ‚ÂµÂ‚ÃœÂ‚Â·ÂBÂ‚Ã¦Â‚Ã«Â‚ÂµÂ‚Â¢Â‚Ã…Â‚Â·Â‚Â©ÂH"
+#define MESSAGE_LOAD_CONFIRM "%s%sÂ‚Ã°ÂƒÂÂ[ÂƒhÂ‚ÂµÂ‚ÃœÂ‚Â·ÂBÂ‚Ã¦Â‚Ã«Â‚ÂµÂ‚Â¢Â‚Ã…Â‚Â·Â‚Â©ÂH"
+#define MESSAGE_RESET_CONFIRM "ÂƒÂŠÂƒZÂƒbÂƒgÂ‚ÂµÂ‚ÃœÂ‚Â·ÂBÂ‚Ã¦Â‚Ã«Â‚ÂµÂ‚Â¢Â‚Ã…Â‚Â·Â‚Â©ÂH"
+#define MESSAGE_END_CONFIRM "ÂIÂ—Â¹Â‚ÂµÂ‚ÃœÂ‚Â·ÂBÂ‚Ã¦Â‚Ã«Â‚ÂµÂ‚Â¢Â‚Ã…Â‚Â·Â‚Â©ÂH"
+#define MESSAGE_YES "Â‚ÃÂ‚Â¢"
+#define MESSAGE_NO "Â‚Â¢Â‚Â¢Â‚Â¦"
+#define MESSAGE_OK "Â‚nÂ‚j"
+#define MESSAGE_CANCEL "ÂƒLÂƒÂƒÂƒÂ“ÂƒZÂƒÂ‹"
 #endif
 
 #ifdef ANDROID
@@ -125,6 +145,28 @@ void ONScripter::leaveSystemCall(bool restore_flag)
 
 int ONScripter::executeSystemCall()
 {
+    /* IkuraDroid: scripts with a textgosub header (07th-style) draw
+     * their own save/load screens (*savemode/*loadmode, reached from
+     * the right-click pause menu with `savegame`/`loadgame`). When the
+     * M3 bridge routed F5/F6 into SYSTEM_SCRIPT_SAVE/LOAD, gosub
+     * straight into the game's own screen instead of showing the
+     * built-in slot list: ret 1 aborts the parked wait and the parser
+     * continues inside the script routine; its final `return` lands on
+     * the top of the textgosub label, the same place the script's own
+     * post-menu path jumps to. */
+    if (system_menu_mode == SYSTEM_SCRIPT_SAVE ||
+        system_menu_mode == SYSTEM_SCRIPT_LOAD) {
+        /* IkuraDroid: consume the trigger before dispatching - one
+         * arming must gosub into the script routine exactly once.
+         * Clearing the mode only after the gosub left a window where a
+         * duplicated dispatch stacked a second return frame and
+         * recaptured the screen after the text had been hidden. */
+        bool save = (system_menu_mode == SYSTEM_SCRIPT_SAVE);
+        system_menu_mode = SYSTEM_NULL;
+        executeSystemScriptMenu(save);
+        return 1;
+    }
+
     SDL_BlitSurface(text_info.image_surface, NULL, backup_surface, NULL);
 
     enterSystemCall();
@@ -140,9 +182,11 @@ int ONScripter::executeSystemCall()
             if (executeSystemReset()) return 1; // stop parsing text
             break;
         case SYSTEM_SAVE:
+            M3_LOG("builtin SAVE screen open");
             executeSystemSave();
             break;
         case SYSTEM_LOAD:
+            M3_LOG("builtin LOAD screen open");
             if (executeSystemLoad()) return 1; // stop parsing text
             break;
         case SYSTEM_LOOKBACK:
@@ -167,6 +211,143 @@ int ONScripter::executeSystemCall()
     }
 
     return 0;
+}
+
+/* IkuraDroid: builds of the bridge before the dispatch capture let the
+ * 07th save routine write its slot thumbnails (screenshot\ss<N>.bmp)
+ * while screenshot_w/h still held the init-time full-screen values, so
+ * those files are full-screen-sized canvases that the slot list lsp's
+ * over the whole page. The script itself only ever writes thumbnails
+ * (the rclk path and the bridge both capture 80x60), so a thumbnail
+ * matching the full screen size can only be such a stale artifact.
+ * Drop the files before the screen lsp's them: the slot falls back to
+ * its dummy image until the next save into it writes a proper shot. */
+static void purgeOversizedSlotScreenshots(const char* base_path, int screen_w, int screen_h)
+{
+    char dir[512];
+    snprintf(dir, sizeof(dir), "%sscreenshot", base_path);
+    DIR* dp = opendir(dir);
+    if (!dp) return;
+
+    struct dirent* entp;
+    while ((entp = readdir(dp)) != NULL) {
+        const char* name = entp->d_name;
+        if (strncmp(name, "ss", 2) != 0) continue;
+        const char* dot = strrchr(name, '.');
+        if (!dot || strcmp(dot, ".bmp") != 0) continue;
+        const char* p = name + 2;
+        if (p == dot) continue;
+        while (p < dot && *p >= '0' && *p <= '9') p++;
+        if (p != dot) continue;
+
+        char path[512];
+        snprintf(path, sizeof(path), "%s/%s", dir, name);
+        FILE* fp = fopen(path, "rb");
+        if (!fp) continue;
+        unsigned char header[26];
+        size_t got = fread(header, 1, sizeof(header), fp);
+        fclose(fp);
+        if (got < sizeof(header)) continue;
+        int w = header[18] | (header[19] << 8) | (header[20] << 16) | ((int)header[21] << 24);
+        int h = header[22] | (header[23] << 8) | (header[24] << 16) | ((int)header[25] << 24);
+        if (w <= 0 || h <= 0 || w != screen_w || h != screen_h) continue;
+
+        if (unlink(path) == 0)
+            M3_LOG("M3 purge: stale full-size slot preview removed: %s (%dx%d)",
+                   name, w, h);
+    }
+    closedir(dp);
+}
+
+bool ONScripter::setupScriptSystemMenu(bool save)
+{
+    /* Script-drawn screens exist only in textgosub games (07th-style
+     * header: *savemode / *loadmode subroutines behind the right-click
+     * menu, writing saves with the `savegame` command). They are
+     * entered from the engine-initiated textgosub wait itself - the
+     * top nesting frame must be the textgosub one, which is exactly
+     * the state the right-click menu hook runs in on PC. Inside the
+     * game's own screens (menu, save, load, lookback - all entered by
+     * script gosubs) the top frame is a plain one and the M3 keys
+     * stay inert. Everything that fails here falls back to the
+     * built-in screens. */
+    if (!textgosub_label) {
+        M3_LOG("M3 %s fallback: no textgosub_label", save ? "SAVE" : "LOAD");
+        return false;
+    }
+
+    const char* target = save ? "savemode" : "loadmode";
+    if (!script_h.hasLabel(target)) {
+        M3_LOG("M3 %s fallback: no *%s label", save ? "SAVE" : "LOAD", target);
+        return false;
+    }
+    if (!script_h.hasLabel(textgosub_label)) {
+        M3_LOG("M3 %s fallback: no *%s label", save ? "SAVE" : "LOAD", textgosub_label);
+        return false;
+    }
+
+    if (!last_nest_info || !last_nest_info->textgosub_flag) {
+        M3_LOG("M3 %s fallback: park outside the textgosub frame (nest=%p tgosub=%d)",
+               save ? "SAVE" : "LOAD",
+               last_nest_info ? (void*)last_nest_info : NULL,
+               last_nest_info ? (int)last_nest_info->textgosub_flag : -1);
+        return false;
+    }
+
+    system_menu_mode = save ? SYSTEM_SCRIPT_SAVE : SYSTEM_SCRIPT_LOAD;
+    M3_LOG("M3 %s armed: script screen *%s", save ? "SAVE" : "LOAD", target);
+    return true;
+}
+
+void ONScripter::executeSystemScriptMenu(bool save)
+{
+    const char* target = save ? "savemode" : "loadmode";
+    if (!script_h.hasLabel(target) || !script_h.hasLabel(textgosub_label)) {
+        /* Cannot happen (setupScriptSystemMenu verified the labels
+         * before arming the mode, and executeSystemCall consumed the
+         * mode before calling here); nothing to unwind. */
+        return;
+    }
+
+    ScriptHandler::LabelInfo text_li = script_h.lookupLabel(textgosub_label);
+
+    /* The game's own right-click path captures the game screen before
+     * hiding the text (*Text_cw_rclk: "getscreenshot 80,60"); the save
+     * routine later squeezes that capture into the slot thumbnail file
+     * (savescreenshot2 -> screenshot\ss<N>.bmp), which the slot list
+     * lsp's at its native size. The bridge bypasses *Text_cw_rclk, so
+     * run the capture here with the same 80x60 size; otherwise
+     * screenshot_w/h keep their init-time full-screen values and
+     * savescreenshot2 writes a full-screen-sized, never-filled BMP
+     * that the slot preview then draws over the whole page. */
+    captureScreenshot(80, 60);
+    purgeOversizedSlotScreenshots(archive_path, screen_width, screen_height);
+    M3_LOG("M3 %s dispatch: capture 80x60 done, gosub *%s",
+           save ? "SAVE" : "LOAD", target);
+
+    /* Hide the text layer the way the game's own right-click handler
+     * does (texthide + textoff in *Text_cw_rclk / *rmenu_csutom): the
+     * text is drawn above every sprite, so the screen's own black
+     * backdrop would not cover it. Both script screens leave through
+     * *save_exit, which runs texton, and the return path re-enters the
+     * top of the textgosub label, where the window is re-rendered. */
+    if (windowchip_sprite_no >= 0)
+        sprite_info[windowchip_sprite_no].visible = false;
+    leaveTextDisplayMode(true);
+    text_on_flag = false;
+    dirty_rect.fill(screen_width, screen_height);
+    flush(refreshMode());
+
+    /* gosub into the game's screen routine; the NestInfo frame carries
+     * the first instruction of the textgosub label as the return
+     * address - the exact target of the script's own "btndef clear :
+     * goto *Text_cw" after the pause menu closes. A successful
+     * `loadgame` inside the load screen never returns: the interpreter
+     * state is replaced by the save, exactly like the built-in load. */
+    gosubReal(target, text_li.start_address, false);
+
+    /* The trigger was already consumed by executeSystemCall before it
+     * called here; leaving the mode cleared is its job now. */
 }
 
 void ONScripter::executeSystemMenu()

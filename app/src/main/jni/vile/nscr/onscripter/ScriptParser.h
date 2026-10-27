@@ -217,7 +217,9 @@ protected:
            SYSTEM_MENU = 7,
            SYSTEM_YESNO = 8,
            SYSTEM_AUTOMODE = 9,
-           SYSTEM_END = 10
+           SYSTEM_END = 10,
+           SYSTEM_SCRIPT_SAVE = 11,
+           SYSTEM_SCRIPT_LOAD = 12
     };
     enum { RET_NOMATCH = 0,
            RET_SKIP_LINE = 1,
