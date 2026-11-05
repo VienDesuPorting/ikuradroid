@@ -47,6 +47,17 @@ extern "C" void c2pstrcpy(Str255 dst, const char* src); // #include <TextUtils.h
 
 #define READ_LENGTH 4096
 
+#if defined(ANDROID)
+#include <android/log.h>
+/* Slot-file location proof: every primary save/load logs the exact
+ * resolved path. save_dir is the game folder (setSaveDir in ons_glue),
+ * so the line doubles as an on-device check that the slots live next to
+ * nscript.dat and not in the app's private data dir. */
+#define ONS_SAVE_LOG(...) __android_log_print(ANDROID_LOG_INFO, "ONS_SAVE", __VA_ARGS__)
+#else
+#define ONS_SAVE_LOG(...) do {} while (0)
+#endif
+
 void ONScripter::searchSaveFile(SaveFileInfo& save_file_info, int no)
 {
     char file_name[256];
@@ -180,7 +191,10 @@ int ONScripter::loadSaveFile(int no)
 {
     char filename[32];
     sprintf(filename, "save%d.dat", no);
+    ONS_SAVE_LOG("load slot %d from %s%s", no,
+                 save_dir ? save_dir : archive_path, filename);
     if (loadFileIOBuf(filename) == 0) {
+        ONS_SAVE_LOG("load slot %d: not found", no);
         fprintf(stderr, "can't open save file %s\n", filename);
         return -1;
     }
@@ -239,13 +253,18 @@ int ONScripter::writeSaveFile(int no, const char* savestr)
 
     char filename[32];
     sprintf(filename, "save%d.dat", no);
+    ONS_SAVE_LOG("write slot %d to %s%s", no,
+                 save_dir ? save_dir : archive_path, filename);
 
     memcpy(file_io_buf, save_data_buf, save_data_len);
     file_io_buf_ptr = save_data_len;
     if (saveFileIOBuf(filename, 0, savestr)) {
+        ONS_SAVE_LOG("write slot %d: FAILED (%s%s)", no,
+                     save_dir ? save_dir : archive_path, filename);
         fprintf(stderr, "can't open save file %s for writing\n", filename);
         return -1;
     }
+    ONS_SAVE_LOG("write slot %d: ok", no);
 
     size_t magic_len = strlen(SAVEFILE_MAGIC_NUMBER) + 2;
     sprintf(filename, RELATIVEPATH "sav%csave%d.dat", DELIMITER, no);

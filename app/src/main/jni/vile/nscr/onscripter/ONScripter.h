@@ -609,6 +609,7 @@ private:
     // variables and methods relevant to rmenu
     bool system_menu_enter_flag;
     int system_menu_mode;
+    char* script_menu_restart_address; // M3: return point for the label-restart dispatch
 
     int shelter_event_mode;
     int shelter_display_mode;
@@ -623,7 +624,6 @@ private:
     int executeSystemCall();
     bool setupScriptSystemMenu(bool save);
     void executeSystemScriptMenu(bool save);
-
     void executeSystemMenu();
     void executeSystemSkip();
     void executeSystemAutomode();

@@ -186,6 +186,10 @@ public:
     LabelInfo lookupLabel(const char* label);
     LabelInfo lookupLabelNext(const char* label);
     bool hasLabel(const char* label);
+    /* IkuraDroid: variable number behind a numalias name, or -1 when the
+     * script never declared it. Used by the M3 bridge to drive the
+     * game's own load_for_title handshake without hardcoding indices. */
+    int lookupNumAlias(const char* alias_name);
     void errorAndExit(const char* str);
 
     ArrayVariable* getRootArrayVariable();

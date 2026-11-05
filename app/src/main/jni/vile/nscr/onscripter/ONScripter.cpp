@@ -609,6 +609,7 @@ void ONScripter::reset()
 
     system_menu_enter_flag = false;
     system_menu_mode = SYSTEM_NULL;
+    script_menu_restart_address = NULL;
     shift_pressed_status = 0;
     ctrl_pressed_status = 0;
     display_mode = DISPLAY_MODE_NORMAL;

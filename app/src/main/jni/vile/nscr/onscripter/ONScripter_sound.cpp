@@ -60,12 +60,30 @@ extern "C" Uint32 SDLCALL bgmfadeCallback(Uint32 interval, void* param);
 
 #define TMP_MUSIC_FILE "tmp.mus"
 
+#if defined(ANDROID)
+#include <android/log.h>
+#define ONS_MUSIC_LOG(...) __android_log_print(ANDROID_LOG_INFO, "ONS_MUSIC", __VA_ARGS__)
+#else
+#define ONS_MUSIC_LOG(...) do {} while (0)
+#endif
+
+/* Defined in ONScripter_event.cpp: suppresses the music-finished hook
+ * while an intentional Mix_HaltMusic() is in flight (SDL_mixer 2.0.1
+ * calls the hook from Mix_HaltMusic itself). */
+extern bool ons_music_halt_guard;
+
 int ONScripter::playSound(const char* filename, int format, bool loop_flag, int channel)
 {
-    if (!audio_open_flag) return SOUND_NONE;
+    if (!audio_open_flag) {
+        ONS_MUSIC_LOG("playSound: audio not open, skip [%s] fmt=%d", filename ? filename : "(null)", format);
+        return SOUND_NONE;
+    }
 
     long length = script_h.cBR->getFileLength(filename);
-    if (length == 0) return SOUND_NONE;
+    if (length == 0) {
+        ONS_MUSIC_LOG("playSound: file not found [%s] fmt=%d", filename ? filename : "(null)", format);
+        return SOUND_NONE;
+    }
 
     unsigned char* buffer;
 
@@ -87,11 +105,15 @@ int ONScripter::playSound(const char* filename, int format, bool loop_flag, int 
         music_info = Mix_LoadMUS_RW(SDL_RWFromMem(buffer, length), 1);
         Mix_VolumeMusic(music_volume);
         Mix_HookMusicFinished(musicFinishCallback);
+        ONS_MUSIC_LOG("playSound music [%s] len=%ld loop=%d vol=%d loader=%s",
+                      filename, length, loop_flag ? 1 : 0, music_volume,
+                      music_info ? "ok" : "NULL");
         if (Mix_PlayMusic(music_info, (music_play_loop_flag && music_loopback_offset == 0.0) ? -1 : 0) == 0) {
             music_buffer = buffer;
             music_buffer_length = length;
             return SOUND_MUSIC;
         }
+        ONS_MUSIC_LOG("playSound: Mix_PlayMusic failed [%s] err=%s", filename, Mix_GetError());
     }
 
     if (format & SOUND_CHUNK) {
@@ -127,6 +149,7 @@ int ONScripter::playSound(const char* filename, int format, bool loop_flag, int 
 
     delete[] buffer;
 
+    ONS_MUSIC_LOG("playSound: unsupported/failed [%s] fmt=%d", filename ? filename : "(null)", format);
     return SOUND_OTHER;
 }
 
@@ -470,14 +493,18 @@ void ONScripter::stopBGM(bool continue_flag)
 
     if (music_info) {
         ext_music_play_once_flag = true;
+        ons_music_halt_guard = true; // SDL_mixer 2.0.1 fires the hook on halt
         Mix_HaltMusic();
+        ons_music_halt_guard = false;
         Mix_FreeMusic(music_info);
         music_info = NULL;
     }
 
     if (midi_info) {
         ext_music_play_once_flag = true;
+        ons_music_halt_guard = true;
         Mix_HaltMusic();
+        ons_music_halt_guard = false;
         Mix_FreeMusic(midi_info);
         midi_info = NULL;
     }

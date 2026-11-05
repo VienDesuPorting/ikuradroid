@@ -175,6 +175,22 @@ void ScriptHandler::setKeyTable(const unsigned char* key_table)
     }
 }
 
+// True if the byte after '%'/'?'/'$' can start a variable reference
+// (a number or a numalias/stralias name). Used to tell inline variable
+// references in text lines (%0, ?0[1], $5) from literal punctuation in
+// Cyrillic prose, e.g. "медсестра?!" or "100%". In CP932 scripts an ASCII
+// '?'/'%' in text never occurs (the fullwidth ？％ are two-byte characters),
+// but a CP1251 script renders punctuation as single ASCII bytes, so the
+// blind parse used to fall into addIntVariable() -> parseArray() and die
+// with "Array No. is not declared" on every question mark in dialogue.
+static bool startsVariableRef(unsigned char ch)
+{
+    return (ch >= '0' && ch <= '9') ||
+           (ch >= 'a' && ch <= 'z') ||
+           (ch >= 'A' && ch <= 'Z') ||
+           ch == '_';
+}
+
 // basic parser function
 const char* ScriptHandler::readToken()
 {
@@ -233,11 +249,13 @@ readTokenTop:
             }
             else {
                 ignore_clickstr_flag = false;
-                if (!eng_flag && (ch == '%' || ch == '?')) {
+                if (!eng_flag && (ch == '%' || ch == '?') &&
+                    startsVariableRef(buf[1])) {
                     addIntVariable(&buf);
                     SKIP_SPACE(buf);
                 }
-                else if (!eng_flag && (ch == '$')) {
+                else if (!eng_flag && ch == '$' &&
+                         startsVariableRef(buf[1])) {
                     addStrVariable(&buf);
                     SKIP_SPACE(buf);
                 }
@@ -821,6 +839,21 @@ int ScriptHandler::getStringFromInteger(char* buffer, int no, int num_column, bo
     return num_column;
 #else
     int code = enc.getEncoding();
+    if (code == Encoding::CODE_CP1251) {
+        /* CP1251 text is single-byte Cyrillic + ASCII: a number expands to
+         * plain ASCII digits. The fullwidth digit paths below only handle
+         * CP932/UTF-8 and, for CP1251, wrote nothing at all (buffer left
+         * uninitialized). Same output as the FORCE_1BYTE_CHAR branch above. */
+        char format[6];
+        if (is_zero_inserted)
+            sprintf(format, "%%0%dd", num_column);
+        else
+            sprintf(format, "%%%dd", num_column);
+        if (num_minus == 1) no = -no;
+        sprintf(buffer, format, no);
+
+        return strlen(buffer);
+    }
     int n = 2; // bytes per character
     if (code == Encoding::CODE_UTF8)
         n = 3;
@@ -987,6 +1020,24 @@ void ScriptHandler::addNumAlias(const char* str, int no)
     Alias* p_num_alias = new Alias(str, no);
     last_num_alias->next = p_num_alias;
     last_num_alias = last_num_alias->next;
+}
+
+/* IkuraDroid: reverse lookup for the numalias table. The alias block is
+ * built while reading the script header (numalias <name>, <var_no>), so
+ * by runtime the mapping is complete and read-only. Returns the variable
+ * number the alias points at, or -1 when the name is unknown - callers
+ * use that as "the script has no such convention". */
+int ScriptHandler::lookupNumAlias(const char* alias_name)
+{
+    if (alias_name == NULL) return -1;
+
+    Alias* alias = root_num_alias.next;
+    while (alias) {
+        if (alias->alias && !strcmp(alias->alias, alias_name))
+            return alias->num;
+        alias = alias->next;
+    }
+    return -1;
 }
 
 void ScriptHandler::addStrAlias(const char* str1, const char* str2)
