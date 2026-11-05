@@ -30,6 +30,15 @@
 #include <android/log.h>
 #endif
 
+/* IkuraDroid M3 bridge diagnostics (same tag as ONScripter_rmenu.cpp):
+ * logs the routing decisions of the synthetic F-key injections and the
+ * reason whenever a trigger is swallowed by the dispatch guard. */
+#if defined(ANDROID)
+#define M3_LOG(...) __android_log_print(ANDROID_LOG_INFO, "ONS_M3", __VA_ARGS__)
+#else
+#define M3_LOG(...) do {} while (0)
+#endif
+
 #define ONS_TIMER_EVENT (SDL_USEREVENT)
 #define ONS_MUSIC_EVENT (SDL_USEREVENT + 1)
 #define ONS_CDAUDIO_EVENT (SDL_USEREVENT + 2)
@@ -51,11 +60,30 @@ SDL_TimerID timer_bgmfade_id = NULL;
 
 bool ext_music_play_once_flag = false;
 
+/* Suppression guard around intentional Mix_HaltMusic() calls.
+ * The vendored SDL_mixer is 2.0.1, whose Mix_HaltMusic() invokes
+ * music_finished_hook() while the lock is held, i.e. an intentional
+ * stop is indistinguishable from a natural track end.  Without the
+ * guard a stop issued while music_play_loop_flag is still/again true
+ * re-arms ONS_MUSIC_EVENT and the restart path in flushEventSub
+ * recreates the very halt that queued it: an endless silent restart
+ * loop (observed at ~300 Hz after loadgame restored the BGM).
+ * Natural track end never runs with the guard set, so looping via
+ * the finish callback keeps working. */
+bool ons_music_halt_guard = false;
+
 /* **************************************** *
  * Callback functions
  * **************************************** */
 extern "C" void musicFinishCallback()
 {
+    if (ons_music_halt_guard) {
+#if defined(ANDROID)
+        __android_log_print(ANDROID_LOG_INFO, "ONS_MUSIC",
+                            "musicFinish: suppressed (intentional halt)");
+#endif
+        return;
+    }
     SDL_Event event;
     event.type = ONS_MUSIC_EVENT;
     SDL_PushEvent(&event);
@@ -1039,8 +1067,12 @@ bool ONScripter::keyPressEvent(SDL_KeyboardEvent* event)
         case SDLK_F5:
             /* 07th-style scripts draw their own save/load screens and
              * reach them through the right-click pause menu; prefer
-             * those over the built-in slot lists (falls back to the
-             * built-in screens when the script has no such labels). */
+             * those over the built-in slot lists. A false return
+             * (no script screens or an empty-stack park - the title)
+             * falls back to the built-in screens; a true return with
+             * the mode left NULL means the probe deliberately
+             * swallowed the trigger (the game's own button screen
+             * owns the park - nothing is opened). */
             if (!setupScriptSystemMenu(false)) system_menu_mode = SYSTEM_LOAD;
             return true;
         case SDLK_F6:
@@ -1055,6 +1087,17 @@ bool ONScripter::keyPressEvent(SDL_KeyboardEvent* event)
         default:
             break;
         }
+    }
+    else if (event->keysym.sym == SDLK_F5 || event->keysym.sym == SDLK_F6) {
+        /* The M3 sheet sent a Save/Load trigger while the dispatch gate
+         * is closed (a built-in screen owns system_menu_mode, or the
+         * script reserved the function keys via getfunction). Without
+         * this line the trigger vanished without a trace - the reported
+         * "Load still opens the text menu" had zero ONS_M3 lines to
+         * reason from. */
+        M3_LOG("M3 F%d ignored: system_menu_mode=%d getfunction_flag=%d",
+               event->keysym.sym == SDLK_F5 ? 5 : 6,
+               (int)system_menu_mode, (int)getfunction_flag);
     }
 
     if ((event_mode & (WAIT_INPUT_MODE | WAIT_BUTTON_MODE)) &&

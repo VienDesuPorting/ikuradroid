@@ -268,9 +268,12 @@ bool ONScripter::setupScriptSystemMenu(bool save)
      * top nesting frame must be the textgosub one, which is exactly
      * the state the right-click menu hook runs in on PC. Inside the
      * game's own screens (menu, save, load, lookback - all entered by
-     * script gosubs) the top frame is a plain one and the M3 keys
-     * stay inert. Everything that fails here falls back to the
+     * script gosubs) the top frame is a plain one: those parks still
+     * dispatch when a textgosub frame remains deeper in the stack
+     * (overlay dispatch below), everything else falls back to the
      * built-in screens. */
+    script_menu_restart_address = NULL;
+
     if (!textgosub_label) {
         M3_LOG("M3 %s fallback: no textgosub_label", save ? "SAVE" : "LOAD");
         return false;
@@ -287,11 +290,116 @@ bool ONScripter::setupScriptSystemMenu(bool save)
     }
 
     if (!last_nest_info || !last_nest_info->textgosub_flag) {
-        M3_LOG("M3 %s fallback: park outside the textgosub frame (nest=%p tgosub=%d)",
-               save ? "SAVE" : "LOAD",
-               last_nest_info ? (void*)last_nest_info : NULL,
-               last_nest_info ? (int)last_nest_info->textgosub_flag : -1);
-        return false;
+        /* IkuraDroid overlay dispatch: the engine also parks OUTSIDE the
+         * textgosub frame while the game is INSIDE its own screens - the
+         * right-click menu loop (*rmenu_*), the save/load screens
+         * (*savemode_btn_loop / *loadmode_btn_loop), the backlog viewer.
+         * There the top frame is a plain gosub frame, but the textgosub
+         * frame sits deeper in the stack: this is still normal gameplay,
+         * only overlayed. The game itself reaches *savemode/*loadmode
+         * from these very loops ('gosub *savemode' in *rmenu_main_higan,
+         * 'goto *loadmode' in *savemode_btn_loop), so the M3 sheet must
+         * open the same script screens here instead of the built-in slot
+         * list (the reported "Load opens the text menu" case).
+         *
+         * The overlay frames are POPPED down to the textgosub frame and
+         * the dispatch then runs as the plain in-game one (return = top
+         * of the textgosub label). Keeping the overlay frames would make
+         * the *save_exit 'return' land inside a screen whose sprites
+         * *save_exit has just purged (csp 1..100) - invisible spbtn
+         * buttons stay clickable and a stray click could overwrite a
+         * save silently. With the unwind the cancel path rebuilds the
+         * text window at the top of the textgosub routine (btndef clear
+         * also drops the overlay button links); a slot pick replaces the
+         * whole interpreter state via loadgame. Parks with NO textgosub
+         * frame anywhere are served by the label-restart dispatch in the
+         * else branch below (button-wait parks - the title and episode
+         * selectors - keep the built-in screens). */
+        if (last_nest_info) {
+            NestInfo* it = last_nest_info;
+            while (it && !it->textgosub_flag) it = it->previous;
+            if (it) {
+                int popped = 0;
+                while (last_nest_info != it) {
+                    NestInfo* dead = last_nest_info;
+                    last_nest_info = dead->previous;
+                    delete last_nest_info->next;
+                    last_nest_info->next = NULL;
+                    popped++;
+                }
+                M3_LOG("M3 %s overlay unwind: %d frame(s) popped, park on the textgosub frame",
+                       save ? "SAVE" : "LOAD", popped);
+                /* fall through: the stack now looks exactly like the
+                 * normal in-game park and the arm below handles it. */
+            }
+            else {
+                /* IkuraDroid label-restart dispatch: in-game the engine
+                 * also parks with NO textgosub frame at all - every wait
+                 * that sits BETWEEN two textgosub frames. Scene
+                 * transitions (bg/effect/delay waits), the prologue
+                 * before the first text line, the char-by-char text
+                 * display itself: the frame from the previous line was
+                 * popped by its `return` and the next one is only
+                 * pushed at the coming click-wait. The reported "Load
+                 * still opens the text menu right after the game start"
+                 * parks exactly here. Dispatch the game's screen anyway
+                 * and return not to the textgosub label but to the top
+                 * of the label that OWNS the parked command:
+                 *
+                 * - the 07th scenes rebuild themselves from label tops
+                 *   by design (wait loops re-run their btndef/exbtn/
+                 *   print preamble, linear segments replay, helper
+                 *   routines re-run and `return` through the frames
+                 *   still sitting underneath);
+                 * - the scene content survives *loadmode's csp 1..100
+                 *   purge: the game itself opens these screens from the
+                 *   right-click menu mid-scene, so bg (a layer, not a
+                 *   sprite) and the standing sprites (tati_* = 980+)
+                 *   live outside the purged range on purpose;
+                 * - a slot pick never returns (loadgame replaces the
+                 *   interpreter state), so the restart only serves the
+                 *   cancel path.
+                 *
+                 * Button-wait parks split in two. With an EMPTY stack
+                 * (the outer else below: the title and the episode
+                 * selectors, reached by gotos) the built-in screens
+                 * stay: the game offers no rows of its own there, and
+                 * leaveSystemCall restores the parked screen byte-exact
+                 * on cancel. A button wait with PLAIN frames
+                 * underneath (this branch: nest != NULL, no textgosub
+                 * frame anywhere) is the game's own UI living over
+                 * scene code - the right-click menu the eyecatch
+                 * routines open (gosub *rmenu_main from *eye_btn_exit),
+                 * script-drawn selectors and the like. The built-in
+                 * slot lists do not exist in the original, and the
+                 * game's menu already carries the Save/Load/History/
+                 * Title/Exit rows, so the M3 trigger is swallowed here
+                 * instead of painting the alien screen over the game's
+                 * UI (the owner report: "M3 Load in the game menu opens
+                 * the default text menu, which the original simply
+                 * does not have"). Nothing was opened, so there is
+                 * nothing for leaveSystemCall to restore; the wait
+                 * keeps running with the mode left NULL. */
+                if (!(event_mode & WAIT_BUTTON_MODE)) {
+                    ScriptHandler::LabelInfo li =
+                        script_h.getLabelByAddress(script_h.getCurrent());
+                    script_menu_restart_address = li.start_address;
+                    system_menu_mode = save ? SYSTEM_SCRIPT_SAVE : SYSTEM_SCRIPT_LOAD;
+                    M3_LOG("M3 %s armed: script screen *%s via label restart (park in *%s)",
+                           save ? "SAVE" : "LOAD", target, li.name);
+                    return true;
+                }
+                M3_LOG("M3 %s blocked: the game's own screen owns the button "
+                       "wait, no builtin screen over it",
+                       save ? "SAVE" : "LOAD");
+                return true;
+            }
+        }
+        else {
+            M3_LOG("M3 %s fallback: park outside the textgosub frame (nest=NULL)",
+                   save ? "SAVE" : "LOAD");
+            return false;
+        }
     }
 
     system_menu_mode = save ? SYSTEM_SCRIPT_SAVE : SYSTEM_SCRIPT_LOAD;
@@ -309,7 +417,54 @@ void ONScripter::executeSystemScriptMenu(bool save)
         return;
     }
 
+    /* 07th Expansion scripts keep their text-wait click cursor as a
+     * regular sprite over the standard files bmp\cursor0.bmp /
+     * bmp\cursor1.bmp (Higanbana: lsph TextCC1SpNum=601 at define, the
+     * *text_cw wait does "amsp TextCC1SpNum,... : vsp TextCC1SpNum,1").
+     * The game's own right-click handler hides them on the way to its
+     * menus; the bridge bypasses *Text_cw_rclk, so without this the
+     * triangle keeps floating over the dispatched save/load screen
+     * (owner report: the pointer shows in the save menu, absent in
+     * ONScripter-RU). Hiding is safe: the next text wait re-shows and
+     * re-positions the sprite itself. */
+    for (int i = 0; i < MAX_SPRITE_NUM; i++) {
+        AnimationInfo* anim = &sprite_info[i];
+        if (!anim->visible || !anim->file_name) continue;
+        const char* fn = anim->file_name;
+        size_t len = strlen(fn);
+        if (len < 11) continue;
+        if (strncasecmp(fn + len - 11, "cursor0.bmp", 11) != 0 &&
+            strncasecmp(fn + len - 11, "cursor1.bmp", 11) != 0)
+            continue;
+        dirty_rect.add(anim->pos);
+        anim->visible = false;
+        M3_LOG("M3 %s dispatch: hid the game's text cursor sprite %d (%s)",
+               save ? "SAVE" : "LOAD", i, fn);
+    }
+
     ScriptHandler::LabelInfo text_li = script_h.lookupLabel(textgosub_label);
+
+    /* Return address: the routine's `return` must land on the top of the
+     * textgosub label - the exact target of the script's own post-menu
+     * path. The overlay parks (inside the game's own menu/save/load
+     * screens) are unwound to the textgosub frame before the dispatch
+     * (setupScriptSystemMenu), so the same contract holds there: the
+     * cancel path rebuilds the text window, a slot pick replaces the
+     * interpreter state via loadgame.
+     *
+     * The label-restart variant (no textgosub frame anywhere, armed by
+     * setupScriptSystemMenu for non-button parks) returns to the top of
+     * the label that owned the parked command instead: the scene
+     * rebuilds itself from there, exactly the shape of the game's own
+     * 'goto *b_title' title-load convention. */
+    char* return_address = text_li.start_address;
+    if (script_menu_restart_address) {
+        return_address = script_menu_restart_address;
+        script_menu_restart_address = NULL;
+        M3_LOG("M3 %s dispatch: label restart, return to *%s",
+               save ? "SAVE" : "LOAD",
+               script_h.getLabelByAddress(return_address).name);
+    }
 
     /* The game's own right-click path captures the game screen before
      * hiding the text (*Text_cw_rclk: "getscreenshot 80,60"); the save
@@ -319,8 +474,15 @@ void ONScripter::executeSystemScriptMenu(bool save)
      * run the capture here with the same 80x60 size; otherwise
      * screenshot_w/h keep their init-time full-screen values and
      * savescreenshot2 writes a full-screen-sized, never-filled BMP
-     * that the slot preview then draws over the whole page. */
-    captureScreenshot(80, 60);
+     * that the slot preview then draws over the whole page.
+     * In the overlay states the game's own 80x60 capture may already be
+     * pending (the rmenu is entered through *Text_cw_rclk, the save
+     * screen through this bridge's own dispatch) - keep it: the
+     * thumbnail should show the game moment, not the menu itself. The
+     * pending state is readable from screenshot_w/h: the init-time
+     * values are the full screen size, every intentional capture here
+     * and in *Text_cw_rclk is 80x60. */
+    if (screenshot_w != 80 || screenshot_h != 60) captureScreenshot(80, 60);
     purgeOversizedSlotScreenshots(archive_path, screen_width, screen_height);
     M3_LOG("M3 %s dispatch: capture 80x60 done, gosub *%s",
            save ? "SAVE" : "LOAD", target);
@@ -330,7 +492,8 @@ void ONScripter::executeSystemScriptMenu(bool save)
      * text is drawn above every sprite, so the screen's own black
      * backdrop would not cover it. Both script screens leave through
      * *save_exit, which runs texton, and the return path re-enters the
-     * top of the textgosub label, where the window is re-rendered. */
+     * top of the textgosub label (or replays the owning label in the
+     * restart variant), where the window is re-rendered. */
     if (windowchip_sprite_no >= 0)
         sprite_info[windowchip_sprite_no].visible = false;
     leaveTextDisplayMode(true);
@@ -339,12 +502,13 @@ void ONScripter::executeSystemScriptMenu(bool save)
     flush(refreshMode());
 
     /* gosub into the game's screen routine; the NestInfo frame carries
-     * the first instruction of the textgosub label as the return
-     * address - the exact target of the script's own "btndef clear :
-     * goto *Text_cw" after the pause menu closes. A successful
-     * `loadgame` inside the load screen never returns: the interpreter
-     * state is replaced by the save, exactly like the built-in load. */
-    gosubReal(target, text_li.start_address, false);
+     * the return address - the top of the textgosub label (or, in the
+     * label-restart variant, the top of the label that owned the parked
+     * command) - mirroring the script's own "btndef clear : goto
+     * *Text_cw" after the pause menu closes. A successful `loadgame`
+     * inside the load screen never returns: the interpreter state is
+     * replaced by the save, exactly like the built-in load. */
+    gosubReal(target, return_address, false);
 
     /* The trigger was already consumed by executeSystemCall before it
      * called here; leaving the mode cleared is its job now. */

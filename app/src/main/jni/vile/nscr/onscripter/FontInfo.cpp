@@ -241,6 +241,18 @@ void FontInfo::setLineArea(const char* buf)
         }
         num_xy[tateyoko_mode] = w * 2 / pitch_xy[tateyoko_mode] + 1;
     }
+    else if (enc->getEncoding() == Encoding::CODE_CP1251) {
+        /* CP1251 is single-byte: strlen IS the character count. The SJIS
+         * "strlen / 2" assumption halved the line capacity for Russian
+         * text, and drawChar's proportional advance (~1 hankaku per
+         * char) then overflowed it mid-string: isEndOfLine wrapped the
+         * tail onto a second line that a single-line sprite box clips
+         * away. Observed on the Higanbana save screen: the slot caption
+         * is built as mid($textlog,0,16) + "..." and lost its trailing
+         * dots over the slot edge. Capacity of strlen + 1 full-width
+         * units leaves headroom for any proportional advance. */
+        num_xy[tateyoko_mode] = strlen(buf) + 1;
+    }
     else {
         num_xy[tateyoko_mode] = strlen(buf) / 2 + 1;
     }

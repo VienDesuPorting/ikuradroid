@@ -23,6 +23,13 @@
 
 #include "ONScripter.h"
 
+#if defined(ANDROID)
+#include <android/log.h>
+#define ONS_MUSIC_LOG(...) __android_log_print(ANDROID_LOG_INFO, "ONS_MUSIC", __VA_ARGS__)
+#else
+#define ONS_MUSIC_LOG(...) do {} while (0)
+#endif
+
 int ONScripter::loadSaveFile2(int file_version)
 {
     stopSMPEG();
@@ -217,6 +224,7 @@ int ONScripter::loadSaveFile2(int file_version)
     stopCommand();
     loopbgmstopCommand();
     stopAllDWAVE();
+    ONS_MUSIC_LOG("load: stops done (mp3/wave/dwave/loopbgm)");
 
     readStr(&midi_file_name); // MIDI file
     readStr(&wave_file_name); // wave, waveloop
@@ -257,9 +265,22 @@ int ONScripter::loadSaveFile2(int file_version)
     else
         mp3save_flag = false;
     readStr(&music_file_name);
+    ONS_MUSIC_LOG("load: midi=[%s] wave=[%s] cd_track=%d wave_loop=%d cd_loop=%d music_loop=%d mp3save=%d music=[%s]",
+                  midi_file_name ? midi_file_name : "",
+                  wave_file_name ? wave_file_name : "",
+                  current_cd_track,
+                  wave_play_loop_flag ? 1 : 0,
+                  cd_play_loop_flag ? 1 : 0,
+                  music_play_loop_flag ? 1 : 0,
+                  mp3save_flag ? 1 : 0,
+                  music_file_name ? music_file_name : "(null)");
     if (music_file_name) {
-        playSound(music_file_name, SOUND_MUSIC | SOUND_MIDI,
-                  music_play_loop_flag, MIX_BGM_CHANNEL);
+        int ret = playSound(music_file_name, SOUND_MUSIC | SOUND_MIDI,
+                            music_play_loop_flag, MIX_BGM_CHANNEL);
+        ONS_MUSIC_LOG("load: restore bgm [%s] ret=%d", music_file_name, ret);
+    }
+    else {
+        ONS_MUSIC_LOG("load: music_file_name is NULL - no bgm to restore");
     }
 
     erase_text_window_mode = readInt();
@@ -361,6 +382,9 @@ int ONScripter::loadSaveFile2(int file_version)
     readChar(); // 0
     readStr(&loop_bgm_name[0]);
     readStr(&loop_bgm_name[1]);
+    ONS_MUSIC_LOG("load: loopbgm=[%s][%s]",
+                  loop_bgm_name[0] ? loop_bgm_name[0] : "",
+                  loop_bgm_name[1] ? loop_bgm_name[1] : "");
     if (loop_bgm_name[0]) {
         if (loop_bgm_name[1])
             playSound(loop_bgm_name[1],
@@ -599,6 +623,10 @@ void ONScripter::saveSaveFile2(bool output_flag)
         writeStr(music_file_name, output_flag);
     else
         writeStr(NULL, output_flag);
+    if (output_flag)
+        ONS_MUSIC_LOG("save: mp3save=%d music_loop=%d music=[%s]",
+                      mp3save_flag ? 1 : 0, music_play_loop_flag ? 1 : 0,
+                      music_file_name ? music_file_name : "(null)");
 
     writeInt((erase_text_window_mode > 0) ? 1 : 0, output_flag);
     writeInt(1, output_flag);
