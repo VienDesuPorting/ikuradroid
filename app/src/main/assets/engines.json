@@ -66,6 +66,15 @@
       "titles": [
         { "name": "True Love", "tested": false }
       ]
+    },
+    {
+      "name": "NScripter",
+      "tested": true,
+      "titles": [
+        { "name": "Higanbana no Saku Yoru ni", "tested": true },
+        { "name": "Rose Guns Days: The Best", "tested": true },
+        { "name": "Umineko no Naku Koro ni", "tested": false }
+      ]
     }
   ]
 }

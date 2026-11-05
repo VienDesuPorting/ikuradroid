@@ -48,6 +48,16 @@ Local adjustments on top of the initial port: the shim includes
 `<SDL.h>` instead of `<SDL2/SDL.h>` to match the flat in-tree SDL 2.30
 header layout.
 
+## Tested with
+
+- **Higanbana no Saku Yoru ni** (RU fan translation, both parts) —
+  CP1251 text and speaker names, the text window, the script cursor,
+  menus, the game's own save/load screens; verified on a 2412x1080
+  device.
+- **Rose Guns Days: The Best** (RU fan translation) — launch, menus and
+  navigation; the unknown-effect crash after the intro is gone.
+- **Umineko no Naku Koro ni** (RU fan translation) — the next target.
+
 ## Build
 
 `Android.mk` builds three static libraries — `bzip2`, `sdl12_compat`,

@@ -1,6 +1,6 @@
 # IkuraDroid
 
-**IkuraDroid** is an Android interpreter for visual novels built with the **Ikura GDL** engine. Its main focus is the classic JAST USA / G-Collections titles: *Crescendo*, *Kana ~ Little Sister*, *The Sagara Family* and others.
+**IkuraDroid** is an Android player for visual novels with two engine lines: classic JAST USA / G-Collections titles on the **Ikura GDL** and **Will** engines (*Crescendo*, *Heart de Roommate*, *Critical Point* and others), and Russian fan translations of NScripter novels on an embedded **ONScripter** fork with **CP1251** support.
 
 The project grew out of the abandoned 2016 Android port of **ViLE (Visual Library Engine)**. ViLE itself covered not only Ikura GDL but also Will, Crowd, C-Ware, JAST, Windy and T-Love. The current goal is to polish the old games and gradually bring back support for the other engines.
 
@@ -10,7 +10,7 @@ Interface: English / Russian. License: GPLv3.
 
 ## Compatibility
 
-Every engine module from the table is compiled into the app. A title earns the tested mark only after it has been checked end to end on a real device; what exactly has been reworked is visible in the [changelog](CHANGELOG.en.md).
+Every engine module from the table is compiled into the app. A title earns the tested mark after being checked on a real device; what exactly has been reworked is visible in the [changelog](CHANGELOG.en.md).
 
 Current statuses also live in `app/src/main/assets/engines.json` and are shown on the in-app **Engines** screen.
 
@@ -41,6 +41,9 @@ Current statuses also live in `app/src/main/assets/engines.json` and are shown o
 | Windy | Mayclub VR Dating SX | not tested |
 | Windy | Nocturnal Illusion Renewal | not tested |
 | T-Love | True Love | not tested |
+| NScripter | Higanbana no Saku Yoru ni | tested |
+| NScripter | Rose Guns Days: The Best | tested |
+| NScripter | Umineko no Naku Koro ni | not tested |
 
 ## Known issues
 
@@ -51,6 +54,22 @@ Current statuses also live in `app/src/main/assets/engines.json` and are shown o
 The base engine code is extended with dedicated modules built for specific games. The first one is **Little My Maid (LMM)** for the Will family. Currently working: game launch and scene playback, PC-style choices, enlarged touch hit areas and the points bar on the game window frame.
 
 Still planned: speaker name plates and an extra playthrough check on real saves. See [CHANGELOG.en.md](CHANGELOG.en.md) for the per-version details.
+
+## The NScripter engine
+
+The second line of development is an embedded NScripter interpreter: a fork of **ONScripter 20230825** (by Ogapee, GPLv2) with **CP1251** support. Russian fan translations — above all the 07th Expansion novels — were written for NScripter and targeted the old Windows ONScripter builds; there is currently no way to run them on Android: the existing Cyrillic ports are long outdated, were built for 32-bit devices only and did not let you pick the novel freely.
+
+What the fork brings:
+
+- an encoding sniffer: the `language english` marker in the script header, with a fallback heuristic on a `default.ttf` next to the script; Japanese originals (CP932) keep working too;
+- a CP1251 pipeline: Cyrillic in text, speaker names, string sprites and engine screens; the script cursor parks after the last glyph;
+- direct touch without mouse synthesis: the press lands on what the finger holds, menus keep their selection highlight, and a near-miss by a couple of pixels falls back to the nearest opaque art pixel;
+- saving and loading on the game's own screens with slot previews; the in-game menu gets its own History row;
+- letterbox scaling for any screen; engine failures are logged instead of silently killing the session.
+
+The fork was made with reference to the outdated ONScripterRU, but no code from it was used. Every file changed against upstream carries an *IkuraDroid modification notice* next to Ogapee's GPL header; the rest of the tree stays byte-identical to ONScripter 20230825. Technical details are in [nscr/README.md](app/src/main/jni/vile/nscr/README.md).
+
+Tested on a device: **Higanbana no Saku Yoru ni** (both parts, Russian translation) — text, encoding, cursor, menus and the game's own save/load screens; **Rose Guns Days: The Best** (Russian translation) — launch, menus and navigation. The next target is *Umineko no Naku Koro ni*.
 
 ## Installation
 
@@ -65,7 +84,7 @@ Still planned: speaker name plates and an extra playthrough check on real saves.
        └── ...game files...
    ```
 
-   Ikura GDL usually needs `GGD` / `ISF` and `*.suf`; Will needs archives like `Rio.arc` and `Chip.arc`.
+   Ikura GDL usually needs `GGD` / `ISF` and `*.suf`; Will needs archives like `Rio.arc` and `Chip.arc`; NScripter needs `nscript.dat`/`pscript.dat` (or a plain-text `0.txt`) and, for Russian translations, `default.ttf`.
 3. Start IkuraDroid, grant file access, tap **Choose folder** and select the `Novels` folder (or a game folder directly).
 4. Open the game from the library.
 
@@ -116,6 +135,7 @@ The Gradle Wrapper 8.10.2 is already in the repository, so there is no need to i
 ## Roadmap
 
 - desktop builds of the core for Linux and Windows;
+- NScripter: testing *Umineko no Naku Koro ni*, video intro playback;
 - testing the remaining titles on real devices;
 - further work on the Will modules and other engines.
 
@@ -125,7 +145,7 @@ The bundled SDL 2.0.3 was already upgraded to 2.30.x in 1.9.8: SDL 2.30.12 is in
 
 - **ViLE (2010–2012)** — the desktop interpreter by the ViLE Team, lead developer BaSF. Development stopped in 2012; the original project is available on SourceForge.
 - **Vile (2015–2016)** — an Android port of ViLE 0.4.13, versions 0.5–0.54. It was published in the «Визуальные новеллы для Android» VK community, then abandoned and the sources disappeared. That community and the «Визуальные новеллы для Android» Telegram channel of the VienDesu! Porting Team are different projects.
-- **IkuraDroid (2026)** — the Android port sources were recovered from an archive saved in 2024. Since then the toolchain and dependencies were updated, the libraries were rebuilt for AArch64 and the launcher moved to Material 3. The engine core has seen a major rework as well: skinned text windows with speaker names, MPEG-1 video and CD-DA playback, a new save system and a library with cover art. Development is continued by the VienDesu! Porting Team.
+- **IkuraDroid (2026)** — the Android port sources were recovered from an archive saved in 2024. Since then the toolchain and dependencies were updated, the libraries were rebuilt for AArch64 and the launcher moved to Material 3. The engine core has seen a major rework as well: skinned text windows with speaker names, MPEG-1 video and CD-DA playback, a new save system and a library with cover art. For Russian fan translations an ONScripter fork with CP1251 support is embedded. Development is continued by the VienDesu! Porting Team.
 
 The core directories and files (`jni/vile/`, `vile.cpp`) still keep the old ViLE names. This makes it easier to compare the code against the SourceForge upstream without breaking the historical structure.
 
@@ -135,6 +155,7 @@ The core directories and files (`jni/vile/`, `vile.cpp`) still keep the old ViLE
 - **"Ivan"** — the original Android port (2015–2016)
 - **VienDesu! Porting Team** — current IkuraDroid development
 - SDL 2.30.12, SDL_gfx / SDL_image / SDL_mixer / SDL_ttf, libmikmod, SMPEG2, libwebp, HQ2x (MaxSt), utf8cpp
+- **ogapee** — ONScripter (GPLv2); the CP1251 fork is maintained as part of IkuraDroid
 - the Will engine was ported from [VNMV](https://github.com/soywiz-archive/vnvm) with the author's permission
 
 ## Links
