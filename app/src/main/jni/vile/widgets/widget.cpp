@@ -260,7 +260,17 @@ void Widget::Free(){
  *	\param Alpha Alphalevel (0=Transparent, 255=Opaque)
  */
 void Widget::SetAlpha(Uint8 Alpha,SDL_Rect *Dest){
-	EDL_SetAlpha(simage,Dest,Alpha);
+	// simage is created lazily by the first Blend()/Blit() into the
+	// widget, so it is still null when an engine tunes its widgets in
+	// the constructor (Kana and Kana Okaeri set the textview alpha
+	// before any script runs). Dereferencing it here was a hard SEGV -
+	// fault address 0x10 is exactly the w field of SDL_Surface. Skip
+	// quietly instead; the script blits the window surface later and
+	// that surface is created at full alpha either way, so nothing
+	// that worked before changes.
+	if(simage){
+		EDL_SetAlpha(simage,Dest,Alpha);
+	}
 }
 
 /*! \brief Sets wether widget should respond to mouse input
