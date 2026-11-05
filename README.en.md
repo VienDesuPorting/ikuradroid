@@ -57,7 +57,7 @@ Still planned: speaker name plates and an extra playthrough check on real saves.
 
 ## The NScripter engine
 
-The second line of development is an embedded NScripter interpreter: a fork of **ONScripter 20230825** (by Ogapee, GPLv2) with **CP1251** support. Russian fan translations — above all the 07th Expansion novels — were written for NScripter and targeted the old Windows ONScripter builds; there is currently no way to run them on Android: the existing Cyrillic ports are long outdated, were built for 32-bit devices only and did not let you pick the novel freely.
+The second line of development is an embedded NScripter interpreter: a fork of **ONScripter 20230825** (by Ogapee, GPLv2) with **CP1251** support. Russian fan translations — above all the 07th Expansion novels — were written for NScripter and targeted the old Windows ONScripter builds; there is currently no way to run them on Android. There was ONScripterRU, a Russian port that could run all kinds of titles with Russian translations, but it is long outdated: it was built for 32-bit devices only, and its sources are gone.
 
 What the fork brings:
 
@@ -67,7 +67,7 @@ What the fork brings:
 - saving and loading on the game's own screens with slot previews; the in-game menu gets its own History row;
 - letterbox scaling for any screen; engine failures are logged instead of silently killing the session.
 
-The fork was made with reference to the outdated ONScripterRU, but no code from it was used. Every file changed against upstream carries an *IkuraDroid modification notice* next to Ogapee's GPL header; the rest of the tree stays byte-identical to ONScripter 20230825. Technical details are in [nscr/README.md](app/src/main/jni/vile/nscr/README.md).
+The fork was made with reference to how ONScripterRU behaved, but no code from it was used. Every file changed against upstream carries an *IkuraDroid modification notice* next to Ogapee's GPL header; the rest of the tree stays byte-identical to ONScripter 20230825. Technical details are in [nscr/README.md](app/src/main/jni/vile/nscr/README.md).
 
 Tested on a device: **Higanbana no Saku Yoru ni** (both parts, Russian translation) — text, encoding, cursor, menus and the game's own save/load screens; **Rose Guns Days: The Best** (Russian translation) — launch, menus and navigation. The next target is *Umineko no Naku Koro ni*.
 
