@@ -588,6 +588,17 @@ bool ONScripter::mousePressEvent(SDL_MouseButtonEvent* event)
     }
     else if (event->button == SDL_BUTTON_LEFT &&
              (event->type == SDL_MOUSEBUTTONUP || btndown_flag)) {
+        /* IkuraDroid: press what the hover holds - vanilla semantics.
+         * The hover is always fresh for a touch: refreshMouseOverButton
+         * seeds it from the last touch position at every park, and the
+         * direct FINGER path re-runs it at the finger position on every
+         * DOWN/MOTION. A re-test here was tried (6bf9309) and is wrong
+         * for transbtn menus built from overlapping strips: the hover
+         * handler had already switched the hit sprite's cell and shown
+         * the script's highlight sprite, and re-reading the alpha after
+         * that mutation picked a DIFFERENT strip at the very same point
+         * (RGD title: hover 97 = Start, re-test 95 = Exit, the script
+         * went to *postwebpress and executed 'end'). */
         current_button_state.button = current_over_button;
         if (current_over_button == -1) {
             if (!bexec_flag) current_button_state.button = 0;
@@ -1060,9 +1071,18 @@ bool ONScripter::keyPressEvent(SDL_KeyboardEvent* event)
      * wait loop needs patching; ret==0 resumes the same wait (save made
      * or dialog cancelled), ret==1 lets the parse continue from the
      * position the load/reset installed. The guard keeps injections
-     * from nesting into an already open built-in screen and from
-     * stealing the keys of scripts that use getfunction buttons. */
-    if (system_menu_mode == SYSTEM_NULL && !getfunction_flag) {
+     * from nesting into an already open built-in screen.
+     *
+     * The old !getfunction_flag condition is gone: RGD calls `getfunction`
+     * in every iteration of its textgosub wait loop (*Text_cwlp - a debug
+     * leftover, its F-key handlers are commented out), which latched the
+     * flag for the whole session and muted the M3 sheet's Save/Load/Title
+     * rows from the first text line on (the reported "the M3 save/load
+     * menu does not open during the game"). The bridge must win over the
+     * debug hook: F5..F8 are hijacked even under getfunction_flag, and
+     * scripts keep F1..F4/F9..F12. Games whose getfunction UI really uses
+     * F5..F8 would lose those keys - none of our titles does. */
+    if (system_menu_mode == SYSTEM_NULL) {
         switch (event->keysym.sym) {
         case SDLK_F5:
             /* 07th-style scripts draw their own save/load screens and
@@ -1090,14 +1110,13 @@ bool ONScripter::keyPressEvent(SDL_KeyboardEvent* event)
     }
     else if (event->keysym.sym == SDLK_F5 || event->keysym.sym == SDLK_F6) {
         /* The M3 sheet sent a Save/Load trigger while the dispatch gate
-         * is closed (a built-in screen owns system_menu_mode, or the
-         * script reserved the function keys via getfunction). Without
+         * is closed (a built-in screen owns system_menu_mode). Without
          * this line the trigger vanished without a trace - the reported
          * "Load still opens the text menu" had zero ONS_M3 lines to
          * reason from. */
-        M3_LOG("M3 F%d ignored: system_menu_mode=%d getfunction_flag=%d",
+        M3_LOG("M3 F%d ignored: system_menu_mode=%d",
                event->keysym.sym == SDLK_F5 ? 5 : 6,
-               (int)system_menu_mode, (int)getfunction_flag);
+               (int)system_menu_mode);
     }
 
     if ((event_mode & (WAIT_INPUT_MODE | WAIT_BUTTON_MODE)) &&
@@ -1357,16 +1376,29 @@ void ONScripter::runEventLoop()
         }
 
         switch (event.type) {
-#if defined(IOS) // || defined(ANDROID)
+#if defined(IOS) || defined(ANDROID)
+        /* IkuraDroid: touch is consumed directly, the ViLE way - no SDL
+         * touch->mouse emulation anywhere under the engine (the hint is
+         * switched off in initSDL, so the SDL_TOUCH_MOUSEID stream never
+         * exists). The #else mouse path below stays PC-only. The vanilla
+         * iOS branch was rewritten for SDL 2: SDL_Touch/SDL_GetTouch are
+         * internal structs, finger counts come from the public
+         * SDL_GetNumTouchFingers, and tfinger x/y arrive normalized
+         * [0..1] - they are passed to the mouse handlers as RAW window
+         * coordinates because deviceToGameX/Y inside them own the
+         * letterbox offset and the game scaling (USE_SDL_RENDERER).
+         * SDL deletes a lifted finger right after queueing its FINGERUP,
+         * so the count seen here is the number of REMAINING fingers:
+         * 0 for a plain one-finger tap (left click), 1+ while a second
+         * finger still rests (right click). */
         case SDL_FINGERMOTION: {
-            SDL_Touch* touch = SDL_GetTouch(event.tfinger.touchId);
-            tmp_event.motion.x = device_width * event.tfinger.x / touch->xres - (device_width - screen_device_width) / 2;
-            tmp_event.motion.y = device_height * event.tfinger.y / touch->yres - (device_height - screen_device_height) / 2;
+            tmp_event.motion.x = device_width * event.tfinger.x;
+            tmp_event.motion.y = device_height * event.tfinger.y;
             if (mouseMoveEvent(&tmp_event.motion)) return;
             if (btndown_flag) {
                 event.button.type = SDL_MOUSEBUTTONDOWN;
                 event.button.button = SDL_BUTTON_LEFT;
-                if (touch->num_fingers >= 2)
+                if (SDL_GetNumTouchFingers(event.tfinger.touchId) >= 2)
                     event.button.button = SDL_BUTTON_RIGHT;
                 event.button.x = tmp_event.motion.x;
                 event.button.y = tmp_event.motion.y;
@@ -1375,47 +1407,75 @@ void ONScripter::runEventLoop()
             }
         } break;
         case SDL_FINGERDOWN: {
-            SDL_Touch* touch = SDL_GetTouch(event.tfinger.touchId);
-            tmp_event.motion.x = device_width * event.tfinger.x / touch->xres - (device_width - screen_device_width) / 2;
-            tmp_event.motion.y = device_height * event.tfinger.y / touch->yres - (device_height - screen_device_height) / 2;
+            tmp_event.motion.x = device_width * event.tfinger.x;
+            tmp_event.motion.y = device_height * event.tfinger.y;
+#ifdef ANDROID
+            __android_log_print(ANDROID_LOG_INFO, "ONS_TOUCH",
+                "fingerDown: window=(%d,%d) p=%.2f fingers=%d",
+                tmp_event.motion.x, tmp_event.motion.y,
+                event.tfinger.pressure,
+                SDL_GetNumTouchFingers(event.tfinger.touchId));
+#endif
             if (mouseMoveEvent(&tmp_event.motion)) return;
-        }
+            num_fingers = SDL_GetNumTouchFingers(event.tfinger.touchId);
             if (btndown_flag) {
-                SDL_Touch* touch = SDL_GetTouch(event.tfinger.touchId);
                 tmp_event.button.type = SDL_MOUSEBUTTONDOWN;
-                tmp_event.button.button = SDL_BUTTON_LEFT;
-                if (touch->num_fingers >= 2)
-                    tmp_event.button.button = SDL_BUTTON_RIGHT;
-                tmp_event.button.x = device_width * event.tfinger.x / touch->xres - (device_width - screen_device_width) / 2;
-                tmp_event.button.y = device_height * event.tfinger.y / touch->yres - (device_height - screen_device_height) / 2;
+                tmp_event.button.button = (num_fingers >= 2) ? SDL_BUTTON_RIGHT : SDL_BUTTON_LEFT;
+                tmp_event.button.x = tmp_event.motion.x;
+                tmp_event.button.y = tmp_event.motion.y;
                 ret = mousePressEvent(&tmp_event.button);
             }
-            {
-                SDL_Touch* touch = SDL_GetTouch(event.tfinger.touchId);
-                num_fingers = touch->num_fingers;
-                if (num_fingers >= 3) {
-                    tmp_event.key.keysym.sym = SDLK_LCTRL;
-                    ret |= keyDownEvent(&tmp_event.key);
-                }
+            if (num_fingers >= 3) {
+                tmp_event.key.keysym.sym = SDLK_LCTRL;
+                ret |= keyDownEvent(&tmp_event.key);
             }
+        }
             if (ret) return;
             break;
         case SDL_FINGERUP:
+            /* Zero pressure is the Java gesture tracker's cancel marker
+             * (menu/cancel swipe, second finger, system cancel): drop the
+             * hover, commit nothing. current_button_state is parked at -1
+             * so the next button wait seeds no hover from it either. */
+            if (event.tfinger.pressure <= 0.0f) {
+#ifdef ANDROID
+                __android_log_print(ANDROID_LOG_INFO, "ONS_TOUCH",
+                    "fingerCancel: drop hover, commit nothing");
+#endif
+                if (event_mode & WAIT_BUTTON_MODE)
+                    mouseOverCheck(-1, -1);
+                current_button_state.x = -1;
+                current_button_state.y = -1;
+                tmp_event.key.keysym.sym = SDLK_LCTRL;
+                keyUpEvent(&tmp_event.key);
+                num_fingers = 0;
+                break;
+            }
             if (num_fingers == 0) break;
             {
-                SDL_Touch* touch = SDL_GetTouch(event.tfinger.touchId);
+                int remaining = SDL_GetNumTouchFingers(event.tfinger.touchId);
                 tmp_event.button.type = SDL_MOUSEBUTTONUP;
-                tmp_event.button.button = SDL_BUTTON_LEFT;
-                if (touch->num_fingers >= 1)
-                    tmp_event.button.button = SDL_BUTTON_RIGHT;
-                tmp_event.button.x = device_width * event.tfinger.x / touch->xres - (device_width - screen_device_width) / 2;
-                tmp_event.button.y = device_height * event.tfinger.y / touch->yres - (device_height - screen_device_height) / 2;
+                tmp_event.button.button = (remaining >= 1) ? SDL_BUTTON_RIGHT : SDL_BUTTON_LEFT;
+                tmp_event.button.x = device_width * event.tfinger.x;
+                tmp_event.button.y = device_height * event.tfinger.y;
+#ifdef ANDROID
+                __android_log_print(ANDROID_LOG_INFO, "ONS_TOUCH",
+                    "fingerUp: window=(%d,%d) p=%.2f remaining=%d button=%d",
+                    tmp_event.button.x, tmp_event.button.y,
+                    event.tfinger.pressure, remaining,
+                    tmp_event.button.button);
+#endif
                 ret = mousePressEvent(&tmp_event.button);
+                if (ret) {
+                    tmp_event.key.keysym.sym = SDLK_LCTRL;
+                    keyUpEvent(&tmp_event.key);
+                    num_fingers = 0;
+                    return;
+                }
             }
             tmp_event.key.keysym.sym = SDLK_LCTRL;
             keyUpEvent(&tmp_event.key);
             num_fingers = 0;
-            if (ret) return;
             break;
 #else
         case SDL_MOUSEMOTION:

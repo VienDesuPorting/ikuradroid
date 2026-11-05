@@ -42,6 +42,12 @@ struct ButtonLink {
     SDL_Rect image_rect;
     AnimationInfo* anim[2];
     int show_flag; // 0...show nothing, 1... show anim[0], 2 ... show anim[1]
+    /* IkuraDroid: the cell the sprite had before the engine's hover
+     * mutation (vanilla setCell(1)); -1 = no mutation is active. The
+     * pre-hover cell is what the transbtn alpha hit test must read, and
+     * also what un-hover has to put back - the script may have parked
+     * the sprite on another cell (RGD keeps Start on cell 1). */
+    int pre_hover_cell;
 
     ButtonLink()
     {
@@ -50,6 +56,7 @@ struct ButtonLink {
         exbtn_ctl[0] = exbtn_ctl[1] = exbtn_ctl[2] = NULL;
         anim[0] = anim[1] = NULL;
         show_flag = 0;
+        pre_hover_cell = -1;
     };
 
     ~ButtonLink()
