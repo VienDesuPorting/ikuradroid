@@ -32,9 +32,9 @@ extern "C" {
 #define VERSION_STR1 "ONScripter"
 #define VERSION_STR2 "Copyright (C) 2001-2020 Studio O.G.A. All Rights Reserved."
 
-#define DEFAULT_SAVE_MENU_NAME "ƒƒZ[ƒu„"
-#define DEFAULT_LOAD_MENU_NAME "ƒƒ[ƒh„"
-#define DEFAULT_SAVE_ITEM_NAME "‚µ‚¨‚è"
+#define DEFAULT_SAVE_MENU_NAME "ÂÂƒÂƒZÂ[ÂƒuÂÂ„"
+#define DEFAULT_LOAD_MENU_NAME "ÂÂƒÂƒÂÂ[ÂƒhÂÂ„"
+#define DEFAULT_SAVE_ITEM_NAME "Â‚ÂµÂ‚Â¨Â‚Ã¨"
 
 #define DEFAULT_TEXT_SPEED_LOW 40
 #define DEFAULT_TEXT_SPEED_MIDDLE 20
@@ -577,7 +577,8 @@ void ScriptParser::writeLog(ScriptHandler::LogInfo& info)
     }
 
     if (saveFileIOBuf(info.filename)) {
-        fprintf(stderr, "can't write %s\n", info.filename);
+        __android_log_print(ANDROID_LOG_ERROR, "ONS",
+                            "can't write %s (save file I/O failed)", info.filename);
         exit(-1);
     }
 }
@@ -732,10 +733,19 @@ ScriptParser::EffectLink* ScriptParser::parseEffect(bool init_flag)
         link = link->next;
     }
 
-    fprintf(stderr, "Effect No. %d is not found.\n", tmp_effect.effect);
-    exit(-1);
-
-    return NULL;
+    /* The upstream code printed to stderr and exit(-1) here, which on
+     * Android killed the process silently: stderr is invisible in logcat
+     * and the atexit(SDL_Quit) teardown looks like a crash (audio stop,
+     * surface disconnect, then a FORTIFY abort during process teardown).
+     * Rose Guns Days hit exactly this after its title "Start": the
+     * script referenced an effect number this build has no definition
+     * for. An undefined transition is not worth the game: fall back to
+     * the instant effect (0) and leave a loud trace instead. */
+    __android_log_print(ANDROID_LOG_WARN, "ONS",
+                        "Effect No. %d is not defined (at %s:%d) - using the instant effect instead",
+                        tmp_effect.effect, current_label_info.name, current_line);
+    tmp_effect.effect = 0;
+    return &tmp_effect;
 }
 
 FILE* ScriptParser::fopen(const char* path, const char* mode, bool use_save_dir)

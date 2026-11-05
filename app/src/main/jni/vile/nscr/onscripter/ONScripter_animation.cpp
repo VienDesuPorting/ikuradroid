@@ -190,6 +190,33 @@ void ONScripter::setupAnimationInfo(AnimationInfo* anim, FontInfo* info)
         SDL_Rect pos;
         if (anim->is_tight_region) {
             drawString(anim->file_name, anim->color_list[anim->current_cell], &f_info, false, NULL, &pos);
+
+            /* A single-line string sprite has no second line to show: when
+             * the measured text ran past the line capacity (num_xy), the
+             * tail wrapped and the sprite box clipped it away - the Higanbana
+             * save slots lost the trailing "..." of their captions exactly
+             * like that. setLineArea already sizes the CP1251 capacity to
+             * strlen + 1 full-width units, but the real advance depends on
+             * the on-device font metrics, so instead of trusting any
+             * estimate: if the measure pass wrapped (xy[1] left the first
+             * line), widen the capacity and re-measure until it fits. */
+            int widen_rounds = 0;
+            while (f_info.xy[1] != 0 && widen_rounds < 4) {
+                f_info.num_xy[0] *= 2;
+                f_info.clear();
+                drawString(anim->file_name, anim->color_list[anim->current_cell], &f_info, false, NULL, &pos);
+                widen_rounds++;
+            }
+            if (widen_rounds > 0) {
+                __android_log_print(ANDROID_LOG_WARN, "ONS_SPRITE",
+                                    "single-line string sprite wrapped: capacity x%d after %d widen round(s), text '%s'",
+                                    f_info.num_xy[0], widen_rounds, anim->file_name);
+            }
+            if (anim->visible) {
+                __android_log_print(ANDROID_LOG_INFO, "ONS_SPRITE",
+                                    "string sprite '%s': measured %dx%d, capacity %d units",
+                                    anim->file_name, pos.w, pos.h, f_info.num_xy[0]);
+            }
         }
         else {
             int xy_bak[2];

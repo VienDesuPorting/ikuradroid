@@ -3045,6 +3045,13 @@ int ONScripter::erasetextwindowCommand()
 
 int ONScripter::endCommand()
 {
+    /* `end` tears the whole game process down (exit -> atexit(SDL_Quit)),
+     * which used to look exactly like a crash in logcat: audio stop, then
+     * the surface disconnect. Log the script location so a script-driven
+     * exit is always distinguishable from a real fault. */
+    __android_log_print(ANDROID_LOG_WARN, "ONS",
+                        "script executed 'end' at %s:%d - exiting the game process",
+                        current_label_info.name, current_line);
     quit();
     stopSMPEG();
     exit(0);

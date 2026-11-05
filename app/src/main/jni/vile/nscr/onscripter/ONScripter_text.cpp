@@ -242,7 +242,8 @@ void ONScripter::openFont(FontInfo* fi)
 {
     if (fi->ttf_font[0] == NULL) {
         if (fi->openFont(font_file, screen_ratio1, screen_ratio2) == NULL) {
-            fprintf(stderr, "can't open font file: %s\n", font_file);
+            __android_log_print(ANDROID_LOG_ERROR, "ONS",
+                                "can't open font file: %s", font_file);
             quit();
             exit(-1);
         }
