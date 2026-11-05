@@ -13,9 +13,72 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include <android/log.h>
 #include <jni.h>
+
+/* Upstream ONScripter reports its runtime problems (undefined effects,
+ * missing files, "mpegplay disabled", font failures) through fprintf(stderr)
+ * plus a bare exit(). On Android stderr goes nowhere, so those deaths were
+ * silent: logcat only showed the SDL_Quit teardown. Pipe the engine's
+ * stderr into logcat under ONS_STDERR so every one of those ~50 message
+ * sites becomes visible the moment it fires. */
+static void *ons_stderr_reader(void *arg)
+{
+    int fd = (int)(intptr_t)arg;
+    char buf[1024];
+    size_t len = 0;
+    for (;;) {
+        ssize_t n = read(fd, buf + len, sizeof(buf) - 1 - len);
+        if (n <= 0) break;
+        len += n;
+        buf[len] = '\0';
+        size_t start = 0;
+        for (size_t i = 0; i < len; i++) {
+            if (buf[i] == '\n') {
+                buf[i] = '\0';
+                if (i > start)
+                    __android_log_print(ANDROID_LOG_WARN, "ONS_STDERR", "%s", buf + start);
+                start = i + 1;
+            }
+        }
+        if (start < len) {
+            memmove(buf, buf + start, len - start);
+            len -= start;
+        }
+        else {
+            len = 0;
+        }
+        if (len == sizeof(buf) - 1) {
+            buf[len] = '\0';
+            __android_log_print(ANDROID_LOG_WARN, "ONS_STDERR", "%s", buf);
+            len = 0;
+        }
+    }
+    if (len > 0)
+        __android_log_print(ANDROID_LOG_WARN, "ONS_STDERR", "%s", buf);
+    return NULL;
+}
+
+static void ons_redirect_stderr()
+{
+    int fds[2];
+    if (pipe(fds) != 0) return;
+    if (dup2(fds[1], 2) < 0) {
+        close(fds[0]);
+        close(fds[1]);
+        return;
+    }
+    close(fds[1]);
+    pthread_t tid;
+    if (pthread_create(&tid, NULL, ons_stderr_reader, (void *)(intptr_t)fds[0]) == 0)
+        pthread_detach(tid);
+    else
+        close(fds[0]);
+    __android_log_print(ANDROID_LOG_INFO, "ONS",
+                        "engine stderr is now mirrored to logcat (tag ONS_STDERR)");
+}
 
 /* Java save/load bridge: the M3 menu needs to know that the ONScripter
  * runtime owns the screen. ViLE engines report through the parked engine
@@ -112,6 +175,14 @@ static int ons_detect_encoding(const char *dir)
 
 int ONScripterRun(const char *dir)
 {
+    /* The engine's stderr carries every fatal diagnostic it has; make sure
+     * it lands in logcat before anything can print or exit. */
+    static bool stderr_redirected = false;
+    if (!stderr_redirected) {
+        ons_redirect_stderr();
+        stderr_redirected = true;
+    }
+
     /* ViLE turns SDL2's touch-to-mouse synthesis off process-wide
      * (SDL_HINT_TOUCH_MOUSE_EVENTS "0" in vile.cpp): ViLE feeds its own
      * widgets from FINGER events directly and the extra mouse stream
