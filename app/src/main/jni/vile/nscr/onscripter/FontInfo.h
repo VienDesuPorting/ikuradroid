@@ -70,6 +70,7 @@ public:
     void setXY(int x = -1, int y = -1);
     void clear();
     void newLine();
+    void restorePenFromOldXY();
     void setLineArea(const char* buf);
 
     bool isEndOfLine(float margin = 0.);

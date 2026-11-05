@@ -227,6 +227,21 @@ void FontInfo::newLine()
     line_offset_xy[0] = line_offset_xy[1] = 0;
 }
 
+void FontInfo::restorePenFromOldXY()
+{
+    /* Put the pen back onto the cell of the last drawn glyph. drawChar()
+     * stores that cell in old_xy[] (pixels) before rendering every glyph,
+     * so the inverse of x()/y() recovers the hankaku coordinates. Used when
+     * a textgosub click-wait (07th Expansion *text_cw) ends: the script
+     * continuation must resume right after the last glyph, on the SAME
+     * line, even if the pen was meanwhile moved to the next line. */
+    if (tateyoko_mode != YOKO_MODE) return;
+    if (pitch_xy[0] <= 0 || pitch_xy[1] <= 0) return;
+
+    xy[0] = (old_xy[0] - top_xy[0] - line_offset_xy[0]) * 2 / pitch_xy[0];
+    xy[1] = (old_xy[1] - top_xy[1] - line_offset_xy[1]) * 2 / pitch_xy[1];
+}
+
 void FontInfo::setLineArea(const char* buf)
 {
     if (enc->getEncoding() == Encoding::CODE_UTF8) {
