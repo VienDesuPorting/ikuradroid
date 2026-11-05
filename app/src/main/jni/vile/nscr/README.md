@@ -8,7 +8,9 @@ SJIS/UTF-8 scripts keep working through the same encoding layer.
 
 Upstream: ONScripter 20230825 by Ogapee, GPLv2 (`onscripter/COPYING`
 is preserved untouched). The fork name only covers the patches below;
-everything else stays byte-identical to upstream.
+everything else stays byte-identical to upstream. The fork was made
+with reference to the outdated ONScripterRU Android build; no code from
+it is included — its behavior guided the CP1251 work below.
 
 ## Layout
 
