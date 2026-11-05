@@ -43,7 +43,8 @@ English version: [README.en.md](README.en.md)
 | T-Love | True Love | не проверен |
 | NScripter | Higanbana no Saku Yoru ni | проверен |
 | NScripter | Rose Guns Days: The Best | проверен |
-| NScripter | Umineko no Naku Koro ni | не проверен |
+| NScripter | Umineko no Naku Koro ni Hane | проверен |
+| NScripter | Umineko no Naku Koro ni (остальные части) | не проверен |
 
 ## Известные баги
 
@@ -69,7 +70,7 @@ English version: [README.en.md](README.en.md)
 
 Форк делался с оглядкой на поведение того самого ONScripterRU, но код из него не использовался. Все файлы, изменённые относительно апстрима, несут пометку *IkuraDroid modification notice* рядом с GPL-шапкой Ogapee; остальное дерево байт-в-байт совпадает с ONScripter 20230825. Технические детали — в [nscr/README.md](app/src/main/jni/vile/nscr/README.md).
 
-Протестировано на устройстве: **Higanbana no Saku Yoru ni** (обе части, русский перевод) — текст, кодировка, курсор, меню и родные экраны сохранений; **Rose Guns Days: The Best** (русский перевод) — запуск, меню и навигация. Следующая цель — *Umineko no Naku Koro ni*.
+Протестировано на устройстве: **Higanbana no Saku Yoru ni** (обе части, русский перевод) — текст, кодировка, курсор, меню и родные экраны сохранений; **Rose Guns Days: The Best** (русский перевод) — запуск, меню и навигация; **Umineko no Naku Koro ni Hane** (русский перевод). Следующая цель — остальные части *Umineko no Naku Koro ni*.
 
 ## Запуск
 

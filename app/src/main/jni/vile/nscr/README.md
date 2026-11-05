@@ -56,7 +56,8 @@ header layout.
   device.
 - **Rose Guns Days: The Best** (RU fan translation) — launch, menus and
   navigation; the unknown-effect crash after the intro is gone.
-- **Umineko no Naku Koro ni** (RU fan translation) — the next target.
+- **Umineko no Naku Koro ni Hane** (RU fan translation) — checked on the device.
+- **Umineko no Naku Koro ni**, the remaining parts — the next target.
 
 ## Build
 

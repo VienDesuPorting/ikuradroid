@@ -73,7 +73,8 @@
       "titles": [
         { "name": "Higanbana no Saku Yoru ni", "tested": true },
         { "name": "Rose Guns Days: The Best", "tested": true },
-        { "name": "Umineko no Naku Koro ni", "tested": false }
+        { "name": "Umineko no Naku Koro ni Hane", "tested": true },
+        { "name": "Umineko no Naku Koro ni (other parts)", "tested": false }
       ]
     }
   ]
