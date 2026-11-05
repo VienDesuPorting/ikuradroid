@@ -47,7 +47,7 @@ Current statuses also live in `app/src/main/assets/engines.json` and are shown o
 
 ## Known issues
 
-- The menu audio may crackle very faintly, but it disappears later during gameplay. This will be fixed in the next version.
+- The menu audio may crackle very faintly, but it disappears later during gameplay. So far this has only been noticed on some titles running on the Ikura GDL engine. This will be fixed in the next version.
 
 ## Additional modules
 
