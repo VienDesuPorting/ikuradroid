@@ -43,7 +43,8 @@ Current statuses also live in `app/src/main/assets/engines.json` and are shown o
 | T-Love | True Love | not tested |
 | NScripter | Higanbana no Saku Yoru ni | tested |
 | NScripter | Rose Guns Days: The Best | tested |
-| NScripter | Umineko no Naku Koro ni | not tested |
+| NScripter | Umineko no Naku Koro ni Hane | tested |
+| NScripter | Umineko no Naku Koro ni (other parts) | not tested |
 
 ## Known issues
 
@@ -69,7 +70,7 @@ What the fork brings:
 
 The fork was made with reference to how ONScripterRU behaved, but no code from it was used. Every file changed against upstream carries an *IkuraDroid modification notice* next to Ogapee's GPL header; the rest of the tree stays byte-identical to ONScripter 20230825. Technical details are in [nscr/README.md](app/src/main/jni/vile/nscr/README.md).
 
-Tested on a device: **Higanbana no Saku Yoru ni** (both parts, Russian translation) — text, encoding, cursor, menus and the game's own save/load screens; **Rose Guns Days: The Best** (Russian translation) — launch, menus and navigation. The next target is *Umineko no Naku Koro ni*.
+Tested on a device: **Higanbana no Saku Yoru ni** (both parts, Russian translation) — text, encoding, cursor, menus and the game's own save/load screens; **Rose Guns Days: The Best** (Russian translation) — launch, menus and navigation; **Umineko no Naku Koro ni Hane** (Russian translation). The next target is the remaining parts of *Umineko no Naku Koro ni*.
 
 ## Installation
 
