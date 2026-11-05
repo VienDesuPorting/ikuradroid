@@ -106,9 +106,13 @@ public final class GameLibrary {
     /**
      * Version of the automatic cover matching logic; bumped when the
      * matcher improves, so silent misses of the previous version get
-     * one more try (see {@link #retryMissedAutoCovers}).
+     * one more try (see {@link #retryMissedAutoCovers}). Version 3:
+     * NScripter tiles are searched by their script caption now (the
+     * native probe in nscr/ons_title.cpp) - folders that were searched
+     * by their raw folder name in earlier builds get one fresh try
+     * with the real title.
      */
-    private static final int AUTO_COVER_MATCHER_VERSION = 2;
+    private static final int AUTO_COVER_MATCHER_VERSION = 3;
     private static final String INSTALL_DIR = "games";
 
     private GameLibrary() {
@@ -261,7 +265,8 @@ public final class GameLibrary {
         }
 
         // Tile names: a manual rename wins, then the SUF startup title
-        // of Ikura GDL games, otherwise the plain folder name; covers
+        // of Ikura GDL games, then the script caption of NScripter
+        // games, otherwise the plain folder name; covers
         // resolve from the cache alongside
         for (RunItem item : items) {
             item.setDisplayName(resolveDisplayName(prefs, item));
@@ -579,27 +584,140 @@ public final class GameLibrary {
     }
 
     // ------------------------------------------------------------------
-    // Tile names: manual renames and SUF titles
+    // Tile names: manual renames, SUF titles and NScripter captions
     // ------------------------------------------------------------------
 
     /**
      * The name a tile shows, or null for the plain folder name: the
      * manual rename (setDisplayName) wins, then the SUF startup title
-     * for Ikura GDL games (probeSufTitle).
+     * for Ikura GDL games (probeSufTitle), then the script caption for
+     * NScripter games (probeNscrTitle).
      */
     private static String resolveDisplayName(SharedPreferences prefs, RunItem item) {
-        String renamed = prefs.getString(KEY_DISPLAY + item.getTitle(), null);
+        String path = item.getSourcePath() != null
+                        ? item.getSourcePath() : item.getInstalledPath();
+        if (path == null) {
+            // No folder to probe: only a manual rename can name this tile
+            return prefs.getString(KEY_DISPLAY + item.getTitle(), null);
+        }
+        return displayNameFor(prefs, new File(path), item.getEngine());
+    }
+
+    /**
+     * The tile name of one game folder - the same string the library
+     * tile shows and the cover searches query: the manual rename first,
+     * then the engine probe (the SUF startup title for Ikura GDL, the
+     * script caption for NScripter), null for the plain folder name.
+     * The engine is detected here when the caller has no RunItem yet;
+     * a known engine name skips that walk.
+     */
+    public static String displayNameFor(SharedPreferences prefs, File dir,
+                    String engine) {
+        String renamed = prefs.getString(KEY_DISPLAY + dir.getName(), null);
         if (renamed != null && renamed.trim().length() > 0) {
             return renamed.trim();
         }
-        if ("Ikura GDL".equals(item.getEngine())) {
-            String path = item.getSourcePath() != null
-                            ? item.getSourcePath() : item.getInstalledPath();
-            if (path != null) {
-                return probeSufTitle(new File(path));
-            }
+        if (engine == null) {
+            engine = detectEngine(dir);
+        }
+        if ("Ikura GDL".equals(engine)) {
+            return probeSufTitle(dir);
+        }
+        if ("NScripter".equals(engine)) {
+            return probeNscrTitle(dir);
         }
         return null;
+    }
+
+    /**
+     * What the add-folder invitation calls a pick: the tile names of
+     * every game the folder contributes - itself when it is a game
+     * folder plus the game folders one level below it, exactly what a
+     * rescan of this root adds - resolved the way the tiles show them.
+     * A game whose script keeps no probeable title stands under its
+     * plain folder name; null when the pick contributes no recognized
+     * games at all. The probes read and decrypt script files, so this
+     * belongs off the UI thread.
+     */
+    public static String addedGamesLabel(Context context, String rootPath) {
+        if (rootPath == null) {
+            return null;
+        }
+        File root = new File(rootPath);
+        SharedPreferences prefs = context.getSharedPreferences(
+                        PREFS_FILE, Context.MODE_PRIVATE);
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        if (isGameFolder(root)) {
+            addTileName(names, prefs, root);
+        }
+        File[] children = root.listFiles();
+        if (children != null) {
+            for (File dir : children) {
+                if (dir.isDirectory() && isGameFolder(dir)) {
+                    addTileName(names, prefs, dir);
+                }
+            }
+        }
+        if (names.isEmpty()) {
+            return null;
+        }
+        StringBuilder label = new StringBuilder();
+        for (String name : names) {
+            if (label.length() > 0) {
+                label.append(", ");
+            }
+            label.append(name);
+        }
+        return label.toString();
+    }
+
+    /** Tile name of one game folder for the invitation label. */
+    private static void addTileName(LinkedHashSet<String> names,
+                    SharedPreferences prefs, File dir) {
+        String name = displayNameFor(prefs, dir, null);
+        if (name == null || name.trim().length() == 0) {
+            name = dir.getName();
+        }
+        names.add(name);
+    }
+
+    /**
+     * NScripter tile names are dug out of the script itself by the
+     * native probe (jni/vile/nscr/ons_title.cpp): the "caption" command
+     * of the define block - the same string the engine puts in the
+     * window title - decoded from whichever of 0.txt / nscr_sec.dat /
+     * nscript.dat the engine would read first, CP932 or CP1251, with
+     * localization tails like ", Russian Patch" trimmed off so VNDB
+     * cover searches hit. Returns null when nothing title-like is
+     * found; the tile keeps the folder name then.
+     */
+    private static String probeNscrTitle(File dir) {
+        if (!sNativeReady) {
+            return null;
+        }
+        try {
+            String title = probeNscrTitleNative(dir.getAbsolutePath());
+            return title != null && title.length() > 0 ? title : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** Native probe implementation (ons_title.cpp); UTF-8, "" when absent. */
+    private static native String probeNscrTitleNative(String dir);
+
+    /** libikuradroid.so is normally already loaded by SDLActivity; this
+     * static load is a safety net for early library walks. Probing is
+     * silently skipped when the library is unavailable. */
+    private static boolean sNativeReady;
+
+    static {
+        try {
+            System.loadLibrary("ikuradroid");
+            sNativeReady = true;
+        } catch (Throwable t) {
+            sNativeReady = false;
+        }
     }
 
     /**

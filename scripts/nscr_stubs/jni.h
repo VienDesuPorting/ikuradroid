@@ -54,6 +54,12 @@ typedef JavaVM_ JavaVM;
 
 struct JNIEnv_ {
     const void* functions;
+
+    /* Methods referenced by the module's JNI entry points; the stub
+     * never runs, so the bodies only have to compile. */
+    void* NewStringUTF(const char*) { return 0; }
+    const char* GetStringUTFChars(jstring, void*) { return 0; }
+    void ReleaseStringUTFChars(jstring, const char*) {}
 };
 
 struct JavaVM_ {

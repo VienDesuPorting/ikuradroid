@@ -11386,8 +11386,15 @@ static unsigned short sjis_2_utf16_org[][2] = {
     {0xfcfc, 0xffff},
     {0, 0}};
 
+/* IkuraDroid: made idempotent. The library title probe (nscr/ons_title.cpp)
+ * initializes the table outside an engine run, and a second engine run in
+ * the same process used to leak the previous arrays. */
 void initSJIS2UTF16()
 {
+    static bool initialized = false;
+    if (initialized) return;
+    initialized = true;
+
     int i = 0;
 
     sjis_2_utf16 = new unsigned short[0xfcfc - 0x8140 + 1];
