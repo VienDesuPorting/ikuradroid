@@ -1018,6 +1018,20 @@ int ONScripter::parseLine()
     else if (cmd[0] == ':')
         return RET_CONTINUE;
 
+    /* A deferred end-of-line newLine() (1-byte mode, see processEOT) must
+     * fire when the engine leaves the text pipeline for a COMMAND.
+     * ONScripter-RU applies that newline immediately in processEOT(); we
+     * hold it back only while the next token can still be a clickstr
+     * ('@'/'\\' are text tokens and consume it in processText). When the
+     * next token is a command (br, select, ld, ...), firing here matches
+     * ONScripter-RU: the RGD select items used to draw one line too high,
+     * and a stale pending newline fired one output too late (first dialogue
+     * line after a scene switch drew one line too low). */
+    if (pending_newline && !script_h.isText()) {
+        sentence_font.newLine();
+        pending_newline = false;
+    }
+
     if (script_h.isText()) {
         if (current_mode == DEFINE_MODE) errorAndExit("text cannot be displayed in define section.");
         return textCommand();

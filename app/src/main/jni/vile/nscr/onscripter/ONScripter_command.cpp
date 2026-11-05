@@ -720,6 +720,13 @@ void ONScripter::setwindowCore()
         sentence_font.window_color[0] = sentence_font.window_color[1] = sentence_font.window_color[2] = 0xff;
     }
 
+    /* NScripter semantics (ONScripter-RU behaves the same): setwindow
+     * re-initializes the text window and resets the output cursor to the
+     * window origin. Without the reset the first text line after a scene's
+     * `window N` could start on a line left over from before the scene
+     * (RGD dialogue drew one line pitch below ONScripter-RU). */
+    sentence_font.clear();
+    pending_newline = false;
     sentence_font.old_xy[0] = sentence_font.x(false);
     sentence_font.old_xy[1] = sentence_font.y(false);
 }
