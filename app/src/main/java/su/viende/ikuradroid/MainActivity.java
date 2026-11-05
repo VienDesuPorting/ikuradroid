@@ -327,12 +327,45 @@ public class MainActivity extends AppCompatActivity
                 offerAddAnother(path);
         }
 
-        /** After a pick: the "add one more folder" invitation. */
-        private void offerAddAnother(String path) {
-                String name = new File(path).getName();
+        /**
+         * After a pick: the "add one more folder" invitation. The message
+         * names the games the way the library tiles will - the script
+         * caption of NScripter games, the SUF title of Ikura GDL games,
+         * the plain folder name only when nothing probeable exists - not
+         * the raw folder name. The name resolution reads and decrypts
+         * script files, so it runs off the UI thread like every other
+         * library walk.
+         */
+        private void offerAddAnother(final String path) {
+                final String folderName = new File(path).getName();
+                new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                                String resolved = GameLibrary.addedGamesLabel(
+                                                                MainActivity.this, path);
+                                final String label = resolved != null
+                                                                && resolved.trim().length() > 0
+                                                                ? resolved.trim()
+                                                                : folderName;
+                                runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                                showAddedDialog(label);
+                                        }
+                                });
+                        }
+                }).start();
+        }
+
+        /** The invitation itself; the caller resolved the label off the
+         * UI thread and this runs back on it. */
+        private void showAddedDialog(String label) {
+                if (isFinishing() || isDestroyed()) {
+                        return;
+                }
                 new MaterialAlertDialogBuilder(this)
                                 .setTitle(R.string.library_added_title)
-                                .setMessage(getString(R.string.library_added_message, name))
+                                .setMessage(getString(R.string.library_added_message, label))
                                 .setPositiveButton(R.string.library_add_more,
                                                 new DialogInterface.OnClickListener() {
                                         @Override

@@ -70,6 +70,7 @@ LOCAL_EXPORT_C_INCLUDES := \
 
 LOCAL_SRC_FILES := \
 	ons_glue.cpp \
+	ons_title.cpp \
 	$(ONS_DIR)/ONScripter.cpp \
 	$(ONS_DIR)/ONScripter_animation.cpp \
 	$(ONS_DIR)/ONScripter_command.cpp \

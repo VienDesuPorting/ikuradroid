@@ -63,7 +63,13 @@ LOCAL_SRC_FILES := \
 	$(wildcard $(LOCAL_PATH)/windy/mayclub/*.cpp)\
 	$(wildcard $(LOCAL_PATH)/windy/nocturnal/*.cpp))
 
-LOCAL_STATIC_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_gfx SDL2_mixer nscr
+# nscr must go through --whole-archive: every engine object is pulled
+# transitively anyway, but ons_title.o (the JNI bridge behind the
+# library tile-name probe) is reached only through the dynamic JNI
+# lookup, which the static linker never sees - a plain archive link
+# drops that member and Java throws UnsatisfiedLinkError at probe time.
+LOCAL_WHOLE_STATIC_LIBRARIES := nscr
+LOCAL_STATIC_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_gfx SDL2_mixer
 LOCAL_LDLIBS := -ldl -llog -lz -lGLESv1_CM -lGLESv2
 LOCAL_CFLAGS := -DVILE_ARCH_LINUX
 
