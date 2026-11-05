@@ -63,7 +63,10 @@ FontInfo::FontInfo()
 
     color[0] = color[1] = color[2] = 0xff;
     on_color[0] = on_color[1] = on_color[2] = 0xff;
-    off_color[0] = off_color[1] = off_color[2] = 0xaa;
+    /* Selectable-sentence (select/rmenu) unhighlighted color. ONScripter-RU
+     * renders select items at ~#cccccc (measured on RGD screenshots); our
+     * old 0xaa made them visibly darker than the reference engine. */
+    off_color[0] = off_color[1] = off_color[2] = 0xcc;
     nofile_color[0] = 0x55;
     nofile_color[1] = 0x55;
     nofile_color[2] = 0x99;

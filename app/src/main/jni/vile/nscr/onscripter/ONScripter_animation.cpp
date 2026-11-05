@@ -189,6 +189,14 @@ void ONScripter::setupAnimationInfo(AnimationInfo* anim, FontInfo* info)
 
         SDL_Rect pos;
         if (anim->is_tight_region) {
+            /* The measure pass below advances f_info.xy. That cursor must
+             * never leak back into the caller's FontInfo through the
+             * copy-back at the end: getSelectableSentence passes the LIVE
+             * sentence font, so after the first select item the stale
+             * measurement cursor reset the line counter and the second item
+             * was placed near the top of the screen (RGD battle-mode select
+             * drew "Автоматический режим" over the film strip). */
+            int measure_xy[2] = {(int)f_info.xy[0], (int)f_info.xy[1]};
             drawString(anim->file_name, anim->color_list[anim->current_cell], &f_info, false, NULL, &pos);
 
             /* A single-line string sprite has no second line to show: when
@@ -212,6 +220,27 @@ void ONScripter::setupAnimationInfo(AnimationInfo* anim, FontInfo* info)
                                     "single-line string sprite wrapped: capacity x%d after %d widen round(s), text '%s'",
                                     f_info.num_xy[0], widen_rounds, anim->file_name);
             }
+
+            /* A tight sprite is sized by calcUpdatedArea to whole text lines
+             * (pitch_y each), but drawGlyph blits the glyph surface (which is
+             * TTF_FontHeight tall, taller than font_size for real fonts) at
+             * font_size/6 below the cell top. The ink bottom therefore lands
+             * below the sprite edge and the sprite clips it: RGD's name plate
+             * lost the lower half of "Лео", the select items were beheaded.
+             * Extend the sprite downward - the ink position does not move. */
+            if (f_info.ttf_font[0]) {
+                int measured_lines = f_info.xy[1] / 2 + 1;
+                int glyph_bottom = (measured_lines - 1) * f_info.pitch_xy[1] +
+                                   f_info.font_size_xy[1] / 6 +
+                                   TTF_FontHeight((TTF_Font*)f_info.ttf_font[0]) + 2;
+                if (pos.h < glyph_bottom) pos.h = glyph_bottom;
+            }
+
+            /* Restore the entry cursor: the measurement is side-effect free
+             * for the caller's font state. */
+            f_info.xy[0] = measure_xy[0];
+            f_info.xy[1] = measure_xy[1];
+
             if (anim->visible) {
                 __android_log_print(ANDROID_LOG_INFO, "ONS_SPRITE",
                                     "string sprite '%s': measured %dx%d, capacity %d units",
