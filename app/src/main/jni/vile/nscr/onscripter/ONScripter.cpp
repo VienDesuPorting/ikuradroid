@@ -60,6 +60,15 @@ void ONScripter::initSDL()
     }
 #endif
 
+#ifdef ANDROID
+    /* IkuraDroid: the ONScripter loop consumes SDL_FINGER* events directly
+     * (runEventLoop, ANDROID branch - the ViLE approach). SDL's own
+     * touch->mouse synthesis would double-deliver every tap as
+     * SDL_TOUCH_MOUSEID button events nothing consumes any more - switch
+     * it off before the first touch can arrive. */
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+#endif
+
 #if !defined(IOS)
     if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == 0 && SDL_JoystickOpen(0) != NULL)
         printf("Initialize JOYSTICK\n");
@@ -278,6 +287,10 @@ ONScripter::ONScripter()
     smpeg_info = NULL;
     layer_alpha_buf = NULL;
     current_button_state.down_flag = false;
+    /* IkuraDroid: -1 marks "no touch event seen yet"; refreshMouseOverButton
+     * uses this on Android to skip the pre-first-touch hover. */
+    current_button_state.x = -1;
+    current_button_state.y = -1;
 
     int i;
     for (i = 0; i < MAX_SPRITE2_NUM; i++)
@@ -798,6 +811,22 @@ void ONScripter::mouseOverCheck(int x, int y)
     last_mouse_state.x = x;
     last_mouse_state.y = y;
 
+    /* IkuraDroid: the hover visual (vanilla setCell(1) on the hovered
+     * strip) mutates the very sprite the transbtn hit test reads its
+     * alpha from - getAlpha() picks the (w/num_of_cells)*current_cell
+     * tile, so a cell left on 1 by the previous check reads a different
+     * alpha landscape and the SAME point can pick another overlapping
+     * strip (RGD title: hover 97 = Start, re-check 95 = Exit). Restore
+     * the pristine cell before the test so every check - press, park
+     * seed, finger motion - scores the same script-arranged art; the
+     * hover cell is re-applied after the test. */
+    if (current_over_button != -1 && current_button_link &&
+        current_button_link->button_type == ButtonLink::SPRITE_BUTTON &&
+        current_button_link->pre_hover_cell >= 0) {
+        sprite_info[current_button_link->sprite_no].setCell(current_button_link->pre_hover_cell);
+        current_button_link->pre_hover_cell = -1;
+    }
+
 #ifdef ANDROID
     /* Log button hit-testing for debugging touch positioning.
      * Only log when there are buttons to check (avoids spam during text). */
@@ -859,6 +888,88 @@ void ONScripter::mouseOverCheck(int x, int y)
     }
 
 #ifdef ANDROID
+    /* IkuraDroid: fingers are not mice. The vanilla test above only fires
+     * when the tap point sits inside a select_rect AND (transbtn menus)
+     * on an opaque pixel of the strip art. A fingertip centered 1-2 game
+     * px off the label scores nothing and the press degrades to LCLICK:
+     * RGD credits, "Golden Abyss" tapped at (258,138) while the item's
+     * rect ends at y=137 - hit=-1, nothing happened, the owner reports
+     * menu presses stopped registering. When the exact pass misses, fall
+     * back to the nearest OPAQUE pixel of the button art within a small
+     * slop radius (nearest distance wins, then stronger alpha, then the
+     * earlier button). Exact vanilla semantics are untouched whenever
+     * the tap is on the art, the press still presses what the hover
+     * holds, and the pre-test cell restore at the top of this function
+     * keeps the alpha landscape pristine for the scan. */
+    if (max_bl == NULL && x >= 0 && y >= 0) {
+        int slop = 6; /* game px, refined from the device scale below */
+        {
+            float sc_x = (screen_width > 0 && screen_device_width > 0)
+                             ? (float)screen_device_width / screen_width
+                             : 0.0f;
+            float sc_y = (screen_height > 0 && screen_device_height > 0)
+                             ? (float)screen_device_height / screen_height
+                             : 0.0f;
+            float sc = (sc_x > 0.0f && sc_y > 0.0f) ? (sc_x < sc_y ? sc_x : sc_y)
+                                                    : 0.0f;
+            if (sc > 0.0f) {
+                slop = (int)(16.0f / sc + 0.5f); /* ~16 device px of slack */
+                if (slop < 2) slop = 2;
+                if (slop > 10) slop = 10;
+            }
+        }
+        ButtonLink* slop_bl = NULL;
+        int slop_c = 0, slop_dist = slop + 1;
+        unsigned int slop_alpha = 0;
+        ButtonLink* it = root_button_link.next;
+        int idx = 0;
+        while (it) {
+            AnimationInfo* info = NULL;
+            if (it->button_type == ButtonLink::SPRITE_BUTTON)
+                info = &sprite_info[it->sprite_no];
+            else if (it->button_type == ButtonLink::NORMAL_BUTTON && it->anim[0])
+                info = it->anim[0];
+            if (info && info->image_surface && info->num_of_cells > 0) {
+                int cell_w = info->image_surface->w / info->num_of_cells;
+                for (int dy = -slop; dy <= slop; dy++) {
+                    int py = y + dy;
+                    int rel_y = py - info->pos.y;
+                    if (rel_y < 0 || rel_y >= info->image_surface->h) continue;
+                    for (int dx = -slop; dx <= slop; dx++) {
+                        int adx = dx < 0 ? -dx : dx;
+                        int ady = dy < 0 ? -dy : dy;
+                        int dist = adx > ady ? adx : ady;
+                        if (dist > slop_dist) continue; /* cannot win */
+                        int px = x + dx;
+                        int rel_x = px - info->pos.x;
+                        if (rel_x < 0 || rel_x >= cell_w) continue;
+                        unsigned char a = info->getAlpha(px, py);
+                        if (a == 0) continue;
+                        if (dist < slop_dist ||
+                            (dist == slop_dist && a > slop_alpha)) {
+                            slop_dist = dist;
+                            slop_alpha = a;
+                            slop_bl = it;
+                            slop_c = idx;
+                        }
+                    }
+                }
+            }
+            it = it->next;
+            idx++;
+        }
+        if (slop_bl) {
+            __android_log_print(ANDROID_LOG_INFO, "ONS_TOUCH",
+                "mouseOverCheck: slop pick button=%d dist=%d alpha=%u",
+                slop_bl->no, slop_dist, (unsigned int)slop_alpha);
+            max_bl = slop_bl;
+            button = slop_bl->no;
+            c = slop_c;
+        }
+    }
+#endif
+
+#ifdef ANDROID
     if (root_button_link.next) {
         __android_log_print(ANDROID_LOG_INFO, "ONS_TOUCH",
             "mouseOverCheck: hit button=%d (was %d)", button, current_over_button);
@@ -878,9 +989,15 @@ void ONScripter::mouseOverCheck(int x, int y)
             if (cbl->button_type == ButtonLink::SPRITE_BUTTON) {
                 if (cbl->exbtn_ctl[0])
                     decodeExbtnControl(cbl->exbtn_ctl[0], &check_src_rect, &check_dst_rect);
-                else {
+                else if (cbl->pre_hover_cell >= 0) {
+                    /* IkuraDroid: un-hover puts back the cell the SCRIPT
+                     * parked the sprite in - not the vanilla blind cell 0
+                     * (RGD re-parks Start on cell 1 for the epilogue).
+                     * The pre-test restore above normally already did
+                     * this; the branch covers chains that skipped it. */
                     sprite_info[cbl->sprite_no].visible = true;
-                    sprite_info[cbl->sprite_no].setCell(0);
+                    sprite_info[cbl->sprite_no].setCell(cbl->pre_hover_cell);
+                    cbl->pre_hover_cell = -1;
                 }
             }
             else if (cbl->button_type == ButtonLink::TMP_SPRITE_BUTTON) {
@@ -911,7 +1028,19 @@ void ONScripter::mouseOverCheck(int x, int y)
             }
             check_dst_rect = bl->image_rect;
             if (bl->button_type == ButtonLink::SPRITE_BUTTON) {
+                /* IkuraDroid: vanilla hover highlight is back - the strip
+                 * shows its second cell (bright label art) while hovered,
+                 * on top of the script's own ctl. The e2312e7 cell freeze
+                 * killed the RGD title hover: its P.. sprites (t_txt_*)
+                 * are never loaded on the title screen, so the ctl alone
+                 * drew nothing. The mutation is safe now - the pre-test
+                 * restore at the top of this function re-reads the
+                 * PRISTINE alpha landscape on every check, so the transbtn
+                 * hit test can no longer flip to another overlapping strip
+                 * (hover 97 = Start, re-test 95 = Exit). bexec games still
+                 * own their presentation entirely (vanilla condition). */
                 if (!bexec_flag || !bl->exbtn_ctl[1]) {
+                    bl->pre_hover_cell = sprite_info[bl->sprite_no].current_cell;
                     sprite_info[bl->sprite_no].visible = true;
                     sprite_info[bl->sprite_no].setCell(1);
                 }
@@ -934,6 +1063,14 @@ void ONScripter::mouseOverCheck(int x, int y)
 
         flush(refreshMode());
         dirty_rect = dirty;
+    }
+    else if (bl && bl->button_type == ButtonLink::SPRITE_BUTTON &&
+             (!bexec_flag || !bl->exbtn_ctl[1])) {
+        /* Same button re-checked (park seed, finger drift): the pre-test
+         * restore above undid the hover cell - put it back silently, the
+         * pixels are identical to what is already on screen (no flush). */
+        bl->pre_hover_cell = sprite_info[bl->sprite_no].current_cell;
+        sprite_info[bl->sprite_no].setCell(1);
     }
 
     current_over_button = button;
@@ -1114,6 +1251,26 @@ void ONScripter::refreshMouseOverButton()
     current_over_button = -1;
     shift_over_button = -1;
     current_button_link = root_button_link.next;
+#ifdef ANDROID
+    /* IkuraDroid: on a touch device there is no real mouse focus - SDL
+     * reports APPMOUSEFOCUS off most of the time, and the vanilla fallback
+     * below then parks the hover at the BOTTOM-RIGHT corner of the game
+     * screen. Every btnwait/textbtnwait park calls this function, so a
+     * button whose art reaches that corner was pre-hovered before any tap:
+     * RGD's title registers its menu as full-height translucent strips
+     * (transbtn - the alpha of the strip art decides the hit), the corner
+     * lands inside the exit strip, and the first tap whose motion had been
+     * consumed outside button mode (the title animation) pressed the stale
+     * corner hover instead of the button under the finger. The owner's
+     * report: "tapping Start pressed the exit button all the way at the
+     * bottom; a long press is needed to hit Start". There is no hover to
+     * preserve on touch: seed the check with the last touch position (game
+     * coords, kept current by mouseMoveEvent/mousePressEvent); before the
+     * first touch there is nothing to hover. */
+    if (current_button_state.x < 0 || current_button_state.y < 0) return;
+    mouseOverCheck(current_button_state.x, current_button_state.y);
+    return;
+#endif
     SDL_GetMouseState(&mx, &my);
     if (!(SDL_GetAppState() & SDL_APPMOUSEFOCUS)) {
         mx = screen_device_width;

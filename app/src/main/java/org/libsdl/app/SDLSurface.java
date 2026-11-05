@@ -285,12 +285,11 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
                         pointerFingerId = event.getPointerId(i);
                         x = event.getX(i) / mWidth;
                         y = event.getY(i) / mHeight;
-                        p = event.getPressure(i);
-                        if (p > 1.0f) {
-                            // may be larger than 1.0f on some devices
-                            // see the documentation of getPressure(i)
-                            p = 1.0f;
-                        }
+                        // IkuraDroid: a system cancel must never click. The
+                        // native pump treats a zero-pressure FINGERUP as a
+                        // cancel marker (drop the hover, commit nothing),
+                        // matching the gesture tracker's cancelEngineTouch.
+                        p = 0f;
                         SDLActivity.onNativeTouch(touchDevId, pointerFingerId, MotionEvent.ACTION_UP, x, y, p);
                     }
                     break;

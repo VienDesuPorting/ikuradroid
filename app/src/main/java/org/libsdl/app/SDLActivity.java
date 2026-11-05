@@ -996,8 +996,14 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         }
         float x = ev.getX() / mSurface.mWidth;
         float y = ev.getY() / mSurface.mHeight;
+        // IkuraDroid: the native pump reads a zero-pressure FINGERUP as the
+        // gesture tracker's cancel marker (drop the hover, commit nothing).
+        // A live tap UP is a commit by definition, so never let a device
+        // that reports 0.0 pressure on the lift turn it into a cancel.
+        float p = ev.getPressure();
+        if (action == MotionEvent.ACTION_UP && p <= 0f) p = 1f;
         onNativeTouch(ev.getDeviceId(), ev.getPointerId(0),
-                action, x, y, ev.getPressure());
+                action, x, y, p);
         mEngineDownLive = (action == MotionEvent.ACTION_DOWN);
     }
 

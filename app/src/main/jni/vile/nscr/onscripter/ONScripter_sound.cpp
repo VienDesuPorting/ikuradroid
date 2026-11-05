@@ -385,6 +385,12 @@ int ONScripter::playMPEG(const char* filename, bool click_flag, bool loop_flag, 
             case SDL_MOUSEBUTTONUP:
                 done_flag = true;
                 break;
+            case SDL_FINGERUP:
+                /* IkuraDroid: direct touch path - a tap that lifts skips
+                 * the playback; a zero-pressure UP is the gesture
+                 * tracker's cancel marker and must not skip. */
+                if (event.tfinger.pressure > 0.0f) done_flag = true;
+                break;
             default:
                 break;
             }
