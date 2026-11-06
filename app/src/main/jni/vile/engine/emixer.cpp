@@ -89,7 +89,7 @@ EngineMixer::MusicChannel::MusicChannel(){
 EngineMixer::MusicChannel::~MusicChannel(){
     Mix_HaltMusic();
 	Mix_FreeMusic(music);
-	free(buffer);
+	delete[] buffer;
     buffer = 0;
     SDL_FreeRW(ops);
     ops= 0;
@@ -106,7 +106,7 @@ EngineMixer::SoundChannel::SoundChannel(){
 EngineMixer::SoundChannel::~SoundChannel(){
 //        Mix_HaltChannel(-1);
 		Mix_FreeChunk(sound);
-        free(buffer);
+        delete[] buffer;
         buffer = 0;
         SDL_FreeRW(ops);
         ops= 0;
@@ -223,6 +223,85 @@ static bool MusicFormatSupported(const Uint8 *Data,int Size){
 	return true;
 }
 
+/*! \brief Locates the PCM payload of a RIFF/WAVE blob
+ *  \param Data Raw resource bytes
+ *  \param Size Resource size in bytes
+ *  \param Offset Receives the byte offset of the data chunk payload
+ *  \param Length Receives the usable payload length (clamped to the
+ *         bytes actually present in the resource)
+ *  \param Claimed Receives the payload length the header announces
+ *  \param Tag Receives the format tag of the fmt chunk (-1 when absent)
+ *  \return True when a data chunk with payload was found
+ */
+static bool WaveDataSpan(const Uint8 *Data,int Size,int *Offset,
+												int *Length,int *Claimed,int *Tag){
+	if(Size<12 || memcmp(Data,"RIFF",4) || memcmp(Data+8,"WAVE",4)){
+		return false;
+	}
+	int pos=12;
+	*Tag=-1;
+	*Offset=0;
+	*Length=0;
+	*Claimed=0;
+	bool havedata=false;
+	while(pos+8<=Size){
+		Uint32 clen=Data[pos+4]|(Data[pos+5]<<8)|
+												(Data[pos+6]<<16)|((Uint32)Data[pos+7]<<24);
+		if(!memcmp(Data+pos,"fmt ",4) && pos+10<=Size){
+			*Tag=Data[pos+8]|(Data[pos+9]<<8);
+		}
+		else if(!memcmp(Data+pos,"data",4)){
+			int start=pos+8;
+			int avail=Size-start;
+			if(avail>0){
+				*Offset=start;
+				*Claimed=(int)(clen&0x3FFFFFFF);
+				*Length=*Claimed<avail?*Claimed:avail;
+				havedata=true;
+			}
+		}
+		pos+=8+(int)((clen+1)&~1);
+	}
+	return havedata;
+}
+
+/*! \brief Measures how noise-like a block of 16-bit PCM looks
+ *  \param Samples Interleaved 16-bit sample data
+ *  \param Count Number of samples (not frames)
+ *  \param Mean Receives the mean absolute sample
+ *  \param Peak Receives the largest absolute sample
+ *  \param Zeros Receives the share of exactly-zero samples in percent
+ *
+ *  Byte-swapped or corrupt PCM reads as near-uniform noise: the mean
+ *  absolute sample lands in the thousands while exact zeros
+ *  practically disappear.  Real music mixes average an order of
+ *  magnitude quieter and always carry some silence.
+ */
+static void PcmStats(const Sint16 *Samples,int Count,long *Mean,
+														int *Peak,int *Zeros){
+	long sum=0;
+	int peak=0;
+	int zeros=0;
+	for(int i=0;i<Count;i++){
+		int v=Samples[i];
+		int a=v<0?-v:v;
+		sum+=a;
+		if(a>peak){
+			peak=a;
+		}
+		if(!v){
+			zeros++;
+		}
+	}
+	*Mean=Count?sum/Count:0;
+	*Peak=peak;
+	*Zeros=Count?(zeros*100)/Count:0;
+}
+
+static bool PcmLooksLikeNoise(long Mean,int Zeros){
+	return Mean>=6000 && Zeros<=2;
+}
+
 /*! \brief Start playing a music score
  *  \param Music Musical score to play back
  *  \return True if track wachannel->s successfully loaded
@@ -248,6 +327,50 @@ bool EngineMixer::PlayMusic(RWops *Music){
 				delete[] musicbuffer.buffer;
 				musicbuffer.buffer=0;
 				return false;
+			}
+			// The header says nothing about the payload: byte-swapped or
+			// truncated rips carry a perfectly valid RIFF shell around
+			// garbage PCM and play as white noise.  Measure the head of
+			// the data chunk and, once per process, drop a standalone
+			// probe WAV into the game folder so the rip can be verified
+			// on its own (play probe_bgm.wav on the device)
+			int doff=0,dlen=0,claimed=0,tag=-1;
+			if(WaveDataSpan(musicbuffer.buffer,size,&doff,&dlen,
+													&claimed,&tag) && tag==1){
+				if(claimed>dlen){
+					LogWarning("BGM: data chunk claims %d bytes but only %d "
+							"are present (truncated copy?)",claimed,dlen);
+				}
+				int n=dlen<262144?dlen&~3:262144;
+				long mean=0;
+				int peak=0,zeros=0;
+				PcmStats((const Sint16*)(musicbuffer.buffer+doff),n/2,
+													&mean,&peak,&zeros);
+				if(PcmLooksLikeNoise(mean,zeros)){
+					LogWarning("BGM data looks like noise: mean=%ld peak=%d "
+							"zeros=%d%% of %d samples - the rip is probably "
+							"byte-swapped or corrupt",mean,peak,zeros,n/2);
+				}
+				else{
+					LogVerbose("BGM data probe: mean=%ld peak=%d zeros=%d%% "
+							"of %d samples",mean,peak,zeros,n/2);
+				}
+				static bool probedone=false;
+				if(!probedone){
+					probedone=true;
+					int w=size<2200000?size:2200000;
+					FILE *tf=fopen("probe_bgm.wav","wb");
+					if(tf && fwrite(musicbuffer.buffer,1,w,tf)==(size_t)w){
+						LogWarning("BGM probe: wrote %d bytes of the track to "
+								"probe_bgm.wav in the game folder",w);
+					}
+					else{
+						LogVerbose("BGM probe: could not write probe_bgm.wav");
+					}
+					if(tf){
+						fclose(tf);
+					}
+				}
 			}
 			musicbuffer.ops = SDL_RWFromMem(musicbuffer.buffer,size);
 			musicbuffer.music  = Mix_LoadMUS_RW(musicbuffer.ops,0);
@@ -281,7 +404,7 @@ void EngineMixer::StopMusic(){
         Mix_HaltMusic();
 		Mix_FreeMusic(musicbuffer.music);
 		musicbuffer.music=0;
-        free(musicbuffer.buffer);
+        delete[] musicbuffer.buffer;
         musicbuffer.buffer = 0;
         SDL_FreeRW(musicbuffer.ops);
         musicbuffer.ops= 0;
@@ -308,6 +431,21 @@ bool EngineMixer::PlaySound(RWops *Sound,int Channel,int Replays){
 			Sound->Seek(0,SEEK_SET);
 			Sound->Read(soundbuffer[Channel].buffer,size);
             soundbuffer[Channel].ops = SDL_RWFromMem(soundbuffer[Channel].buffer,size);
+			// Sound effects get the same noise check as music, but stay
+			// quiet unless the PCM head really looks like garbage
+			int sdoff=0,sdlen=0,sdclaimed=0,sdtag=-1;
+			if(WaveDataSpan(soundbuffer[Channel].buffer,size,&sdoff,&sdlen,
+													&sdclaimed,&sdtag) && sdtag==1){
+				int sn=sdlen<262144?sdlen&~3:262144;
+				long smean=0;
+				int speak=0,szeros=0;
+				PcmStats((const Sint16*)(soundbuffer[Channel].buffer+sdoff),sn/2,
+													&smean,&speak,&szeros);
+				if(PcmLooksLikeNoise(smean,szeros)){
+					LogWarning("SND data looks like noise: mean=%ld peak=%d "
+							"zeros=%d%% (check the sound resource)",smean,speak,szeros);
+				}
+			}
 			soundbuffer[Channel].sound = Mix_LoadWAV_RW(soundbuffer[Channel].ops, 0);
            // soundbuffer[Channel].sound =  Mix_QuickLoad_RAW(soundbuffer[Channel].buffer,size);
 			if(soundbuffer[Channel].sound){
@@ -330,7 +468,7 @@ void EngineMixer::StopSound(int Channel){
             Mix_HaltChannel(Channel);
 			Mix_FreeChunk(soundbuffer[Channel].sound);
 			soundbuffer[Channel].sound=0;
-			free(soundbuffer[Channel].buffer);
+			delete[] soundbuffer[Channel].buffer;
 			soundbuffer[Channel].buffer=0;
             SDL_FreeRW(soundbuffer[Channel].ops);
             soundbuffer[Channel].ops= 0;
@@ -341,7 +479,7 @@ void EngineMixer::StopSound(int Channel){
 		for(int i=0;i<AUDIO_CHANNELS;i++){
             Mix_FreeChunk(soundbuffer[i].sound);
 			soundbuffer[i].sound=0;
-			free(soundbuffer[i].buffer);
+			delete[] soundbuffer[i].buffer;
 			soundbuffer[i].buffer=0;
             SDL_FreeRW(soundbuffer[i].ops);
             soundbuffer[i].ops= 0;
