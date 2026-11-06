@@ -10,41 +10,9 @@ English version: [README.en.md](README.en.md)
 
 ## Совместимость
 
-Все модули из таблицы уже собраны в приложении. Статус «проверен» получает тайтл, проверенный на реальном устройстве; что именно доработано в каждом тайтле — видно в [чейнджлоге](CHANGELOG.md).
+Таблица протестированных и ещё не проверенных игр выросла и переехала в отдельный документ:
 
-Актуальные статусы также хранятся в `app/src/main/assets/engines.json` и показываются на экране **«Движки»**.
-
-| Движок | Тайтл | Статус |
-| --- | --- | --- |
-| Ikura GDL | Crescendo | проверен |
-| Ikura GDL | Heart de Roommate | проверен |
-| Ikura GDL | Cat Girl Alliance | не проверен |
-| Ikura GDL | Hitomi -My Stepsister- | не проверен |
-| Ikura GDL | Idols Galore! | не проверен |
-| Ikura GDL | Kana ... Okaeri! | не проверен |
-| Ikura GDL | Kana ~ Little Sister | не проверен |
-| Ikura GDL | The Sagara Family | не проверен |
-| Ikura GDL | Snow | не проверен |
-| Ikura GDL | Virgin | не проверен |
-| Will | Critical Point | проверен |
-| Will | Princess Waltz | не проверен |
-| Will | Starry Sky | не проверен |
-| Will | Yume Miru Kusuri | не проверен |
-| Will | Little My Maid | не проверен |
-| Crowd | Tokimeki Check-in! | не проверен |
-| Crowd | XChange 1 | не проверен |
-| Crowd | XChange 3 | не проверен |
-| C-Ware | DiviDead | не проверен |
-| JAST | Season of the Sakura | не проверен |
-| JAST | 3 Sisters Story | не проверен |
-| JAST | Runaway City | не проверен |
-| Windy | Mayclub VR Dating SX | не проверен |
-| Windy | Nocturnal Illusion Renewal | не проверен |
-| T-Love | True Love | не проверен |
-| NScripter | Higanbana no Saku Yoru ni | проверен |
-| NScripter | Rose Guns Days: The Best | проверен |
-| NScripter | Umineko no Naku Koro ni Hane | проверен |
-| NScripter | Umineko no Naku Koro ni (остальные части) | не проверен |
+[![Совместимость](https://img.shields.io/badge/Совместимость-6_из_29_проверено-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.md)
 
 ## Известные баги
 

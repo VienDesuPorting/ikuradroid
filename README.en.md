@@ -10,41 +10,9 @@ Interface: English / Russian. License: GPLv3.
 
 ## Compatibility
 
-Every engine module from the table is compiled into the app. A title earns the tested mark after being checked on a real device; what exactly has been reworked is visible in the [changelog](CHANGELOG.en.md).
+The table of tested and not-yet-tested games has grown and moved to a separate document:
 
-Current statuses also live in `app/src/main/assets/engines.json` and are shown on the in-app **Engines** screen.
-
-| Engine | Title | Status |
-| --- | --- | --- |
-| Ikura GDL | Crescendo | tested |
-| Ikura GDL | Heart de Roommate | tested |
-| Ikura GDL | Cat Girl Alliance | not tested |
-| Ikura GDL | Hitomi -My Stepsister- | not tested |
-| Ikura GDL | Idols Galore! | not tested |
-| Ikura GDL | Kana ... Okaeri! | not tested |
-| Ikura GDL | Kana ~ Little Sister | not tested |
-| Ikura GDL | The Sagara Family | not tested |
-| Ikura GDL | Snow | not tested |
-| Ikura GDL | Virgin | not tested |
-| Will | Critical Point | tested |
-| Will | Princess Waltz | not tested |
-| Will | Starry Sky | not tested |
-| Will | Yume Miru Kusuri | not tested |
-| Will | Little My Maid | not tested |
-| Crowd | Tokimeki Check-in! | not tested |
-| Crowd | XChange 1 | not tested |
-| Crowd | XChange 3 | not tested |
-| C-Ware | DiviDead | not tested |
-| JAST | Season of the Sakura | not tested |
-| JAST | 3 Sisters Story | not tested |
-| JAST | Runaway City | not tested |
-| Windy | Mayclub VR Dating SX | not tested |
-| Windy | Nocturnal Illusion Renewal | not tested |
-| T-Love | True Love | not tested |
-| NScripter | Higanbana no Saku Yoru ni | tested |
-| NScripter | Rose Guns Days: The Best | tested |
-| NScripter | Umineko no Naku Koro ni Hane | tested |
-| NScripter | Umineko no Naku Koro ni (other parts) | not tested |
+[![Compatibility](https://img.shields.io/badge/Compatibility-6_of_29_tested-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.en.md)
 
 ## Known issues
 
