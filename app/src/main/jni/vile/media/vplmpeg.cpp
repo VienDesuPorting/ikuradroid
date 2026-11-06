@@ -96,6 +96,7 @@ typedef struct{
         double rpos;                            //!< Resampler phase (input frames)
         float rcarry[2];                        //!< Resampler carry (last input frame)
         PLM_RING *ring;                         //!< PCM backlog for the mixer hook
+        Uint32 audiobytes;                      //!< PCM bytes ever pushed (starve detection)
 } PLM_PLAYBACK;
 
 /*! \brief Allocates a power-of-two ring buffer */
@@ -261,6 +262,7 @@ static void audio_decode_cb(plm_t *plm,plm_samples_t *samples,void *user){
 
         if (out>0){
                 plm_ring_push(pb->ring,(Uint8*)pcm,(size_t)out*2*sizeof(Sint16));
+                pb->audiobytes+=(Uint32)(out*2*sizeof(Sint16));
         }
 }
 
@@ -284,9 +286,20 @@ bool VideoPLMPEG_Play(RWops *Resource,const SDL_Rect *Dest,int ScreenW,int Scree
         double framerate=plm_get_framerate(plm);
         double duration=plm_get_duration(plm);
         int samplerate=plm_get_samplerate(plm);
-        bool hasaudio=plm_get_audio_enabled(plm)!=0;
-        LogVerbose("Video: %dx%d @%.2ffps %.1fs audio=%d rate=%d",
-                vw,vh,framerate,duration,hasaudio?1:0,samplerate);
+        int numaudio=plm_get_num_audio_streams(plm);
+        bool hasaudio=plm_get_audio_enabled(plm)!=0 && numaudio>0;
+        if (!hasaudio){
+                // No audio stream in the system header: OP.DOM-style
+                // openings are mastered silent and take their music
+                // from a CDDA track. plm_get_audio_enabled() merely
+                // reports the decoder flag (default on), so this has
+                // to be checked here: otherwise the ring pacing below
+                // arms itself, the backlog can never fill and the
+                // decode loop spins without ever polling the events.
+                plm_set_audio_enabled(plm,FALSE);
+        }
+        LogVerbose("Video: %dx%d @%.2ffps %.1fs audio=%d streams=%d rate=%d",
+                vw,vh,framerate,duration,hasaudio?1:0,numaudio,samplerate);
         if (vw<=0 || vh<=0){
                 plm_destroy(plm);
                 return false;
@@ -397,7 +410,9 @@ bool VideoPLMPEG_Play(RWops *Resource,const SDL_Rect *Dest,int ScreenW,int Scree
         // first seconds absorb startup jitter without delaying the start.
         if (pb.audiook){
                 Uint32 mark=SDL_GetTicks();
-                while (!plm_has_ended(plm) && plm_ring_backlog(pb.ring)<hwstartb){
+                Uint32 deadline=mark+2500;
+                while (!plm_has_ended(plm) && plm_ring_backlog(pb.ring)<hwstartb
+                                && SDL_GetTicks()<deadline){
                         Uint32 now=SDL_GetTicks();
                         double dt=(now-mark)/1000.0;
                         mark=now;
@@ -426,15 +441,20 @@ bool VideoPLMPEG_Play(RWops *Resource,const SDL_Rect *Dest,int ScreenW,int Scree
                         Uint32 backlog=plm_ring_backlog(pb.ring);
                         Uint32 lowwater=hwstartb/2;
                         if (backlog<lowwater){
-                                do{
-                                        if (plm_has_ended(plm)) break;
+                                // Decode a bounded burst only: a starved
+                                // ring must never spin the thread blind -
+                                // the outer pass still polls the events
+                                // and sleeps between the bursts.
+                                for (int burst=0;burst<8 && backlog<lowwater
+                                                && !plm_has_ended(plm);burst++){
                                         Uint32 now=SDL_GetTicks();
                                         double dt=(now-lastticks)/1000.0;
                                         lastticks=now;
                                         if (dt>1.0/30.0) dt=1.0/30.0;
                                         plm_decode(plm,dt);
                                         backlog=plm_ring_backlog(pb.ring);
-                                }while (backlog<lowwater);
+                                }
+                                SDL_Delay(4);
                         }
                         else if (backlog<high){
                                 Uint32 now=SDL_GetTicks();
@@ -447,6 +467,27 @@ bool VideoPLMPEG_Play(RWops *Resource,const SDL_Rect *Dest,int ScreenW,int Scree
                         else{
                                 lastticks=SDL_GetTicks();
                                 SDL_Delay(8);
+                        }
+
+                        // A header that promised audio but never delivered
+                        // a single byte within 4 seconds will not catch up:
+                        // fall back to wall-clock pacing so the events keep
+                        // flowing and the cpu stops burning. The video holds
+                        // its position - the starved bursts have been pacing
+                        // at realtime anyway.
+                        if (pb.audiook && pb.audiobytes==0
+                                        && SDL_GetTicks()-playstart>4000){
+                                SDL_LockAudio();
+                                Mix_HookMusic(NULL,NULL);
+                                SDL_UnlockAudio();
+                                plm_ring_destroy(pb.ring);
+                                pb.ring=0;
+                                pb.audiook=false;
+                                plm_set_audio_enabled(plm,FALSE);
+                                silentstart=playstart;
+                                decoded=0;
+                                LogError("Video: no audio packets decoded"
+                                                " - switching to silent pacing");
                         }
                 }
                 else{
