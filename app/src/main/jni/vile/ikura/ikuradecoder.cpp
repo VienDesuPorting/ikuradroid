@@ -1020,10 +1020,10 @@ bool IkuraDecoder::iop_ht(const Uint8 *Data,int Length){
 bool IkuraDecoder::iop_ec(const Uint8 *Data,int Length){
 	Uint16 start=GETWORD(Data+0);
 	Uint16 end=GETWORD(Data+2);
-	Uint16 length=end-length;
+	Uint16 length=end-start;
 	for(int i=0;i<length;i++){
 	}
-	LogError("Load system flags: %d -> %d",start,end);
+	LogVerbose("Load system flags: %d -> %d",start,end);
 	return false;
 }
 
@@ -1474,6 +1474,7 @@ bool IkuraDecoder::PlayCDDAScan(int channel,uString *MusicName){
 	Stringlist candidates;
 	int count=GetBGM(&candidates);
 	if(!count){
+		LogError("CDDA scan: no BGM resources registered");
 		return false;
 	}
 	// Build every suffix a rip may append to the track number

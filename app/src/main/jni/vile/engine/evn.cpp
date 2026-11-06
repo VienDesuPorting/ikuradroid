@@ -138,12 +138,12 @@ int EngineVN::GetImages(Stringlist *List){
 	return r_images.EnumerateArchives(List);
 }
 
-/*! \brief Enumerates a list of music archives
+/*! \brief Enumerates a list of music resources
  *  \param Pointer to list to populate
  *  \return Number of items added to list
  */
 int EngineVN::GetBGM(Stringlist *List){
-	return r_bgm.EnumerateArchives(List);
+	return r_bgm.EnumerateResources(List);
 }
 
 /*! \brief Enumerates a list of sound effect archives

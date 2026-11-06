@@ -167,9 +167,14 @@ bool DRSDecoder::OP06(const Uint8 *Data,int Length){
 bool DRSDecoder::OP07(const Uint8 *Data,int Length){
 	int reg=parser.DecodeValue(GETDWORD(Data));
 	Uint16 cnt=GETWORD(Data+4);
+	// Diagnostics for the title screen dispatch: the register
+	// polled and the entry chosen are the ground truth of every
+	// menu loop
+	LogTest("ONJP: reg=%d cnt=%d",reg,cnt);
 	if(reg>=(int)0 && reg<cnt){
 		for(int i=5;i<Length;i+=2){
 			if(!reg){
+				LogTest("ONJP: -> entry %d",GETWORD(Data+i));
 				parser.JumpFunction(GETWORD(Data+i));
 				break;
 			}
