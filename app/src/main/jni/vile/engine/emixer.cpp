@@ -159,7 +159,7 @@ static bool MusicFormatSupported(const Uint8 *Data,int Size){
 				Uint16 ch=Data[pos+10]|(Data[pos+11]<<8);
 				Uint32 rate=Data[pos+12]|(Data[pos+13]<<8)|
 								(Data[pos+14]<<16)|((Uint32)Data[pos+15]<<24);
-				Uint16 bits=Data[pos+20]|(Data[pos+21]<<8);
+				Uint16 bits=Data[pos+22]|(Data[pos+23]<<8);
 				if((tag==1 && (bits==8||bits==16)) || tag==0x11){
 					LogVerbose("BGM: RIFF/WAVE tag=%u bits=%u ch=%u rate=%u",
 									tag,bits,ch,rate);
