@@ -2726,7 +2726,16 @@ bool IkuraDecoder::iop_ig(const Uint8 *Data,int Length){
 		}
 
 		// Store results
-		LogTest("IG: %d %d -> pos=%d flag=%d",cur,btn,pos,flag);
+		// The poll runs every frame and steady pos=-1 flag=0 is the
+		// silent idle state, so only transitions (taps, spot hits,
+		// cancels) are worth a log line
+		static Sint16 igpos=-32768;
+		static Sint16 igflag=-32768;
+		if(pos!=igpos || flag!=igflag){
+			igpos=pos;
+			igflag=flag;
+			LogTest("IG: %d %d -> pos=%d flag=%d",cur,btn,pos,flag);
+		}
 		parser.SetValue(cur,pos);
 		parser.SetValue(btn,flag);
 	}

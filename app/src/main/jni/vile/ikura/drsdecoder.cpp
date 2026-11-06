@@ -24,6 +24,29 @@ DRSDecoder::DRSDecoder(int Width,int Height) : IkuraDecoder(Width,Height){
 DRSDecoder::~DRSDecoder(){
 }
 
+// Opcode trace flood control: the interpreter streams one trace line
+// per executed opcode, and steady-state script loops (the title
+// screen poll) would flood logcat with the same short cycle forever.
+// Each gate id reports at most once per window while brand new
+// opcodes still show up immediately.  Ids 0-255 cover the dispatcher
+// trace, higher ids belong to handlers that log on their own.
+static bool TraceGate(int Id){
+	static Uint32 last[512];
+	static bool init=false;
+	Uint32 now=SDL_GetTicks();
+	if(!init){
+		for(int i=0;i<512;i++){
+			last[i]=now-10000;
+		}
+		init=true;
+	}
+	if(now-last[Id]<10000){
+		return false;
+	}
+	last[Id]=now;
+	return true;
+}
+
 /*! \brief Advances the scripted engine
  *  \returns True if the engine is waiting for user input
  */
@@ -37,7 +60,9 @@ bool DRSDecoder::EventGameProcess(){
 		if(l){
 			l--;
 		}
-		LogVerbose("OPCODE %02X (%d bytes)",c,l);
+		if(TraceGate(c)){
+			LogVerbose("OPCODE %02X (%d bytes)",c,l);
+		}
 
 		// Map opcode between ikura and drs handlers
 		if(c==0x00)					r=iop_ed(b,l);
@@ -169,13 +194,25 @@ bool DRSDecoder::OP07(const Uint8 *Data,int Length){
 	Uint16 cnt=GETWORD(Data+4);
 	// Diagnostics for the title screen dispatch: the register
 	// polled and the entry chosen are the ground truth of every
-	// menu loop
-	LogTest("ONJP: reg=%d cnt=%d",reg,cnt);
+	// menu loop.  Steady menu loops repeat the same dispatch, so
+	// only transitions get logged
+	static int onjp_reg=-1;
+	static int onjp_cnt=-1;
+	if(reg!=onjp_reg || cnt!=onjp_cnt){
+		onjp_reg=reg;
+		onjp_cnt=cnt;
+		LogTest("ONJP: reg=%d cnt=%d",reg,cnt);
+	}
 	if(reg>=(int)0 && reg<cnt){
 		for(int i=5;i<Length;i+=2){
 			if(!reg){
-				LogTest("ONJP: -> entry %d",GETWORD(Data+i));
-				parser.JumpFunction(GETWORD(Data+i));
+				int target=GETWORD(Data+i);
+				static int onjp_target=-1;
+				if(target!=onjp_target){
+					onjp_target=target;
+					LogTest("ONJP: -> entry %d",target);
+				}
+				parser.JumpFunction(target);
 				break;
 			}
 			else{
@@ -331,12 +368,16 @@ bool DRSDecoder::OP2C(const Uint8 *Data,int Length){
 }
 
 bool DRSDecoder::OP3C(const Uint8 *Data,int Length){
-	LogVerbose("OP3C:CGFLAG:%d",Length);
+	if(TraceGate(0x3C+256)){
+		LogVerbose("OP3C:CGFLAG:%d",Length);
+	}
 	return false;
 }
 
 bool DRSDecoder::OP3D(const Uint8 *Data,int Length){
-	LogVerbose("OP3D:CGFLAG:%d",Length);
+	if(TraceGate(0x3D+256)){
+		LogVerbose("OP3D:CGFLAG:%d",Length);
+	}
 	return false;
 }
 
