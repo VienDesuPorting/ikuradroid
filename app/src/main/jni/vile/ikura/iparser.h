@@ -24,6 +24,9 @@ class IParser {
 		bool ReturnFunction();
 		bool GetOpcode(Uint8 *Opcode,const Uint8 **Buffer,Uint32 *Length);
 
+		// Diagnostics
+		void GetDebugPos(uString *Name,int *Position);
+
 		// Variable and flags API
 		int DecodeValue(Uint32 Value);
 		int GetValue(int Position);

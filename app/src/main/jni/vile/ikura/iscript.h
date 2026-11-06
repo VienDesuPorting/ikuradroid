@@ -56,6 +56,9 @@ class IkuraScript {
 		bool Call(Uint16 Table);
 		bool Return();
 
+		// Diagnostics
+		uString DebugPos(int *Position);
+
 		// Savegame interface
 		bool Load(IkuraDecoder *Engine,Savegame *File,uString Script);
 		uString Save(Savegame *File);
