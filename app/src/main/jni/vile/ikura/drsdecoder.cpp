@@ -485,6 +485,7 @@ bool DRSDecoder::OP79(const Uint8 *Data,int Length){
 	int track=parser.DecodeValue(GETDWORD(Data));
 	if(track<=0){
 		// Track 0 stops playback (mirrors iop_das)
+		LogVerbose("OP79:CDDA:%d (stop)",track);
 		StopMusic();
 		nameMusic="stop";
 		cdda_track=-1;
@@ -494,6 +495,7 @@ bool DRSDecoder::OP79(const Uint8 *Data,int Length){
 	// The title screen loop re-issues OP79 every cycle: only act when
 	// the track changes, the music has ended or the last lookup failed
 	if(track==cdda_track && (Mix_PlayingMusic()||cdda_failed)){
+		LogVerbose("OP79:CDDA:%d (latched)",track);
 		return false;
 	}
 	LogTest("OP79:CDDA:%d",track);

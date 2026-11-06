@@ -15,6 +15,8 @@
 
 #include "emixer.h"
 
+#include <string.h>
+
 #ifdef ANDROID
 extern "C"
 {
@@ -124,6 +126,103 @@ bool EngineMixer::PlayCDDA(int Track){
 	return retval;
 }
 
+/*! \brief Validates that SDL_mixer can honestly decode a music blob
+ *  \param Data Raw audio data (whole resource in memory)
+ *  \param Size Data size in bytes
+ *  \return True if the bundled SDL_mixer can decode this format
+ *
+ * SDL_mixer 2.0.1 falls back to SMPEG for any blob that starts with an
+ * MPEG audio sync pattern, and SMPEG only decodes MPEG layer I/II. Rips
+ * named .wav but actually carrying MPEG layer III (or exotic RIFF
+ * formats the wavestream decoder rejects) therefore start playing as
+ * loud white noise. Identify the format positively and refuse what
+ * cannot be decoded, so the device log reports the file's real format
+ * instead of the speakers emitting static.
+ */
+static bool MusicFormatSupported(const Uint8 *Data,int Size){
+	if(Size<8){
+		return false;
+	}
+	// RIFF/WAVE: the wavestream decoder only handles PCM 8/16 bit
+	// and IMA ADPCM; anything else falls through to SMPEG and misplays
+	if(!memcmp(Data,"RIFF",4) && !memcmp(Data+8,"WAVE",4)){
+		int pos=12;
+		while(pos+8<=Size){
+			Uint32 clen=Data[pos+4]|(Data[pos+5]<<8)|
+						(Data[pos+6]<<16)|((Uint32)Data[pos+7]<<24);
+			if(!memcmp(Data+pos,"fmt ",4)){
+				if(pos+24>Size){
+					LogError("BGM: truncated RIFF/WAVE format chunk");
+					return false;
+				}
+				Uint16 tag=Data[pos+8]|(Data[pos+9]<<8);
+				Uint16 ch=Data[pos+10]|(Data[pos+11]<<8);
+				Uint32 rate=Data[pos+12]|(Data[pos+13]<<8)|
+								(Data[pos+14]<<16)|((Uint32)Data[pos+15]<<24);
+				Uint16 bits=Data[pos+20]|(Data[pos+21]<<8);
+				if((tag==1 && (bits==8||bits==16)) || tag==0x11){
+					LogVerbose("BGM: RIFF/WAVE tag=%u bits=%u ch=%u rate=%u",
+									tag,bits,ch,rate);
+					return true;
+				}
+				LogError("BGM: RIFF/WAVE fmt=%u bits=%u ch=%u rate=%u "
+								"is not PCM 8/16-bit or IMA ADPCM; refusing",
+								tag,bits,ch,rate);
+				return false;
+			}
+			pos+=8+(int)((clen+1)&~1);
+		}
+		LogError("BGM: RIFF/WAVE without a format chunk; refusing");
+		return false;
+	}
+	// Plain formats SDL_mixer identifies by magic on sight
+	if(!memcmp(Data,"OggS",4) || !memcmp(Data,"MThd",4) ||
+							!memcmp(Data,"IMPM",4) || !memcmp(Data,"PSID",4) ||
+							!memcmp(Data,"Extended Module: ",16)){
+		return true;
+	}
+	// Screamtracker files carry their magic at offset 0x2C
+	if(Size>0x30 && !memcmp(Data+0x2C,"SCRM",4)){
+		return true;
+	}
+	// Protracker-style modules carry their magic at offset 108
+	if(Size>112){
+		static const char *mods[]={"M.K.","M!K!","FLT4","FLT8",
+					"4CHN","6CHN","8CHN","10CH","12CH","14CH",
+					"16CH","18CH","20CH","24CH","28CH","30CH",
+					"32CH","CD81","OKTA"};
+		for(unsigned int i=0;i<sizeof(mods)/sizeof(mods[0]);i++){
+			if(!memcmp(Data+108,mods[i],4)){
+				return true;
+			}
+		}
+	}
+	// MPEG audio: SMPEG decodes layer I/II only. Layer III and
+	// reserved header combinations render as white noise.
+	if(Data[0]==0xFF && (Data[1]&0xE0)==0xE0){
+		Uint8 version=(Data[1]&0x18)>>3;
+		Uint8 layer=(Data[1]&0x06)>>1;
+		Uint8 srate=(Data[2]&0x0C)>>2;
+		Uint8 bitrate=(Data[2]&0xF0)>>4;
+		if(version==1 || layer==0 || bitrate==0 || bitrate==15 || srate==3){
+			LogError("BGM: invalid MPEG header (version=%u layer=%u "
+							"bitrate=%u rate=%u); refusing",
+							version,layer,bitrate,srate);
+			return false;
+		}
+		if(layer==1){
+			LogError("BGM: MPEG layer III audio; the bundled SMPEG only "
+							"decodes layer I/II and plays this as white noise - "
+							"re-rip the track as PCM WAV or OGG");
+			return false;
+		}
+		return true;
+	}
+	// Unknown container: leave the decision to SDL_mixer (it fails
+	// cleanly with an error log when no decoder claims the data)
+	return true;
+}
+
 /*! \brief Start playing a music score
  *  \param Music Musical score to play back
  *  \return True if track wachannel->s successfully loaded
@@ -143,6 +242,13 @@ bool EngineMixer::PlayMusic(RWops *Music){
             musicbuffer.buffer=new Uint8[size];
 			Music->Seek(0,SEEK_SET);
 			Music->Read(musicbuffer.buffer,size);
+			// Refuse formats the mixer stack cannot decode honestly
+			// (SMPEG renders unknown data as white noise)
+			if(!MusicFormatSupported(musicbuffer.buffer,size)){
+				delete[] musicbuffer.buffer;
+				musicbuffer.buffer=0;
+				return false;
+			}
 			musicbuffer.ops = SDL_RWFromMem(musicbuffer.buffer,size);
 			musicbuffer.music  = Mix_LoadMUS_RW(musicbuffer.ops,0);
 
@@ -154,7 +260,15 @@ bool EngineMixer::PlayMusic(RWops *Music){
 				if( Mix_PlayMusic( musicbuffer.music, -1 ) != -1 )
                     retval=true;
 			}
-			else LogError("Couldn't open music: %s",Mix_GetError());
+			else{
+				LogError("Couldn't open music: %s",Mix_GetError());
+				// The failed load leaves nothing playing, so the
+				// next StopMusic would skip the cleanup and leak
+				SDL_FreeRW(musicbuffer.ops);
+				musicbuffer.ops=0;
+				delete[] musicbuffer.buffer;
+				musicbuffer.buffer=0;
+			}
 		}
 	}
 
