@@ -54,19 +54,38 @@ IkuraScript::~IkuraScript(){
  */
 bool IkuraScript::GetOpcode(Uint8 *Opcode,const Uint8 **Buffer,Uint32 *Length){
 	bool retval=false;
-	if(buffer && positions && positions->position<length){
+	if(buffer && positions && positions->position+1<length){
 		// Extract oplength
 		retval=true;
 		int pos=positions->position;
 		if(buffer[pos+1]&0x80){
-			// Length is two bytes (Between 0x80 and 0x7FFF)
+			if(pos+2<(int)length){
+				// Length is two bytes (Between 0x80 and 0x7FFF)
+				*Opcode=buffer[pos+0];
+				*Length=(((buffer[pos+1]&0x7F)<<8)|buffer[pos+2])-3;
+				*Buffer=buffer+pos+3;
+				positions->position+=(*Length)+3;
+			}
+			else{
+				// Truncated header: stop parsing instead of reading
+				// past the buffer
+				retval=false;
+			}
+		}
+		else if(buffer[pos+1]<2){
+			// Degenerate length byte: the stream is malformed here.
+			// Consume the opcode only, with zero operand bytes, so the
+			// position always advances (a raw length of 0 used to yield
+			// position+=0 and an endless reread of the same byte).
 			*Opcode=buffer[pos+0];
-			*Length=(((buffer[pos+1]&0x7F)<<8)|buffer[pos+2])-3;
-			*Buffer=buffer+pos+3;
-			positions->position+=(*Length)+3;
+			*Length=0;
+			*Buffer=buffer+pos+2;
+			positions->position+=2;
+			LogError("Degenerate opcode length %d (op 0x%02x) in %s:%d",
+					buffer[pos+1],*Opcode,sname.c_str(),pos);
 		}
 		else{
-			// Length is one byte (Between 0x00 and 0x7F)
+			// Length is one byte (Between 0x02 and 0x7F)
 			*Opcode=buffer[pos+0];
 			*Length=buffer[pos+1]-2;
 			*Buffer=buffer+pos+2;
@@ -106,6 +125,17 @@ bool IkuraScript::GetOpcode(Uint8 *Opcode,const Uint8 **Buffer,Uint32 *Length){
 		}
 	}
 	return retval;
+}
+
+/*! \brief Reports the current script name and execution position
+ *  \param Position Optional receiver for the current opcode position
+ *  \returns Name of the script resource currently executed
+ */
+uString IkuraScript::DebugPos(int *Position){
+	if(Position){
+		*Position=positions?(int)positions->position:0;
+	}
+	return sname;
 }
 
 /*! \brief Jumps to an indexed position inside the current script

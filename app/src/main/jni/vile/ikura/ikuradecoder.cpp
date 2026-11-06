@@ -704,7 +704,11 @@ bool IkuraDecoder::iop_unknown(const Uint8 Code,
 		sprintf(buffer," 0x%x",Data[i]);
 		data+=buffer;
 	}
-	LogError("Unknown OPC:0x%x (Length=%d): %s",Code,Length,data.c_str());
+	uString sname;
+	int spos=0;
+	parser.GetDebugPos(&sname,&spos);
+	LogError("Unknown OPC:0x%x (Length=%d) at %s:%d: %s",
+				Code,Length,sname.c_str(),spos,data.c_str());
 	return false;
 }
 
@@ -1553,6 +1557,9 @@ bool IkuraDecoder::iop_ls(const Uint8 *Data,int Length){
 			delete [] tbuffer;
 		}
 		delete blob;
+	}
+	else{
+		LogError("Failed to load script %s",(char*)Data);
 	}
 	EventLoadSystem();
 	return false;

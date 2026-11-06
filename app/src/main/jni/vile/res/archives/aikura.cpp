@@ -90,7 +90,10 @@ ArchiveIkura::ArchiveIkura(uString Path) : ArchiveBase(Path){
 								AddItem(tbuf,start,end-start);
 							}
 							else{
-								AddItem(tbuf,start,fullsize);
+								// The entry extends to the end of the archive:
+								// register the remaining length, not the whole
+								// file size (RWops bounds-checks Offset+Size)
+								AddItem(tbuf,start,fullsize-start);
 								break;
 							}
 						}

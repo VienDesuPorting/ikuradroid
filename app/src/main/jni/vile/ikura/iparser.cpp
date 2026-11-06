@@ -238,6 +238,25 @@ bool IParser::GetOpcode(Uint8 *Opcode,const Uint8 **Buffer,Uint32 *Length){
 	}
 }
 
+/*! \brief Reports the script stack top's name and current position
+ *  \param Name Receiver for the script resource name (may be 0)
+ *  \param Position Receiver for the current opcode position (may be 0)
+ */
+void IParser::GetDebugPos(uString *Name,int *Position){
+	if(Name){
+		*Name="";
+	}
+	if(Position){
+		*Position=0;
+	}
+	if(scriptstack){
+		uString sname=scriptstack->DebugPos(Position);
+		if(Name){
+			*Name=sname;
+		}
+	}
+}
+
 /*! \brief Loads a new script while dropping all current data
  *  \param Script The script resource to load
  *  \returns True if script was successfully loaded

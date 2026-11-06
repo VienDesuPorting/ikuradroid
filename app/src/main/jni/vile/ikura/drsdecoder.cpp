@@ -134,6 +134,9 @@ bool DRSDecoder::OP02(const Uint8 *Data,int Length){
 		}
 		delete blob;
 	}
+	else{
+		LogError("Failed to load script %s",(char*)Data+2);
+	}
 	return false;
 }
 
