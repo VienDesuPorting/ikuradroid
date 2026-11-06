@@ -66,10 +66,41 @@ DIRS := . common crowd crowd/tokimeki crowd/xchange1 crowd/xchange3 \
         ikura/hitomi ikura/idols ikura/kana ikura/kanaoka ikura/sagara \
         ikura/snow jast media res res/archives res/converters testing \
         tlove will will/critical will/lmm will/yume will/princess \
-        will/starry windy windy/mayclub windy/nocturnal widgets
+        will/starry windy windy/mayclub windy/nocturnal widgets \
+        nscr
 
 SRCS := $(foreach d,$(DIRS),$(wildcard $(VILE)/$(d)/*.cpp))
 OBJS := $(patsubst $(VILE)/%.cpp,$(BUILD)/obj/%.o,$(SRCS))
+# ONScripter sources: exact list from vile/nscr/Android.mk LOCAL_SRC_FILES.
+# Everything else in nscr/onscripter (onscripter_main.cpp defines SDL_main,
+# AVIWrapper needs avifile, LUAHandler needs lua, the rest are standalone
+# CLI tools) is intentionally not built, same as on Android.
+ONS_TUS := ONScripter ONScripter_animation ONScripter_command \
+           ONScripter_effect ONScripter_effect_breakup ONScripter_effect_cascade \
+           ONScripter_event ONScripter_file ONScripter_file2 ONScripter_image \
+           ONScripter_lut ONScripter_rmenu ONScripter_sound ONScripter_text \
+           ScriptHandler ScriptParser ScriptParser_command \
+           AnimationInfo FontInfo DirtyRect Encoding resize_image \
+           DirectReader SarReader NsaReader sjis2utf16
+OBJS += $(foreach tu,$(ONS_TUS),$(BUILD)/obj/nscr/onscripter/$(tu).o)
+
+# ONScripter-Droid C parts (mirrors vile/nscr/Android.mk static libraries)
+OBJS += $(patsubst $(VILE)/nscr/bzip2/%.c,$(BUILD)/obj/nscr/bzip2/%.o,$(wildcard $(VILE)/nscr/bzip2/*.c))
+OBJS += $(BUILD)/obj/nscr/sdl_compat/sdl12_compat_runtime.o
+OBJS += $(BUILD)/host_stubs.o
+
+# ONScripter-Droid C++ flags (mirror vile/nscr/Android.mk LOCAL_CFLAGS;
+# stubs for <jni.h>/<android/log.h> come from scripts/nscr_stubs).
+NSCR  := $(VILE)/nscr
+JNI   := $(ROOT)/app/src/main/jni
+NSCRXXFLAGS := -std=gnu++14 -fpermissive -w -O2 -g \
+       -I$(NSCR)/onscripter -I$(NSCR)/sdl_compat -I$(NSCR)/bzip2 \
+       -I$(JNI)/sdl/include -I$(JNI)/sdl_image -I$(JNI)/sdl_mixer \
+       -I$(JNI)/sdl_ttf -I$(JNI)/smpeg2-2.0.0 -I$(JNI)/smpeg2-2.0.0/smpeg \
+       -I$(ROOT)/scripts/nscr_stubs \
+       -DLINUX -DANDROID -DUSE_SDL_RENDERER -DPDA_AUTOSIZE -DENABLE_1BYTE_CHAR \
+       -DSDL_JAVA_PACKAGE_PATH=su_viende_ikuradroid \
+       -include $(NSCR)/sdl_compat/sdl12_compat.h
 
 # Engine include paths (mirror Android.mk LOCAL_C_INCLUDES)
 INC := -I$(VILE) -I$(VILE)/engine -I$(VILE)/dialogs -I$(VILE)/widgets \
@@ -102,10 +133,30 @@ ALLFLAGS := -std=gnu++11 -DVILE_ARCH_LINUX -fno-strict-aliasing \
 .PHONY: all clean run
 all: $(BUILD)/vile-pc
 
+$(BUILD)/host_stubs.o: host_stubs.c
+>mkdir -p $(dir $@)
+>$(CC) -O2 -c $< -o $@
+
 $(BUILD)/vile-pc: $(OBJS)
 >mkdir -p $(dir $@)
 >$(CXX) $(OBJS) $(SDL_LIBS) -lz -lm -o $@
 
+# ONScripter objects get their own flags; the shorter stems of these
+# pattern rules make GNU make prefer them over the generic one below.
+$(BUILD)/obj/nscr/%.o: $(VILE)/nscr/%.cpp
+>mkdir -p $(dir $@)
+>$(CXX) $(NSCRXXFLAGS) -c $< -o $@
+
+$(BUILD)/obj/nscr/bzip2/%.o: $(VILE)/nscr/bzip2/%.c
+>mkdir -p $(dir $@)
+>$(CC) -O2 -I$(NSCR)/bzip2 -c $< -o $@
+
+$(BUILD)/obj/nscr/sdl_compat/sdl12_compat_runtime.o: $(VILE)/nscr/sdl_compat/sdl12_compat_runtime.c
+>mkdir -p $(dir $@)
+>$(CC) -O2 -g -D_GNU_SOURCE -I$(NSCR)/sdl_compat -I$(JNI)/sdl/include -c $< -o $@
+
+# generic rule must come last; explicit ONScripter objects resolve through
+# the shorter-stem nscr pattern rule above
 $(BUILD)/obj/%.o: $(VILE)/%.cpp
 >mkdir -p $(dir $@)
 >$(CXX) $(ALLFLAGS) -c $< -o $@
