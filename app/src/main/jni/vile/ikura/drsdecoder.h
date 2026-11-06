@@ -41,10 +41,18 @@ class DRSDecoder : public IkuraDecoder {
 		inline bool OP55(const Uint8 *Data,int Length);		// Load image
 		inline bool OP77(const Uint8 *Data,int Length);		// Play SE
 		inline bool OP79(const Uint8 *Data,int Length);		// Play CDDA
+		inline bool iop_ic(const Uint8 *Data,int Length);		// Change cursor
 		inline bool OPF3(const Uint8 *Data,int Length);		// Play Video
 		inline bool OPF8(const Uint8 *Data,int Length);		// Enable save
 		inline bool OPF9(const Uint8 *Data,int Length);		// Disable save
 		inline bool OPFA(const Uint8 *Data,int Length);		// Reset save
+
+		// CDDA state (the title screen loop re-issues OP79 every
+		// cycle, so the handler must not rescan the archives or
+		// restart the track on every poll)
+		int cdda_track;						//!< Last requested CDDA track (-1 = none)
+		bool cdda_failed;					//!< Last lookup found no playable source
+
 	public:
 		DRSDecoder(int Width,int Height);
 		~DRSDecoder();

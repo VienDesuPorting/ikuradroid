@@ -159,6 +159,7 @@ class IkuraDecoder : public EngineVN {
 		bool iop_das(const Uint8 *Data,int Length);
 		bool iop_dap(const Uint8 *Data,int Length);
 		bool PlayCDDAFiles(int channel,uString *MusicName);
+	bool PlayCDDAScan(int channel,uString *MusicName);
         bool iop_pm(const Uint8 *Data,int Length);
 		bool iop_pf(const Uint8 *Data,int Length);
 		bool iop_exc(const Uint8 *Data,int Length);

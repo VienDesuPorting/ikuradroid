@@ -1443,14 +1443,110 @@ bool IkuraDecoder::iop_das(const Uint8 *Data,int Length){
  *  nameMusic and savegames can replay the same track on load.
  */
 bool IkuraDecoder::PlayCDDAFiles(int channel,uString *MusicName){
-	static const char *bases[]={"TK%02d","TK_%02d","TK-%02d",
-	                "MUSIC%02d","MUSIC%d","%02d"};
+	static const char *bases[]={"TK%02d","TK%d","TK_%02d","TK_%d",
+				"TK-%02d","TK-%d","MUSIC%02d","MUSIC%d",
+				"TRACK%02d","TRACK%d","%02d","%d"};
 	for(unsigned int i=0;i<sizeof(bases)/sizeof(bases[0]);i++){
 		uString name=EDL_Format(bases[i],channel);
 		if(PlayMusic(name)){
 			if(MusicName)*MusicName=name;
 			return true;
 		}
+	}
+	return false;
+}
+
+/*! \brief Scans the BGM sources for names that encode the track number
+ *  \param channel Numeric CD track index
+ *  \param MusicName Receives the file name that actually started
+ *  \return True if a matching BGM file was found and started
+ *
+ * Rips name their CDDA dumps freely ("<disc>_track17.wav",
+ * "cd1_tk03.ogg", ...), which the fixed bases in PlayCDDAFiles can
+ * not reach. This pass walks every registered BGM resource and
+ * accepts any name whose basename ends in a track token (track/tk/
+ * music plus an optional separator plus the number), so arbitrary
+ * prefixes keep working. A miss logs the full candidate list: the
+ * next device report then shows the rip's real naming instead of a
+ * bare "no matching file".
+ */
+bool IkuraDecoder::PlayCDDAScan(int channel,uString *MusicName){
+	Stringlist candidates;
+	int count=GetBGM(&candidates);
+	if(!count){
+		return false;
+	}
+	// Build every suffix a rip may append to the track number
+	static const char *words[]={"track","tk","music"};
+	static const char *seps[]={"","_","-"," "};
+	uString tails[24];
+	int ntails=0;
+	for(unsigned int w=0;w<sizeof(words)/sizeof(words[0]);w++){
+		for(unsigned int s=0;s<sizeof(seps)/sizeof(seps[0]);s++){
+			tails[ntails++]=EDL_Format("%s%s%d",
+						words[w],seps[s],channel);
+			tails[ntails++]=EDL_Format("%s%s%02d",
+						words[w],seps[s],channel);
+		}
+	}
+	uString bare=EDL_Format("%d",channel);
+	uString barepad=EDL_Format("%02d",channel);
+	for(int i=0;i<count;i++){
+		uString name=candidates.GetString(i);
+		// Enumerate hands out lowercase "base.ext"
+		uString base=name;
+		for(int j=(int)name.length()-1;j>=0;j--){
+			if(name[j]=='.'){
+				base=name.substr(0,j);
+				break;
+			}
+		}
+		bool matched=false;
+		if(base==bare || base==barepad){
+			matched=true;
+		}
+		for(int t=0;t<ntails && !matched;t++){
+			const uString &tail=tails[t];
+			if(base.length()>=tail.length() &&
+						base.substr(base.length()-tail.length())==tail){
+				// Require a separator (or the string start) in
+				// front of the token so "kah0017" never reads
+				// as track 17
+				if(base.length()==tail.length()){
+					matched=true;
+				}
+				else{
+					const char *b=base.c_str();
+					char prev=b[base.length()-tail.length()-1];
+					if(prev=='_' || prev=='-' || prev==' ' ||
+								prev=='/'){
+						matched=true;
+					}
+				}
+			}
+		}
+		if(matched && PlayMusic(name)){
+			if(MusicName)*MusicName=name;
+			return true;
+		}
+	}
+	// Nothing matched: dump the candidates so the device log shows
+	// the rip's real naming (the OP79 latch keeps this to one report)
+	LogError("CDDA %d: no track file matched; BGM sources (%d):",
+			channel,count);
+	int shown=count>96?96:count;
+	for(int i=0;i<shown;i+=8){
+		uString line;
+		for(int j=i;j<i+8 && j<shown;j++){
+			if(j>i){
+				line+=" ";
+			}
+			line+=candidates.GetString(j);
+		}
+		LogError("  %s",line.c_str());
+	}
+	if(count>shown){
+		LogError("  ... %d more",count-shown);
 	}
 	return false;
 }
@@ -1465,7 +1561,7 @@ bool IkuraDecoder::iop_dap(const Uint8 *Data,int Length){
 	// MUSIC##.WAV. Poll the known bases (ArchiveItem matching is
 	// case-insensitive) before giving up.
 	uString name;
-	if(PlayCDDAFiles(channel,&name)){
+	if(PlayCDDAFiles(channel,&name) || PlayCDDAScan(channel,&name)){
 		nameMusic=name;
 		return false;
 	}
@@ -2629,7 +2725,7 @@ bool IkuraDecoder::iop_ig(const Uint8 *Data,int Length){
 		}
 
 		// Store results
-		//LogTest("IG: %d %d %d %d (%d %d)",cur,btn,cnt,bflag,pos,flag);
+		LogTest("IG: %d %d -> pos=%d flag=%d",cur,btn,pos,flag);
 		parser.SetValue(cur,pos);
 		parser.SetValue(btn,flag);
 	}

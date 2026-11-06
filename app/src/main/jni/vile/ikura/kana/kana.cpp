@@ -21,6 +21,14 @@ Kana::Kana(uString Path) : DRSDecoder(640,480){
 	AddImages(new ArchiveIkura(Path+"DRSGRP"));
 	AddSE(new ArchiveIkura(Path+"DRSSEF"));
 	AddVideo(new ArchiveFiles(Path+"OP.DOM"));
+	// DRS titles stream their music from the CD's audio tracks.
+	// Rips carry them either packed in a DRSBGM cabinet or as
+	// loose files under a dozen naming schemes (TK##, MUSIC##,
+	// <disc>_trackNN.wav), so the whole folder is registered and
+	// OP79 resolves the track number through the fixed name
+	// bases and the suffix scan
+	AddBGM(new ArchiveIkura(Path+"DRSBGM"));
+	AddBGM(new ArchiveFiles(Path+"*"));
 
 	// Configure textview
 	w_textview->Move(0,0);

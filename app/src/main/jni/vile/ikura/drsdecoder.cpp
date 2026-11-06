@@ -17,6 +17,8 @@
 
 DRSDecoder::DRSDecoder(int Width,int Height) : IkuraDecoder(Width,Height){
 	w_display->SetTarget(1);
+	cdda_track=-1;
+	cdda_failed=false;
 }
 
 DRSDecoder::~DRSDecoder(){
@@ -35,7 +37,7 @@ bool DRSDecoder::EventGameProcess(){
 		if(l){
 			l--;
 		}
-		LogTest("OPCODE %02X (%d bytes)",c,l);
+		LogVerbose("OPCODE %02X (%d bytes)",c,l);
 
 		// Map opcode between ikura and drs handlers
 		if(c==0x00)					r=iop_ed(b,l);
@@ -100,7 +102,7 @@ bool DRSDecoder::EventGameProcess(){
 		else if(c==0x7A)			r=iop_dap(b,l);
 		else if(c==0x7B)			r=iop_das(b,l);
 		else if(c==0x80)			r=iop_im(b,l);
-		//else if(c==0x81)			r=iop_ic(b,l);
+		else if(c==0x81)			r=iop_ic(b,l);
 		else if(c==0x84)			r=iop_ih(b,l);
 		else if(c==0x85)			r=iop_ig(b,l);
 		else if(c==0xF1)			r=iop_atimes(b,l);
@@ -324,12 +326,12 @@ bool DRSDecoder::OP2C(const Uint8 *Data,int Length){
 }
 
 bool DRSDecoder::OP3C(const Uint8 *Data,int Length){
-	LogTest("OP3C:CGFLAG:%d",Length);
+	LogVerbose("OP3C:CGFLAG:%d",Length);
 	return false;
 }
 
 bool DRSDecoder::OP3D(const Uint8 *Data,int Length){
-	LogTest("OP3D:CGFLAG:%d",Length);
+	LogVerbose("OP3D:CGFLAG:%d",Length);
 	return false;
 }
 
@@ -444,10 +446,10 @@ bool DRSDecoder::OP54(const Uint8 *Data,int Length){
 	Sint32 src=parser.DecodeValue(GETDWORD(Data+4));
 	Sint32 dir=parser.DecodeValue(GETDWORD(Data+8));
 	if(dir){
-		LogTest("FADEIN:%d:%d",ticks,src);
+		LogVerbose("FADEIN:%d:%d",ticks,src);
 	}
 	else{
-		LogTest("FADEOUT:%d:%d",ticks,src);
+		LogVerbose("FADEOUT:%d:%d",ticks,src);
 	}
 	return false;
 }
@@ -456,7 +458,7 @@ bool DRSDecoder::OP54(const Uint8 *Data,int Length){
 bool DRSDecoder::OP55(const Uint8 *Data,int Length){
 	int index=parser.DecodeValue(GETDWORD(Data));
 	uString name=(char*)Data+4;
-	LogTest("Loading surface[%d]=%s",index,name.c_str());
+	LogVerbose("Loading surface[%d]=%s",index,name.c_str());
 	SDL_Surface *surface=LoadImage(name);
 	if(surface){
 		w_display->SetSurface(index,surface);
@@ -469,14 +471,52 @@ bool DRSDecoder::OP55(const Uint8 *Data,int Length){
 bool DRSDecoder::OP77(const Uint8 *Data,int Length){
 	int index=parser.DecodeValue(GETDWORD(Data));
 	//Uint8 cmd=GETBYTE(Data+4);
-	LogTest("OP77:SEP:%d",index);
+	LogVerbose("OP77:SEP:%d",index);
 	return false;
 }
 
 // Play CDDA track
 bool DRSDecoder::OP79(const Uint8 *Data,int Length){
-	int end=parser.DecodeValue(GETDWORD(Data));
-	LogTest("OP79:CDDA:%d",end);
+	int track=parser.DecodeValue(GETDWORD(Data));
+	if(track<=0){
+		// Track 0 stops playback (mirrors iop_das)
+		StopMusic();
+		nameMusic="stop";
+		cdda_track=-1;
+		cdda_failed=false;
+		return false;
+	}
+	// The title screen loop re-issues OP79 every cycle: only act when
+	// the track changes, the music has ended or the last lookup failed
+	if(track==cdda_track && (Mix_PlayingMusic()||cdda_failed)){
+		return false;
+	}
+	LogTest("OP79:CDDA:%d",track);
+	cdda_track=track;
+	cdda_failed=false;
+	uString name;
+	if(PlayCDDAFiles(track,&name) || PlayCDDAScan(track,&name) ||
+				PlayTrack(track)){
+		// Record the name so savegames resume the same track
+		if(name.length()){
+			nameMusic=name;
+		}
+		return false;
+	}
+	// Nothing matched: latch the failure so the ~250ms loop does not
+	// rescan every archive each cycle
+	cdda_failed=true;
+	LogError("CDDA track %d has no matching BGM file",track);
+	return false;
+}
+
+// Change mouse cursor (0x81). The PC originals swap the cursor sprite
+// over hotspots; a touchscreen has no cursor to change, so the operand
+// is consumed and dropped. Registered so the interpreter stops
+// reporting the opcode as unknown on every title loop cycle.
+bool DRSDecoder::iop_ic(const Uint8 *Data,int Length){
+	(void)Data;
+	(void)Length;
 	return false;
 }
 
