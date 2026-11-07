@@ -70,6 +70,9 @@ DIRS := . common crowd crowd/tokimeki crowd/xchange1 crowd/xchange3 \
         nscr
 
 SRCS := $(foreach d,$(DIRS),$(wildcard $(VILE)/$(d)/*.cpp))
+# ikurajni.cpp is the Android JNI entry (needs <jni.h>); the desktop
+# build enters through the upstream ViLE main() in vile.cpp instead.
+SRCS := $(filter-out %/ikurajni.cpp,$(SRCS))
 OBJS := $(patsubst $(VILE)/%.cpp,$(BUILD)/obj/%.o,$(SRCS))
 # ONScripter sources: exact list from vile/nscr/Android.mk LOCAL_SRC_FILES.
 # Everything else in nscr/onscripter (onscripter_main.cpp defines SDL_main,
