@@ -30,8 +30,7 @@
  *  Base: ONScripter 20230825 by Ogapee. This fork was made with
  *  reference to the outdated ONScripterRU Android build and carries
  *  CP1251 changes for Russian fan translations.
- *  Modified for IkuraDroid by Christopher_VN <github.com/christopher-vn>
- *  as part of the VienDesuPorting/ikuradroid project
+ *  Modified for IkuraDroid by the VienDesu! Porting Team
  *  <github.com/VienDesuPorting/ikuradroid>.
  *
  *  Distributed under the same GNU GPL (v2 or later) as the original

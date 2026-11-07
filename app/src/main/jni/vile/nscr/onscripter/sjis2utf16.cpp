@@ -1,5 +1,21 @@
 #include <stdio.h>
 /* sjis 0x8140 - 0xfcfc */
+/*
+ *  IkuraDroid modification notice - 2026
+ *
+ *  This file is modified for ONScripter-Droid, the NScripter/ONScripter
+ *  engine module of IkuraDroid (su.viende.ikuradroid) - the ViLE-based
+ *  Android visual novel player.
+ *
+ *  Base: ONScripter 20230825 by Ogapee. This fork was made with
+ *  reference to the outdated ONScripterRU Android build and carries
+ *  CP1251 changes for Russian fan translations.
+ *  Modified for IkuraDroid by the VienDesu! Porting Team
+ *  <github.com/VienDesuPorting/ikuradroid>.
+ *
+ *  Distributed under the same GNU GPL (v2 or later) as the original
+ *  ONScripter; this notice supplements the original copyright above.
+ */
 static unsigned short* sjis_2_utf16;
 
 static unsigned short* utf16_2_sjis_00;
