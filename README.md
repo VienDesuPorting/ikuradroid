@@ -121,7 +121,7 @@ Gradle Wrapper 8.10.2 уже лежит в репозитории, отдель�
 ## Участники и компоненты
 
 - **ViLE Team** — движок ViLE (GPLv3)
-- **«Иван»** — оригинальный Android-порт (2015–2016)
+- **«Иван»** — оригинальный Android-порт (2015–2016), [исходники](https://github.com/VienDesuPorting/vile-android)
 - **VienDesu! Porting Team** — текущая разработка IkuraDroid
 - SDL 2.30.12, SDL_gfx / SDL_image / SDL_mixer / SDL_ttf, libmikmod, SMPEG2, libwebp, HQ2x (MaxSt), utf8cpp
 - **ogapee** — ONScripter (GPLv2); форк с поддержкой CP1251 ведётся в составе IkuraDroid

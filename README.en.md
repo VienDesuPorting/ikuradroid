@@ -121,7 +121,7 @@ The core directories and files (`jni/vile/`, `vile.cpp`) still keep the old ViLE
 ## Credits
 
 - **ViLE Team** — the ViLE engine (GPLv3)
-- **"Ivan"** — the original Android port (2015–2016)
+- **"Ivan"** — the original Android port (2015–2016), [sources](https://github.com/VienDesuPorting/vile-android)
 - **VienDesu! Porting Team** — current IkuraDroid development
 - SDL 2.30.12, SDL_gfx / SDL_image / SDL_mixer / SDL_ttf, libmikmod, SMPEG2, libwebp, HQ2x (MaxSt), utf8cpp
 - **ogapee** — ONScripter (GPLv2); the CP1251 fork is maintained as part of IkuraDroid
