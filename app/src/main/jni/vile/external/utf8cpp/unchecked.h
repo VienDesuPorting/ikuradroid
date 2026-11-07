@@ -23,6 +23,17 @@ FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
+/*
+ *  IkuraDroid modification notice - 2026
+ *
+ *  Local compatibility change only: the utf8::unchecked::next/prior
+ *  call sites are namespace-qualified so they no longer resolve to
+ *  std::next/std::prior through ADL on modern toolchains.
+ *  Modified for IkuraDroid by the VienDesu! Porting Team
+ *  <github.com/VienDesuPorting/ikuradroid>.
+ *
+ *  The original utf8cpp copyright and license terms above apply.
+ */
 
 
 #ifndef UTF8_FOR_CPP_UNCHECKED_H_2675DCD0_9480_4c0c_B92A_CC14C027B731
