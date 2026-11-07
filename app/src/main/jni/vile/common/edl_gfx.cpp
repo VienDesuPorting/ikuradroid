@@ -1094,6 +1094,11 @@ bool EDL_SurfaceHasAlpha(SDL_Surface *Surface){
  *  \param Alpha Alpha value
  */
 void EDL_SetAlpha(SDL_Surface *src, SDL_Rect *srcrect,Uint8 Alpha){
+	// Widgets may be configured before any surface is assigned
+	if(!src || !src->pixels){
+		return;
+	}
+
 	// Get best rect
 	SDL_Rect srect={0,0,src->w,src->h};
 	if(srcrect){
