@@ -42,6 +42,7 @@ class DRSDecoder : public IkuraDecoder {
 		inline bool OP77(const Uint8 *Data,int Length);		// Play SE
 		inline bool OP79(const Uint8 *Data,int Length);		// Play CDDA
 		inline bool iop_ic(const Uint8 *Data,int Length);		// Change cursor
+		inline bool OP85(const Uint8 *Data,int Length);		// Get input
 		inline bool OPF3(const Uint8 *Data,int Length);		// Play Video
 		inline bool OPF8(const Uint8 *Data,int Length);		// Enable save
 		inline bool OPF9(const Uint8 *Data,int Length);		// Disable save
@@ -53,6 +54,9 @@ class DRSDecoder : public IkuraDecoder {
 		int cdda_track;						//!< Last requested CDDA track (-1 = none)
 		bool cdda_failed;					//!< Last lookup found no playable source
 
+		// Input polling state (OP85 idle detection)
+		int ig_lastpos;
+		int ig_lastflag;
 	public:
 		DRSDecoder(int Width,int Height);
 		~DRSDecoder();

@@ -19,6 +19,8 @@ DRSDecoder::DRSDecoder(int Width,int Height) : IkuraDecoder(Width,Height){
 	w_display->SetTarget(1);
 	cdda_track=-1;
 	cdda_failed=false;
+	ig_lastpos=0x7FFFFFFF;
+	ig_lastflag=0x7FFFFFFF;
 }
 
 DRSDecoder::~DRSDecoder(){
@@ -129,7 +131,7 @@ bool DRSDecoder::EventGameProcess(){
 		else if(c==0x80)			r=iop_im(b,l);
 		else if(c==0x81)			r=iop_ic(b,l);
 		else if(c==0x84)			r=iop_ih(b,l);
-		else if(c==0x85)			r=iop_ig(b,l);
+		else if(c==0x85)			r=OP85(b,l);
 		else if(c==0xF1)			r=iop_atimes(b,l);
 		else if(c==0xF2)			r=iop_await(b,l);
 		else if(c==0xF3)			r=OPF3(b,l);
@@ -581,6 +583,31 @@ bool DRSDecoder::iop_ic(const Uint8 *Data,int Length){
 	(void)Data;
 	(void)Length;
 	return false;
+}
+
+// Get input (IOP_IG)
+//
+// The DRS title menus poll the input from a tight script loop that
+// carries no await of their own, so an idle poll must hand the rest of
+// the processing budget back to the host. Without this the menu loop
+// burns through the full 20 ms opcode budget of every host tick and the
+// log drowns in thousands of IG lines per second. The first poll after
+// a state change still returns false so the script reacts to hover
+// moves and clicks within the very same tick.
+bool DRSDecoder::OP85(const Uint8 *Data,int Length){
+	bool retval=iop_ig(Data,Length);
+	if(!retval){
+		Uint16 cur=GETWORD(Data);
+		Uint16 btn=GETWORD(Data+2);
+		int pos=parser.GetValue(cur);
+		int flag=parser.GetValue(btn);
+		if(pos==ig_lastpos && flag==ig_lastflag){
+			return true;
+		}
+		ig_lastpos=pos;
+		ig_lastflag=flag;
+	}
+	return retval;
 }
 
 // Play video (IOP_AVIP)
