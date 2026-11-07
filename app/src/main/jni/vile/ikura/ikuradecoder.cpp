@@ -1938,7 +1938,10 @@ bool IkuraDecoder::iop_cset(const Uint8 *Data,int Length){
 	}
 
 	// Extract and terminate caption
-	char caption[Length-18];
+	// (the buffer must hold the copied bytes plus the terminator;
+	// sizing it at Length-18 made the caption[Length-18]=0 store
+	// land one byte past the end of the stack allocation)
+	char caption[Length-18+1];
 	strncpy(caption,(char*)Data+18,Length-18);
 	caption[Length-18]=0;
 
