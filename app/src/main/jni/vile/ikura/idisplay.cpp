@@ -297,7 +297,14 @@ void IkuraDisplay::SetSpot(int Index,int X,int Y,int W,int H){
 		wptr->Move(X,Y);
 		wptr->Resize(W,H);
 		wptr->SetTag(Index);
-		spots->AddWidget(wptr);
+		// Group::GetWidget scans from the top of the list and
+		// AddWidget's default inserts at the top, so the last
+		// defined hotspot would win every overlap. Scripts define
+		// their catch-all regions (a full-screen "hover nothing"
+		// spot) after the real buttons, so the lookup must follow
+		// the definition order: append to the bottom and let the
+		// first defined hotspot claim the pointer.
+		spots->AddWidget(wptr,-1);
 	}
 }
 
