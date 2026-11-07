@@ -188,7 +188,14 @@ bool DRSDecoder::OP06(const Uint8 *Data,int Length){
 }
 
 // Jumpswitch (IOP_ONJP)
-// Cnt is now a word
+//
+// The DRS layout widened the ISF byte-sized count to a word, which also
+// shifts the entry table: [dword register][word count][word entries],
+// so the entries start at offset 6. The ISF variant reads from offset 5
+// because its count is a single byte. Reading from 5 here shifted every
+// table index into its high byte (index*256), the jump landed far outside
+// the jumptable, and the Kana title menu loop derailed into the script
+// start on every dispatcher pass - skipping its input polling entirely.
 bool DRSDecoder::OP07(const Uint8 *Data,int Length){
 	int reg=parser.DecodeValue(GETDWORD(Data));
 	Uint16 cnt=GETWORD(Data+4);
@@ -204,13 +211,13 @@ bool DRSDecoder::OP07(const Uint8 *Data,int Length){
 		LogTest("ONJP: reg=%d cnt=%d",reg,cnt);
 	}
 	if(reg>=(int)0 && reg<cnt){
-		for(int i=5;i<Length;i+=2){
+		for(int i=6;i<Length;i+=2){
 			if(!reg){
 				int target=GETWORD(Data+i);
 				static int onjp_target=-1;
 				if(target!=onjp_target){
 					onjp_target=target;
-					LogTest("ONJP: -> entry %d",target);
+					LogTest("ONJP: reg switch -> entry %d",target);
 				}
 				parser.JumpFunction(target);
 				break;
@@ -220,17 +227,25 @@ bool DRSDecoder::OP07(const Uint8 *Data,int Length){
 			}
 		}
 	}
+	else{
+		LogTest("ONJP: reg=%d out of range (cnt=%d)",reg,cnt);
+	}
 	return false;
 }
 
 // Callswitch (IOP_ONJS)
-// Cnt is now a word and an extra word is present
+//
+// The DRS layout prepends an extra word and widens the count to a word:
+// [word extra][dword register][word count][word entries], so the entries
+// start at offset 8 (the ISF variant reads from 5 because its header is
+// only five bytes wide).
 bool DRSDecoder::OP08(const Uint8 *Data,int Length){
 	int reg=parser.DecodeValue(GETDWORD(Data+2));
 	Uint16 cnt=GETWORD(Data+6);
 	if(reg>=(int)0 && reg<cnt){
-		for(int i=5;i<Length;i+=2){
+		for(int i=8;i<Length;i+=2){
 			if(!reg){
+				LogTest("ONJS: reg switch -> entry %d",GETWORD(Data+i));
 				parser.CallFunction(GETWORD(Data+i));
 				break;
 			}

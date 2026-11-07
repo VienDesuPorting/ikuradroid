@@ -24,6 +24,7 @@ IkuraScript::IkuraScript(){
 	buffer=0;
 	length=0;
 	jumptable=0;
+	jtabcount=0;
 	positions=0;
 	NextPtr=0;
 	save_pos=0;
@@ -145,8 +146,16 @@ uString IkuraScript::DebugPos(int *Position){
 bool IkuraScript::Jump(Uint16 Table){
 	bool retval=false;
 	if(positions && jumptable){
-		positions->position=ssoffset+jumptable[Table];
-		retval=true;
+		if(Table>=jtabcount){
+			// Out-of-range indices used to read past the heap
+			// allocation; refuse the jump instead.
+			LogError("Jump target %d outside jumptable (%d entries)",
+					Table,jtabcount);
+		}
+		else{
+			positions->position=ssoffset+jumptable[Table];
+			retval=true;
+		}
 	}
 	return retval;
 }
@@ -331,6 +340,7 @@ bool IkuraScript::LoadISF(uString Name,Uint8 *Buffer,Uint32 Length){
 			delete [] jumptable;
 		}
 		jumptable=new Uint32[tablecount+1];
+		jtabcount=tablecount;
 		for(int i=0;i<tablecount;i++){
 			jumptable[i]=buffer[(i*4)+8]|(buffer[(i*4)+9]<<8)|
 				(buffer[(i*4)+10]<<16)|(buffer[(i*4)+11]<<24);
@@ -407,6 +417,7 @@ bool IkuraScript::LoadDRS(uString Name,Uint8 *Buffer,Uint32 Length){
 		delete [] jumptable;
 	}
 	jumptable=new Uint32[tablecount+1];
+	jtabcount=tablecount;
 	for(int i=0;i<tablecount;i++){
 		jumptable[i]=buffer[(i*4)+pos+0]|(buffer[(i*4)+pos+1]<<8)|
 			(buffer[(i*4)+pos+2]<<16)|(buffer[(i*4)+pos+3]<<24);

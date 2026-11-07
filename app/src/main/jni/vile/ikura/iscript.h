@@ -36,6 +36,7 @@ class IkuraScript {
 		unsigned int length;				//!< Size of script buffer
 		Uint32 *jumptable;              	//!< Table of script positions
 		Uint32 *calltable;              	//!< Table of script positions
+		unsigned int jtabcount;			//!< Valid entries in jumptable
 		uString sname;						//!< Name of script resource
 		IkuraScriptPosition *positions;		//!< Stacks positions
 		uString save_name;					//!< Remembers script name
