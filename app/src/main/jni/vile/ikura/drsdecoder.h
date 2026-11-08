@@ -30,6 +30,9 @@ class DRSDecoder : public IkuraDecoder {
 		// Override ikura interpreter
 		virtual bool EventGameProcess();
 
+		// DRS specific wait states (typed text lines + page breaks)
+		virtual bool EventGameTick();
+
 		// drs opcode handlers
 		inline bool OP02(const Uint8 *Data,int Length);		// Call script
 		inline bool OP03(const Uint8 *Data,int Length);		// Return from call
@@ -38,7 +41,7 @@ class DRSDecoder : public IkuraDecoder {
 		inline bool OP07(const Uint8 *Data,int Length);		// Jumpswitch
 		inline bool OP08(const Uint8 *Data,int Length);		// Callswitch
 		inline bool OP0C(const Uint8 *Data,int Length);		// Read lines flags
-		inline bool OP0D(const Uint8 *Data,int Length);		// Read lines flags
+		inline bool OP0D(const Uint8 *Data,int Length);		// Page break (waits for click)
 		inline bool OP0E(const Uint8 *Data,int Length);		// Extended flags
 		inline bool OP11(const Uint8 *Data,int Length);		// Set font size
 		inline bool OP15(const Uint8 *Data,int Length);		// Open window

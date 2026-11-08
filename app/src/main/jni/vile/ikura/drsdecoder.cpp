@@ -41,6 +41,69 @@ DRSDecoder::DRSDecoder(int Width,int Height) : IkuraDecoder(Width,Height){
 DRSDecoder::~DRSDecoder(){
 }
 
+/*! \brief DRS wait state machine
+ *
+ *  DRS text works different from Ikura: OP2C types out single lines that
+ *  accumulate inside the current page, and OP0D is the page break which
+ *  pauses the interpreter until the player dismisses the page (reversed
+ *  from KANAUS.EXE: the text opcode stays pending until the text layer
+ *  releases it, and 0x0D only occurs in story scripts after text blocks).
+ *  keyok is always consumed here: the base class leaves it set in the
+ *  IS_WAITCLICK branch, which lets one stale click advance several pages.
+ */
+bool DRSDecoder::EventGameTick(){
+	if(state==IS_WAITTIMER){
+		if(timerend<SDL_GetTicks()){
+			// Timed state has ended
+			while(SkipAnimation());
+			state=IS_NORMAL;
+		}
+		else if(keyctrl()){
+			// Skip state and fall back
+			w_textview->CompleteText();
+			while(SkipAnimation());
+			state=IS_NORMAL;
+		}
+	}
+	if(state==IS_WAITTEXT){
+		if(!w_textview->GetRemainingText()){
+			// Line printed; the next line or the page break follows
+			state=IS_NORMAL;
+		}
+		else if(keyctrl()){
+			// Skip state and fall back
+			w_textview->CompleteText();
+			while(SkipAnimation());
+			state=IS_NORMAL;
+		}
+		else if(keyok){
+			// Complete printing text
+			w_textview->CompleteText();
+			keyok=false;
+		}
+	}
+	if(state==IS_WAITCLICK){
+		if(keyctrl()){
+			// Skip state and fall back
+			w_textview->CompleteText();
+			while(SkipAnimation());
+			w_textview->ClearText();
+			state=IS_NORMAL;
+			keyok=false;
+		}
+		else if(keyok){
+			// Page turn: drop the finished page and resume the script
+			w_textview->CompleteText();
+			while(SkipAnimation());
+			w_textview->ClearText();
+			state=IS_NORMAL;
+			keyok=false;
+		}
+	}
+
+	return !(state==IS_NORMAL);
+}
+
 // Opcode trace flood control: the interpreter streams one trace line
 // per executed opcode, and steady-state script loops (the title
 // screen poll) would flood logcat with the same short cycle forever.
@@ -279,9 +342,15 @@ bool DRSDecoder::OP0C(const Uint8 *Data,int Length){
 	return false;
 }
 
+// Page break between text blocks. The original engine keeps this opcode
+// pending until the player dismisses the page: lines of the block flow
+// into the window automatically, but the transition to the next block
+// waits for a click. 0x0D never occurs in system scripts (START, TITLE,
+// CG_MODE), only in story scripts right after a finished text block.
 bool DRSDecoder::OP0D(const Uint8 *Data,int Length){
-	LogVerbose("OP0C:KID:%d",Length);
-	return false;
+	LogVerbose("OP0D:pagebreak:%d",Length);
+	state=IS_WAITCLICK;
+	return true;
 }
 
 bool DRSDecoder::OP0E(const Uint8 *Data,int Length){
@@ -394,7 +463,11 @@ bool DRSDecoder::OP2C(const Uint8 *Data,int Length){
 			}
 		}
 		w_textview->SetVisible(true);
-		w_textview->PrintText(text.c_str());
+		if(strlen(text.c_str())){
+			w_textview->PrintText(text.c_str());
+			// Hold the VM until this line has been typed out
+			state=IS_WAITTEXT;
+		}
 	}
 	return true;
 }
