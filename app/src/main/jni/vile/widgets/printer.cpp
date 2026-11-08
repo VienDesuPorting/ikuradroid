@@ -184,6 +184,19 @@ void Printer::FreeCursor(){
  *  blits through a black DirectDraw colorkey).
  */
 void Printer::SetCursor(SDL_Surface *Sheet,int FrameWidth,int FrameHeight,Uint32 FrameMS){
+	// The DRS engine loads the same sheet into several slots (Kana
+	// parks ICON_01 in slots 0 and 1) and switches slots on every
+	// line/page wait. Re-slicing the strip each time would rebuild
+	// all frame textures per page turn (and a failed rebuild would
+	// silently drop the cursor), so an identical re-set only
+	// restarts the timing.
+	if(Sheet && Sheet==cursor_sheet && cursor_textures &&
+		cursor_fw==FrameWidth && cursor_fh==FrameHeight &&
+		cursor_frames>0){
+		cursor_framems=FrameMS?FrameMS:120;
+		cursor_lasttick=SDL_GetTicks();
+		return;
+	}
 	FreeCursor();
 	if(Sheet && FrameWidth>0 && FrameHeight>0 &&
 				Sheet->w>=FrameWidth && Sheet->h>=FrameHeight){
@@ -192,6 +205,7 @@ void Printer::SetCursor(SDL_Surface *Sheet,int FrameWidth,int FrameHeight,Uint32
 		cursor_frames=Sheet->w/FrameWidth;
 		cursor_framems=FrameMS?FrameMS:120;
 		cursor_lasttick=SDL_GetTicks();
+		cursor_sheet=Sheet;
 		if(cursor_frames>0 && Sheet->format->BytesPerPixel<=4){
 			cursor_textures=new EDLTexture*[cursor_frames];
 			for(int i=0;i<cursor_frames;i++){
@@ -724,6 +738,15 @@ void Printer::Render(){
 		// next character would land on), 4px to its right, clamped to the
 		// print area; the frame advances (frame+1)%count every FrameMS
 		if(cursor_on && cursor_textures && cursor_frames>0){
+			// The animation owns its repaint: while the cursor is
+			// visible the widget asks for the next frame itself.
+			// Without this the global refresh flag - armed by the
+			// typing text above - is the only thing keeping the
+			// render loop alive, and any pass that skips this
+			// widget (a side channel consuming the flag, a hidden
+			// dialog, a transition) freezes the cursor for the
+			// rest of the wait.
+			Refresh();
 			Uint32 now=SDL_GetTicks();
 			if(now<cursor_lasttick || now-cursor_lasttick>=cursor_framems){
 				cursor_lasttick=now;

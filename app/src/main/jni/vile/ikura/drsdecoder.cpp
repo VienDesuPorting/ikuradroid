@@ -37,6 +37,15 @@ DRSDecoder::DRSDecoder(int Width,int Height) : IkuraDecoder(Width,Height){
 	ig_lastpos=0x7FFFFFFF;
 	ig_lastflag=0x7FFFFFFF;
 	page_has_text=false;
+	// Text pacing, reversed from KANAUS.EXE: the 0x2C stream prints
+	// one character every cfg[0x212]+1 engine ticks (the countdown at
+	// 0x41a300 reloads 2 and fires on 0), and the tick is the 60Hz
+	// idle gate (0x40d2a0, one tick per 0x11 ms). UserSetup byte 12
+	// (registry HKCU\Software\DO\KANAUS) pins cfg[0x212]=2, the EXE
+	// default is 2 as well: 3 ticks = 50ms per character. The 25ms
+	// engine default typed the text twice as fast as the PC original.
+	SetMessageDelayEnabled(true);
+	SetMessageDelayInterval(50);
 	for(int i=0;i<6;i++){
 		cursors[i].sheet=0;
 		cursors[i].fw=0;
@@ -679,11 +688,13 @@ void DRSDecoder::ShowTextCursor(int Slot,bool Enable){
 	if(Slot!=cursor_active){
 		cursor_active=Slot;
 		// The original advances the frame counter every `delay` engine
-		// ticks (~60Hz): delay 8 is roughly 128ms per frame. The follow
-		// flag (0x22) is always 0 in Kana, so the cursor tracks the
-		// carriage instead of the configured fixed offset.
+		// ticks; the tick is the 60Hz frame gate of the idle loop
+		// (KANAUS.EXE 0x40d2a0: one tick per 0x11 ms), so one frame
+		// holds delay*1000/60 ms (delay 8 = 133ms; the book flips
+		// open over ~1.5s). The follow flag (0x22) is always 0 in
+		// Kana, so the cursor tracks the carriage, not the offset.
 		w_textview->SetCursor(cursors[Slot].sheet,cursors[Slot].fw,
-				cursors[Slot].fh,cursors[Slot].delay*16);
+				cursors[Slot].fh,cursors[Slot].delay*1000/60);
 	}
 	w_textview->ShowCursor(true);
 }
