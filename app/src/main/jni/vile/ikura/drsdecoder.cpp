@@ -36,6 +36,7 @@ DRSDecoder::DRSDecoder(int Width,int Height) : IkuraDecoder(Width,Height){
 	cdda_failed=false;
 	ig_lastpos=0x7FFFFFFF;
 	ig_lastflag=0x7FFFFFFF;
+	page_has_text=false;
 }
 
 DRSDecoder::~DRSDecoder(){
@@ -90,6 +91,7 @@ bool DRSDecoder::EventGameTick(){
 			w_textview->ClearText();
 			state=IS_NORMAL;
 			keyok=false;
+			page_has_text=false;
 		}
 		else if(keyok){
 			// Page turn: drop the finished page and resume the script
@@ -98,6 +100,7 @@ bool DRSDecoder::EventGameTick(){
 			w_textview->ClearText();
 			state=IS_NORMAL;
 			keyok=false;
+			page_has_text=false;
 		}
 	}
 
@@ -146,8 +149,20 @@ bool DRSDecoder::EventGameProcess(){
 
 		// Map opcode between ikura and drs handlers
 		if(c==0x00)					r=iop_ed(b,l);
-		else if(c==0x01)			r=iop_ls(b,l);
-		else if(c==0x02)			r=OP02(b,l);
+		else if(c==0x01){
+			// Script switch: hotspots of the previous screen (title
+			// menu buttons, full-screen catch-alls) must not eat the
+			// next scene's background taps - a swallowed tap never
+			// reaches keyok, which used to freeze EV11 forever on
+			// its first page break. Every DRS screen redefines its
+			// spots right before its own IG polls.
+			w_display->Clear();
+			r=iop_ls(b,l);
+		}
+		else if(c==0x02){
+			w_display->Clear();
+			r=OP02(b,l);
+		}
 		else if(c==0x03)			r=OP03(b,l);
 		else if(c==0x04)			r=iop_jp(b,l);
 		else if(c==0x05)			r=OP05(b,l);
@@ -349,8 +364,18 @@ bool DRSDecoder::OP0C(const Uint8 *Data,int Length){
 // CG_MODE), only in story scripts right after a finished text block.
 bool DRSDecoder::OP0D(const Uint8 *Data,int Length){
 	LogVerbose("OP0D:pagebreak:%d",Length);
-	state=IS_WAITCLICK;
-	return true;
+	// 0x0D is a page separator and story scripts also issue it on
+	// EMPTY pages: EV11 opens with BLACK + gameinfo + 0x0D before
+	// any text and before the opening choice. Blocking there froze
+	// the game on a black screen (the original VM releases pending
+	// unconditionally on 0x0D), so only finished text pages pause
+	// for the dismissing click; empty breaks clear through.
+	if(page_has_text){
+		state=IS_WAITCLICK;
+		return true;
+	}
+	w_textview->ClearText();
+	return false;
 }
 
 bool DRSDecoder::OP0E(const Uint8 *Data,int Length){
@@ -465,6 +490,9 @@ bool DRSDecoder::OP2C(const Uint8 *Data,int Length){
 		w_textview->SetVisible(true);
 		if(strlen(text.c_str())){
 			w_textview->PrintText(text.c_str());
+			// The page now holds content: the next 0x0D pauses for
+			// the dismissing click instead of clearing through
+			page_has_text=true;
 			// Hold the VM until this line has been typed out
 			state=IS_WAITTEXT;
 		}

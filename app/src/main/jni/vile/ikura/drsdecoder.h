@@ -75,6 +75,11 @@ class DRSDecoder : public IkuraDecoder {
 		// Input polling state (OP85 idle detection)
 		int ig_lastpos;
 		int ig_lastflag;
+
+		// Page state: 0x0D pauses the VM only when the page holds text;
+		// story scripts also issue empty breaks before their opening
+		// choice (EV11: BLACK + gameinfo + 0x0D with no text printed)
+		bool page_has_text;
 	public:
 		DRSDecoder(int Width,int Height);
 		~DRSDecoder();

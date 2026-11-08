@@ -348,6 +348,10 @@ void IkuraDisplay::Clear(){
 		spots->DestroyWidget(wptr);
 		wptr=spots->GetWidget(cnt++);
 	}
+	// A stale hover/click pair would feed the next IG poll a phantom
+	// selection, so a full clear resets the tracked input state too
+	selected=-1;
+	result=-1;
 }
 
 /*! \brief Loads a named resource into specified buffer
