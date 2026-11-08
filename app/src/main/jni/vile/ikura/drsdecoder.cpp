@@ -37,9 +37,27 @@ DRSDecoder::DRSDecoder(int Width,int Height) : IkuraDecoder(Width,Height){
 	ig_lastpos=0x7FFFFFFF;
 	ig_lastflag=0x7FFFFFFF;
 	page_has_text=false;
+	for(int i=0;i<6;i++){
+		cursors[i].sheet=0;
+		cursors[i].fw=0;
+		cursors[i].fh=0;
+		cursors[i].follow=0;
+		cursors[i].x=0;
+		cursors[i].y=0;
+		cursors[i].delay=8;
+	}
+	cursor_active=-1;
+	textqueue_len=0;
+	textqueue_idx=0;
 }
 
 DRSDecoder::~DRSDecoder(){
+	for(int i=0;i<6;i++){
+		if(cursors[i].sheet){
+			SDL_FreeSurface(cursors[i].sheet);
+			cursors[i].sheet=0;
+		}
+	}
 }
 
 /*! \brief DRS wait state machine
@@ -68,13 +86,18 @@ bool DRSDecoder::EventGameTick(){
 	}
 	if(state==IS_WAITTEXT){
 		if(!w_textview->GetRemainingText()){
-			// Line printed; the next line or the page break follows
+			// Line printed; run the remaining 0x2C control tail (newline,
+			// page wait, clear) before the interpreter moves on
 			state=IS_NORMAL;
+			if(RunTextQueue()){
+				return true;
+			}
 		}
 		else if(keyctrl()){
 			// Skip state and fall back
 			w_textview->CompleteText();
 			while(SkipAnimation());
+			SkipTextQueue();
 			state=IS_NORMAL;
 		}
 		else if(keyok){
@@ -89,6 +112,7 @@ bool DRSDecoder::EventGameTick(){
 			w_textview->CompleteText();
 			while(SkipAnimation());
 			w_textview->ClearText();
+			SkipTextQueue();
 			state=IS_NORMAL;
 			keyok=false;
 			page_has_text=false;
@@ -101,6 +125,9 @@ bool DRSDecoder::EventGameTick(){
 			state=IS_NORMAL;
 			keyok=false;
 			page_has_text=false;
+			if(RunTextQueue()){
+				return true;
+			}
 		}
 	}
 
@@ -177,15 +204,15 @@ bool DRSDecoder::EventGameProcess(){
 		else if(c==0x0E)			r=OP0E(b,l);
 		else if(c==0x10)			r=iop_cw(b,l);
 		else if(c==0x11)			r=OP11(b,l);
-		//else if(c==0x12)			r=OP12(b,l);
-		//else if(c==0x13)			r=OP13(b,l);
+			//else if(c==0x12)			r=OP12(b,l);
+		else if(c==0x13)			r=OP13(b,l);
 		else if(c==0x14)			r=iop_cset(b,l);
 		else if(c==0x15)			r=OP15(b,l);
 		else if(c==0x16)			r=iop_cwc(b,l);
 		else if(c==0x17)			r=iop_cc(b,l);
 		else if(c==0x20)			r=OP20(b,l);
 		else if(c==0x21)			r=OP21(b,l);
-		//else if(c==0x22)			r=OP22(b,l);
+		else if(c==0x22)			r=OP22(b,l);
 		else if(c==0x28)			r=iop_wo(b,l);
 		else if(c==0x29)			r=iop_wc(b,l);
 		else if(c==0x2A)			r=OP2A(b,l);
@@ -362,19 +389,15 @@ bool DRSDecoder::OP0C(const Uint8 *Data,int Length){
 // into the window automatically, but the transition to the next block
 // waits for a click. 0x0D never occurs in system scripts (START, TITLE,
 // CG_MODE), only in story scripts right after a finished text block.
+// Page break marker (0x0D)
+//
+// The DRS dialect uses 0x0D purely as a separator between text
+// blocks; the original VM never blocks or clears on it. The page
+// pause and the clear live inside the 0x2C control tail (11 = wait
+// for the dismissing click, 03 = clear the page), so this handler
+// only needs to consume the opcode.
 bool DRSDecoder::OP0D(const Uint8 *Data,int Length){
 	LogVerbose("OP0D:pagebreak:%d",Length);
-	// 0x0D is a page separator and story scripts also issue it on
-	// EMPTY pages: EV11 opens with BLACK + gameinfo + 0x0D before
-	// any text and before the opening choice. Blocking there froze
-	// the game on a black screen (the original VM releases pending
-	// unconditionally on 0x0D), so only finished text pages pause
-	// for the dismissing click; empty breaks clear through.
-	if(page_has_text){
-		state=IS_WAITCLICK;
-		return true;
-	}
-	w_textview->ClearText();
 	return false;
 }
 
@@ -384,11 +407,28 @@ bool DRSDecoder::OP0E(const Uint8 *Data,int Length){
 }
 
 // Set font size (IOP_PB)
-// No window parameter
+//
+// The DRS rows advance by fontsize+8 (reversed: the newline handler
+// 0x41b4d0 walks the pen by [fontsize]+8), so font 24 paces the window
+// in 32px steps - 13 rows over the 416px print area, matching the
+// reference screenshots.
 bool DRSDecoder::OP11(const Uint8 *Data,int Length){
 	if(iop_check(4,IOP_PB,Data,Length)){
 		int size=parser.DecodeValue(GETDWORD(Data));
 		w_textview->SetFontSize(size);
+		w_textview->SetLeading(size+8);
+	}
+	return false;
+}
+
+// Set text colors (0x13)
+//
+// Reversed from KANAUS.EXE 0x4200d0: three RGB triples follow the
+// length word (window, text ink, shadow). The DRS window draws no
+// frame or fill, so only the text ink applies (white in Kana).
+bool DRSDecoder::OP13(const Uint8 *Data,int Length){
+	if(Length>=9){
+		w_textview->SetFontColor(Data[3],Data[4],Data[5]);
 	}
 	return false;
 }
@@ -404,8 +444,14 @@ bool DRSDecoder::OP15(const Uint8 *Data,int Length){
 	return true;
 }
 
-// Set text window position (IOP_WS)
-// Completely off
+// Set text window position and print area (IOP_WS)
+//
+// Reversed from KANAUS.EXE 0x420340: [dst][x][y][w][h] frames the
+// dialog, then [tx][ty][tw][th] pins the inner print area that defines
+// the text origin, the word wrap width and the page capacity. Kana
+// uses a full screen dialog (0,0,640,480) with the print area
+// (44,36,552,416) - the missing print area is why the port neither
+// wrapped at the original boundary nor kept its margins.
 bool DRSDecoder::OP20(const Uint8 *Data,int Length){
 	Uint8 dst=GETBYTE(Data);
 	if(dst){
@@ -419,29 +465,82 @@ bool DRSDecoder::OP20(const Uint8 *Data,int Length){
 	if(w && h){
 		w_textview->Resize(w,h);
 	}
+	if(Length>=33){
+		// Inner print area, relative to the dialog
+		Uint32 tx=GETDWORD(Data+17);
+		Uint32 ty=GETDWORD(Data+21);
+		Uint32 tw=GETDWORD(Data+25);
+		Uint32 th=GETDWORD(Data+29);
+		w_textview->SetTextPosition(tx-x,ty-y,tw,th);
+	}
 	return false;
 }
 
 
-// Set text window graphic (IOP_WP)
-// Much simpler than Ikura
+// Load animated cursor sheet (0x21)
+//
+// Reversed from KANAUS.EXE 0x420430 + 0x419d00: [dst][slot][name\0]
+// [frame width][frame height] loads a horizontal frame strip into one
+// of six cursor slots; the frame count is sheet width / frame width
+// (0x419e04). START.DRS loads ICON_01 - 11 frames of 24x24, an opening
+// book with an arrow - into slots 0 (line waits) and 1 (page waits).
+// The old IOP_WP interpretation treated the sheet as a window graphic
+// and resized the textview to the 24x24 frame: that both wrecked the
+// layout and tiled the book frames over the dialog.
 bool DRSDecoder::OP21(const Uint8 *Data,int Length){
-	// Get provided text window data
-	Uint8 dst=GETBYTE(Data);
+	if(Length<18){
+		LogError("OP21: illegal length %d",Length);
+		return false;
+	}
+	int slot=GETBYTE(Data+1);
+	if(slot<0 || slot>5){
+		LogError("OP21: illegal cursor slot %d",slot);
+		return false;
+	}
 	char *filename=(char*)Data+2;
-	int width=parser.DecodeValue(GETDWORD(Data+Length-8));
-	int height=parser.DecodeValue(GETDWORD(Data+Length-4));
-	if(dst){
-		LogError("ILLEGAL WINDOW: %d",dst);
+	int fw=parser.DecodeValue(GETDWORD(Data+Length-8));
+	int fh=parser.DecodeValue(GETDWORD(Data+Length-4));
+	SDL_Surface *sheet=LoadImage(filename);
+	if(!sheet){
+		LogError("OP21: failed to load cursor sheet %s",filename);
+		return false;
 	}
-	else{
-		SDL_Surface *tmpsurface=LoadImage(filename);
-		if(tmpsurface){
-			w_textview->Resize(width,height);
-			w_textview->Set(tmpsurface);
-			SDL_FreeSurface(tmpsurface);
-		}
+	if(cursors[slot].sheet){
+		SDL_FreeSurface(cursors[slot].sheet);
 	}
+	cursors[slot].sheet=sheet;
+	cursors[slot].fw=fw;
+	cursors[slot].fh=fh;
+	LogTest("OP21: cursor slot %d = %s (%dx%d frames)",slot,filename,fw,fh);
+	return false;
+}
+
+// Configure animated cursor (0x22)
+//
+// Reversed from KANAUS.EXE 0x420520 + 0x419e60: [dst][slot][follow]
+// [x][y][delay:word]. follow=0 lets the cursor track the text
+// carriage (Kana), a nonzero flag would pin it at a fixed offset;
+// delay counts engine ticks per animation frame.
+bool DRSDecoder::OP22(const Uint8 *Data,int Length){
+	if(Length<15){
+		LogError("OP22: illegal length %d",Length);
+		return false;
+	}
+	int slot=GETBYTE(Data+1);
+	if(slot<0 || slot>5){
+		LogError("OP22: illegal cursor slot %d",slot);
+		return false;
+	}
+	cursors[slot].follow=GETBYTE(Data+2);
+	cursors[slot].x=parser.DecodeValue(GETDWORD(Data+3));
+	cursors[slot].y=parser.DecodeValue(GETDWORD(Data+7));
+	cursors[slot].delay=GETWORD(Data+11);
+	if(!cursors[slot].delay){
+		cursors[slot].delay=8;
+	}
+	LogVerbose("OP22: cursor slot %d follow=%d pos=(%d,%d) delay=%d",
+				slot,cursors[slot].follow,cursors[slot].x,
+				cursors[slot].y,cursors[slot].delay);
 	return false;
 }
 
@@ -472,32 +571,136 @@ bool DRSDecoder::OP2B(const Uint8 *Data,int Length){
 }
 
 // Print text messages (IOP_PM)
+//
+// Reversed from KANAUS.EXE 0x420840 -> 0x4198f0: the payload after
+// [dst][length] is a control stream. 0xFF introduces a string of
+// 7f-prefixed character pairs that ends at a NUL; every other byte
+// goes through the 19-entry control table (0x41ab2c):
+//   02  line wait - hold the VM until the line has typed out
+//   03  clear the page and home the carriage
+//   06  newline (a full page waits for the dismissing click)
+//   11  page end - wait for a click with the animated book cursor
+//   00, 01, 04..10, 12 and anything above 0x12 is skipped
+// The stream is parsed into a queue and executed step by step as the
+// wait states complete. The old handler glued every byte below 0x7F
+// into the line, so the control-only opcodes (bare 06/03) leaked
+// their bytes - and the headers of the following opcodes - into the
+// page as tofu boxes and stray punctuation.
 bool DRSDecoder::OP2C(const Uint8 *Data,int Length){
-	// Set text window dimensions
-	Uint8 dst=GETBYTE(Data);
-	//Uint16 length=GETWORD(Data+1);
-	if(dst){
-		LogError("ILLEGAL WINDOW: %d",dst);
+	if(GETBYTE(Data)){
+		LogError("ILLEGAL WINDOW: %d",GETBYTE(Data));
+		return false;
 	}
-	else{
-		// Print text (Stripping unicode encoding)
-		uString text;
-		for(int j=3;Data[j];j++){
-			if(Data[j]<0x7F){
-				text+=(char)Data[j];
+	textqueue_len=0;
+	textqueue_idx=0;
+	int pos=3;
+	while(pos<Length && textqueue_len<24){
+		Uint8 c=Data[pos++];
+		if(c==0xFF){
+			// String of (prefix,character) pairs until the NUL
+			uString text;
+			while(pos+1<Length && Data[pos]){
+				if(Data[pos]==0x7F && Data[pos+1]){
+					text+=(char)Data[pos+1];
+				}
+				pos+=2;
 			}
+			if(pos<Length && !Data[pos]){
+				pos++;
+			}
+			textqueue[textqueue_len].op=TQ_TEXT;
+			textqueue[textqueue_len].text=text;
+			textqueue_len++;
 		}
-		w_textview->SetVisible(true);
-		if(strlen(text.c_str())){
-			w_textview->PrintText(text.c_str());
-			// The page now holds content: the next 0x0D pauses for
-			// the dismissing click instead of clearing through
-			page_has_text=true;
-			// Hold the VM until this line has been typed out
-			state=IS_WAITTEXT;
+		else if(c==0x02){
+			textqueue[textqueue_len++].op=TQ_LINEWAIT;
+		}
+		else if(c==0x03){
+			textqueue[textqueue_len++].op=TQ_CLEAR;
+		}
+		else if(c==0x06){
+			textqueue[textqueue_len++].op=TQ_NEWLINE;
+		}
+		else if(c==0x11){
+			textqueue[textqueue_len++].op=TQ_PAGEWAIT;
 		}
 	}
-	return true;
+	return RunTextQueue();
+}
+
+// Execute the parsed 0x2C control stream up to the next wait state
+bool DRSDecoder::RunTextQueue(){
+	while(textqueue_idx<textqueue_len){
+		TEXTQUEUEITEM &cmd=textqueue[textqueue_idx++];
+		switch(cmd.op){
+			case TQ_TEXT:
+				w_textview->SetVisible(true);
+				if(cmd.text.length()){
+					w_textview->PrintText(cmd.text.c_str());
+					page_has_text=true;
+				}
+				// Hold the VM until the line has been typed out; the book
+				// cursor (slot 0) tracks the carriage while it waits
+				ShowTextCursor(0,true);
+				state=IS_WAITTEXT;
+				return true;
+			case TQ_LINEWAIT:
+				// ctl02: the soft line wait ended with the typed line
+				continue;
+			case TQ_NEWLINE:
+				w_textview->PrintNewline();
+				continue;
+			case TQ_PAGEWAIT:
+				// ctl11: page end - click to continue with the book
+				// cursor (slot 1)
+				ShowTextCursor(1,true);
+				state=IS_WAITCLICK;
+				return true;
+			case TQ_CLEAR:
+				// ctl03: drop the page and home the carriage
+				w_textview->ClearText();
+				page_has_text=false;
+				ShowTextCursor(-1,false);
+				continue;
+		}
+	}
+	return false;
+}
+
+// Apply a cursor slot (0x21 sheet + 0x22 config) to the textview
+void DRSDecoder::ShowTextCursor(int Slot,bool Enable){
+	if(!Enable){
+		w_textview->ShowCursor(false);
+		return;
+	}
+	if(Slot<0 || Slot>5 || !cursors[Slot].sheet){
+		return;
+	}
+	if(Slot!=cursor_active){
+		cursor_active=Slot;
+		// The original advances the frame counter every `delay` engine
+		// ticks (~60Hz): delay 8 is roughly 128ms per frame. The follow
+		// flag (0x22) is always 0 in Kana, so the cursor tracks the
+		// carriage instead of the configured fixed offset.
+		w_textview->SetCursor(cursors[Slot].sheet,cursors[Slot].fw,
+				cursors[Slot].fh,cursors[Slot].delay*16);
+	}
+	w_textview->ShowCursor(true);
+}
+
+// Drain the 0x2C control queue without waiting (skip mode)
+void DRSDecoder::SkipTextQueue(){
+	while(textqueue_idx<textqueue_len){
+		int op=textqueue[textqueue_idx++].op;
+		if(op==TQ_NEWLINE){
+			w_textview->PrintNewline();
+		}
+		else if(op==TQ_CLEAR){
+			w_textview->ClearText();
+			page_has_text=false;
+		}
+	}
+	w_textview->ShowCursor(false);
 }
 
 bool DRSDecoder::OP3C(const Uint8 *Data,int Length){

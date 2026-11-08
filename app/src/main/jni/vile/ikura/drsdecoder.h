@@ -44,9 +44,11 @@ class DRSDecoder : public IkuraDecoder {
 		inline bool OP0D(const Uint8 *Data,int Length);		// Page break (waits for click)
 		inline bool OP0E(const Uint8 *Data,int Length);		// Extended flags
 		inline bool OP11(const Uint8 *Data,int Length);		// Set font size
+		inline bool OP13(const Uint8 *Data,int Length);		// Set text colors
 		inline bool OP15(const Uint8 *Data,int Length);		// Open window
 		inline bool OP20(const Uint8 *Data,int Length);		// Window position
-		inline bool OP21(const Uint8 *Data,int Length);		// Window graphics
+		inline bool OP21(const Uint8 *Data,int Length);		// Load cursor sheet
+		inline bool OP22(const Uint8 *Data,int Length);		// Configure cursor
 		inline bool OP2A(const Uint8 *Data,int Length);		// Show window
 		inline bool OP2B(const Uint8 *Data,int Length);		// Hide window
 		inline bool OP2C(const Uint8 *Data,int Length);		// Print text
@@ -80,6 +82,37 @@ class DRSDecoder : public IkuraDecoder {
 		// story scripts also issue empty breaks before their opening
 		// choice (EV11: BLACK + gameinfo + 0x0D with no text printed)
 		bool page_has_text;
+
+		// DRS cursor slots (opcodes 0x21 sheet / 0x22 config): Kana loads
+		// ICON_01 (11 frames of 24x24, an opening book) into slot 0 (line
+		// waits) and slot 1 (page waits) - reversed from 0x420430/0x420520
+		struct DRSCURSOR{
+			SDL_Surface *sheet;
+			int fw;
+			int fh;
+			int follow;
+			int x;
+			int y;
+			int delay;
+			};
+		DRSCURSOR cursors[6];
+		int cursor_active;
+
+		// Parsed 0x2C control stream: one opcode can carry a text line
+		// plus its control tail (02 line wait, 03 clear, 06 newline,
+		// 11 page-end click wait); the queue drains step by step as each
+		// wait state completes
+		enum{ TQ_NONE=0,TQ_TEXT,TQ_LINEWAIT,TQ_NEWLINE,TQ_PAGEWAIT,TQ_CLEAR };
+		struct TEXTQUEUEITEM{
+			int op;
+			uString text;
+			};
+		TEXTQUEUEITEM textqueue[24];
+		int textqueue_len;
+		int textqueue_idx;
+		bool RunTextQueue();
+		void SkipTextQueue();
+		void ShowTextCursor(int Slot,bool Enable);
 	public:
 		DRSDecoder(int Width,int Height);
 		~DRSDecoder();

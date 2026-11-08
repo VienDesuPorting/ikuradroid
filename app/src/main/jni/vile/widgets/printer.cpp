@@ -45,6 +45,17 @@ Printer::Printer(int X,int Y,int Width,int Height) : Widget(X,Y,Width,Height){
 	shadow_x=0;
 	shadow_y=0;
 
+	// Cursor animation state (no sheet loaded yet)
+	cursor_sheet=0;
+	cursor_fw=0;
+	cursor_fh=0;
+	cursor_frames=0;
+	cursor_textures=0;
+	cursor_frame=0;
+	cursor_lasttick=0;
+	cursor_framems=0;
+	cursor_on=false;
+
 	// Create default font
 	font_ttf=0;
 	font_size=Cfg::Font::default_size;
@@ -68,6 +79,17 @@ Printer::Printer(SDL_Rect Pos) : Widget(Pos){
 	clearscreen=false;
 	shadow_x=0;
 	shadow_y=0;
+
+	// Cursor animation state (no sheet loaded yet)
+	cursor_sheet=0;
+	cursor_fw=0;
+	cursor_fh=0;
+	cursor_frames=0;
+	cursor_textures=0;
+	cursor_frame=0;
+	cursor_lasttick=0;
+	cursor_framems=0;
+	cursor_on=false;
 
 	// Create default font
 	font_ttf=0;
@@ -93,6 +115,17 @@ Printer::Printer() : Widget(){
 	shadow_x=0;
 	shadow_y=0;
 
+	// Cursor animation state (no sheet loaded yet)
+	cursor_sheet=0;
+	cursor_fw=0;
+	cursor_fh=0;
+	cursor_frames=0;
+	cursor_textures=0;
+	cursor_frame=0;
+	cursor_lasttick=0;
+	cursor_framems=0;
+	cursor_on=false;
+
 	// Create default font
 	font_ttf=0;
 	font_size=Cfg::Font::default_size;
@@ -103,6 +136,7 @@ Printer::Printer() : Widget(){
 }
 
 Printer::~Printer(){
+	FreeCursor();
 	if(stext){
 		SDL_FreeSurface(stext);
 	}
@@ -118,6 +152,121 @@ Printer::~Printer(){
 
 void Printer::SetWordwrap(bool Enable){
 	wordwrap=Enable;
+}
+
+/*! \brief Releases the click-to-continue cursor animation
+ *
+ * The sheet surface itself stays owned by the engine decoder.
+ */
+void Printer::FreeCursor(){
+	if(cursor_textures){
+		for(int i=0;i<cursor_frames;i++){
+			if(cursor_textures[i]){
+				cursor_textures[i]->free();
+				delete cursor_textures[i];
+			}
+		}
+		delete [] cursor_textures;
+		cursor_textures=0;
+	}
+	cursor_frames=0;
+	cursor_frame=0;
+	cursor_on=false;
+	cursor_sheet=0;
+}
+
+/*! \brief Sets the click-to-continue cursor sheet (DRS 0x21/0x22)
+ *  \param Sheet Horizontal strip of FrameWidth x FrameHeight frames (not owned)
+ *  \param FrameMS Hold time of one animation frame in milliseconds
+ *
+ *  The sheet is sliced into prebuilt textures; the DRS sheets carry a
+ *  pure black background that acts as the color key (the original
+ *  blits through a black DirectDraw colorkey).
+ */
+void Printer::SetCursor(SDL_Surface *Sheet,int FrameWidth,int FrameHeight,Uint32 FrameMS){
+	FreeCursor();
+	if(Sheet && FrameWidth>0 && FrameHeight>0 &&
+				Sheet->w>=FrameWidth && Sheet->h>=FrameHeight){
+		cursor_fw=FrameWidth;
+		cursor_fh=FrameHeight;
+		cursor_frames=Sheet->w/FrameWidth;
+		cursor_framems=FrameMS?FrameMS:120;
+		cursor_lasttick=SDL_GetTicks();
+		if(cursor_frames>0 && Sheet->format->BytesPerPixel<=4){
+			cursor_textures=new EDLTexture*[cursor_frames];
+			for(int i=0;i<cursor_frames;i++){
+				cursor_textures[i]=0;
+			}
+			for(int i=0;i<cursor_frames;i++){
+				// Slice one frame into a 32bit surface, keying black out
+				SDL_Surface *rgba=SDL_CreateRGBSurface(0,FrameWidth,FrameHeight,32,
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+							0xff000000,0x00ff0000,0x0000ff00,0x000000ff);
+#else
+							0x000000ff,0x0000ff00,0x00ff0000,0xff000000);
+#endif
+				if(rgba){
+					if(SDL_MUSTLOCK(rgba)){
+						SDL_LockSurface(rgba);
+					}
+					for(int y=0;y<FrameHeight;y++){
+						const Uint8 *src=(const Uint8*)Sheet->pixels+
+							y*Sheet->pitch+i*FrameWidth*Sheet->format->BytesPerPixel;
+						Uint32 *dst=(Uint32*)((Uint8*)rgba->pixels+y*rgba->pitch);
+						for(int x=0;x<FrameWidth;x++){
+							Uint32 pixel=0;
+							switch(Sheet->format->BytesPerPixel){
+								case 1:
+									pixel=src[x];
+									break;
+								case 2:
+									pixel=((const Uint16*)src)[x];
+									break;
+								case 3:
+									pixel=src[x*3]|(src[x*3+1]<<8)|(src[x*3+2]<<16);
+									break;
+								default:
+									pixel=((const Uint32*)src)[x];
+									break;
+							}
+							Uint8 r,g,b;
+							SDL_GetRGB(pixel,Sheet->format,&r,&g,&b);
+							dst[x]=SDL_MapRGBA(rgba->format,r,g,b,
+										(r||g||b)?0xFF:0x00);
+						}
+					}
+					if(SDL_MUSTLOCK(rgba)){
+						SDL_UnlockSurface(rgba);
+					}
+					cursor_textures[i]=new EDLTexture();
+					if(!cursor_textures[i]->loadFromSurface(rgba)){
+						cursor_textures[i]->free();
+						delete cursor_textures[i];
+						cursor_textures[i]=0;
+					}
+					SDL_FreeSurface(rgba);
+				}
+			}
+			// Drop the whole animation when no frame survived
+			int alive=0;
+			for(int i=0;i<cursor_frames;i++){
+				if(cursor_textures[i]){
+					alive++;
+				}
+			}
+			if(!alive){
+				FreeCursor();
+			}
+		}
+	}
+}
+
+/*! \brief Shows or hides the click-to-continue cursor */
+void Printer::ShowCursor(bool Enable){
+	cursor_on=Enable;
+	if(Enable){
+		cursor_lasttick=SDL_GetTicks();
+	}
 }
 
 /*! \brief Pins the row pitch (leading) between text rows
@@ -569,5 +718,33 @@ void Printer::Render(){
            // stexturetext->setBlendMode(SDL_BLENDMODE_BLEND);
 			// Use widget graphics
 			stexturetext->render(pos.x,pos.y);
+		}
+
+		// Click-to-continue cursor: tracks the carriage (the position the
+		// next character would land on), 4px to its right, clamped to the
+		// print area; the frame advances (frame+1)%count every FrameMS
+		if(cursor_on && cursor_textures && cursor_frames>0){
+			Uint32 now=SDL_GetTicks();
+			if(now<cursor_lasttick || now-cursor_lasttick>=cursor_framems){
+				cursor_lasttick=now;
+				cursor_frame=(cursor_frame+1)%cursor_frames;
+			}
+			int cx=pos.x+trect.x+4;
+			int cy=pos.y+trect.y;
+			if(cx+cursor_fw>pos.x+pos.w){
+				cx=pos.x+pos.w-cursor_fw;
+			}
+			if(cx<pos.x){
+				cx=pos.x;
+			}
+			if(cy+cursor_fh>pos.y+pos.h){
+				cy=pos.y+pos.h-cursor_fh;
+			}
+			if(cy<pos.y){
+				cy=pos.y;
+			}
+			if(cursor_textures[cursor_frame]){
+				cursor_textures[cursor_frame]->render(cx,cy);
+			}
 		}
 }

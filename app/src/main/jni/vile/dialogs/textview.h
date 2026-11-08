@@ -65,6 +65,8 @@ class Textview : public DialogBase {
 		virtual void CompleteText();
 		virtual void ClearText();
 		void SetLeading(int Leading);
+		void SetCursor(SDL_Surface *Sheet,int FrameWidth,int FrameHeight,Uint32 FrameMS);
+		void ShowCursor(bool Enable);
 		bool GetTextSize(uString Text,int *Width,int *Height);
 		bool GetTextPosition(int *X,int *Y,int *W,int *H);
 		void SetTextPosition(int X,int Y,int W,int H);

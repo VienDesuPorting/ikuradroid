@@ -135,6 +135,20 @@ void Textview::SetLeading(int Leading){
 	}
 }
 
+/*! \brief Sets the click-to-continue cursor sheet (DRS 0x21/0x22) */
+void Textview::SetCursor(SDL_Surface *Sheet,int FrameWidth,int FrameHeight,Uint32 FrameMS){
+	if(w_text){
+		w_text->SetCursor(Sheet,FrameWidth,FrameHeight,FrameMS);
+	}
+}
+
+/*! \brief Shows or hides the click-to-continue cursor */
+void Textview::ShowCursor(bool Enable){
+	if(w_text){
+		w_text->ShowCursor(Enable);
+	}
+}
+
 void Textview::CompleteText(){
 	if(w_text){
 		w_text->SkipScreen();

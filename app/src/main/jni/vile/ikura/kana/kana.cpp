@@ -45,11 +45,12 @@ Kana::Kana(uString Path) : DRSDecoder(640,480){
 	AddBGM(new ArchiveIkura(Path+"DRSBGM"));
 	AddBGM(new ArchiveFiles(Path+"*"));
 
-	// Configure textview
+	// Configure textview. The real geometry, pitch and colors arrive
+	// from the DRS scripts themselves (START.DRS 0x20 window + print
+	// area, 0x11 font size): the PC original draws windowless white
+	// text straight on the scene, so no alpha fill is preset here
 	w_textview->Move(0,0);
 	w_textview->Resize(640,480);
-	w_textview->SetTextPosition(20,20,600,460);
-	w_textview->SetAlpha(128);
 
 	// Load standard boot script
 	RunScript("START.ISF");

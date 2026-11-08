@@ -48,6 +48,20 @@ class Printer : public Widget {
 		bool wordwrap;			//!< Wether or not to wrap text lines
 		bool clearscreen;		//!< Clear screen at next pass (wordwrap only)
 		bool printnext();
+		// Animated "click to continue" cursor (DRS 0x21/0x22): the sheet
+		// is a horizontal strip of FrameWidth x FrameHeight frames; the
+		// active frame renders at the carriage position, 4px to the right
+		// (reversed: KANAUS.EXE 0x41a1c0 draws at pen+4)
+		SDL_Surface *cursor_sheet;
+		int cursor_fw;
+		int cursor_fh;
+		int cursor_frames;
+		EDLTexture **cursor_textures;
+		int cursor_frame;
+		Uint32 cursor_lasttick;
+		Uint32 cursor_framems;
+		bool cursor_on;
+		void FreeCursor();
 	public:
 		Printer(int X,int Y,int Width,int Height);
 		Printer(SDL_Rect Position);
@@ -68,6 +82,8 @@ class Printer : public Widget {
 		void ClearScreen();
 		void SetWordwrap(bool Enable);
 		void SetLeading(int Leading);
+		void SetCursor(SDL_Surface *Sheet,int FrameWidth,int FrameHeight,Uint32 FrameMS);
+		void ShowCursor(bool Enable);
 		void SetBackgroundColor(Uint32 Color);
 		void SetFontFace(string Filename);
 		void SetFontSize(int Size);
