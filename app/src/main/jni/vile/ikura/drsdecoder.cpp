@@ -30,6 +30,11 @@
 
 #include "drsdecoder.h"
 
+// Metric-compatible Times New Roman replacement for the DRS story text;
+// GameFontInstaller drops it into the game folder (the constructor note
+// has the reference measurements that picked this face)
+#define DRS_SERIF_FACE  "LiberationSerif-Regular.ttf"
+
 DRSDecoder::DRSDecoder(int Width,int Height) : IkuraDecoder(Width,Height){
 	w_display->SetTarget(1);
 	cdda_track=-1;
@@ -46,6 +51,29 @@ DRSDecoder::DRSDecoder(int Width,int Height) : IkuraDecoder(Width,Height){
 	// engine default typed the text twice as fast as the PC original.
 	SetMessageDelayEnabled(true);
 	SetMessageDelayInterval(50);
+	serif_face=false;
+	// Story text face. KanaUS draws the DRS text in Times New Roman
+	// (registry UserFont) and the reference rows measure TNR advance
+	// widths at a ~26px em, while the OP11 script value (24) only
+	// paces the rows (24+8=32px pitch) - the GDI face was built with
+	// a height/width pair of its own. DejaVu (default.ttf) runs ~13%
+	// wider than TNR at equal size, which wrapped lines one word early
+	// and spilled whole pages ("so on." alone on a second page). Ship
+	// Liberation Serif next to the game and switch the DRS textview to
+	// it; the path is resolved next to the default face so the same
+	// game-folder lookup works on Android and PC. Printer::SetFontFace
+	// keeps the default face when the file is absent, so installs
+	// without the asset degrade to the old look.
+	aString face=Cfg::Font::default_face.c_str();
+	aString::size_type slash=face.rfind('/');
+	aString serif=(slash==aString::npos)?aString(DRS_SERIF_FACE):
+			face.substr(0,slash+1)+DRS_SERIF_FACE;
+	FILE *seriffile=fopen(serif.c_str(),"r");
+	if(seriffile){
+		fclose(seriffile);
+		w_textview->SetFontFace(serif);
+		serif_face=true;
+	}
 	for(int i=0;i<6;i++){
 		cursors[i].sheet=0;
 		cursors[i].fw=0;
@@ -422,10 +450,18 @@ bool DRSDecoder::OP0E(const Uint8 *Data,int Length){
 // 0x41b4d0 walks the pen by [fontsize]+8), so font 24 paces the window
 // in 32px steps - 13 rows over the 416px print area, matching the
 // reference screenshots.
+//
+// The glyphs themselves render two pixels larger than the pacing size:
+// four prologue rows measure TNR advance widths at a ~26px em (they fit
+// the metric-compatible face at 26 within 2%, at the pacing size they
+// miss by 27px), and the original wraps after "hospital"/"white" only
+// hold at 26. Rendering at the pacing size would keep the row pitch but
+// wrap one word earlier than the PC build. Skipped when the TNR-metric
+// face is absent, so the DejaVu fallback keeps its old geometry.
 bool DRSDecoder::OP11(const Uint8 *Data,int Length){
 	if(iop_check(4,IOP_PB,Data,Length)){
 		int size=parser.DecodeValue(GETDWORD(Data));
-		w_textview->SetFontSize(size);
+		w_textview->SetFontSize(size+(serif_face?2:0));
 		w_textview->SetLeading(size+8);
 	}
 	return false;

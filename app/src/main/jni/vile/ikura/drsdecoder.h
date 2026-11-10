@@ -83,6 +83,12 @@ class DRSDecoder : public IkuraDecoder {
 		// choice (EV11: BLACK + gameinfo + 0x0D with no text printed)
 		bool page_has_text;
 
+		// Story text runs on the bundled TNR-metric face (Liberation
+		// Serif) when the asset reached the game folder; only then
+		// OP11 renders two pixels larger than the pacing size (the
+		// constructor note has the reference measurements)
+		bool serif_face;
+
 		// DRS cursor slots (opcodes 0x21 sheet / 0x22 config): Kana loads
 		// ICON_01 (11 frames of 24x24, an opening book) into slot 0 (line
 		// waits) and slot 1 (page waits) - reversed from 0x420430/0x420520
