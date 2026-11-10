@@ -55,6 +55,8 @@ Printer::Printer(int X,int Y,int Width,int Height) : Widget(X,Y,Width,Height){
 	cursor_lasttick=0;
 	cursor_framems=0;
 	cursor_on=false;
+	cursor_clampw=0;
+	cursor_clamph=0;
 
 	// Create default font
 	font_ttf=0;
@@ -90,6 +92,8 @@ Printer::Printer(SDL_Rect Pos) : Widget(Pos){
 	cursor_lasttick=0;
 	cursor_framems=0;
 	cursor_on=false;
+	cursor_clampw=0;
+	cursor_clamph=0;
 
 	// Create default font
 	font_ttf=0;
@@ -125,6 +129,8 @@ Printer::Printer() : Widget(){
 	cursor_lasttick=0;
 	cursor_framems=0;
 	cursor_on=false;
+	cursor_clampw=0;
+	cursor_clamph=0;
 
 	// Create default font
 	font_ttf=0;
@@ -273,6 +279,13 @@ void Printer::SetCursor(SDL_Surface *Sheet,int FrameWidth,int FrameHeight,Uint32
 			}
 		}
 	}
+}
+
+/*! \brief Sets the extent the click cursor clamps to (the dialog
+ * window), overriding the printer rectangle (DRS 0x20) */
+void Printer::SetCursorClamp(int W,int H){
+	cursor_clampw=W;
+	cursor_clamph=H;
 }
 
 /*! \brief Shows or hides the click-to-continue cursor */
@@ -754,17 +767,24 @@ void Printer::Render(){
 			}
 			int cx=pos.x+trect.x+4;
 			int cy=pos.y+trect.y;
-			if(cx+cursor_fw>pos.x+pos.w){
-				cx=pos.x+pos.w-cursor_fw;
+			// The original clamps the cursor to the dialog window
+			// (0x41a1c0 reads the window right/bottom), not to the
+			// print area: the book may hang past the wrap edge into
+			// the window margin - pulling it back would stamp it
+			// over the text
+			int clampw=cursor_clampw?cursor_clampw:pos.w;
+			int clamph=cursor_clamph?cursor_clamph:pos.h;
+			if(cx+cursor_fw>clampw){
+				cx=clampw-cursor_fw;
 			}
-			if(cx<pos.x){
-				cx=pos.x;
+			if(cx<0){
+				cx=0;
 			}
-			if(cy+cursor_fh>pos.y+pos.h){
-				cy=pos.y+pos.h-cursor_fh;
+			if(cy+cursor_fh>clamph){
+				cy=clamph-cursor_fh;
 			}
-			if(cy<pos.y){
-				cy=pos.y;
+			if(cy<0){
+				cy=0;
 			}
 			if(cursor_textures[cursor_frame]){
 				cursor_textures[cursor_frame]->render(cx,cy);

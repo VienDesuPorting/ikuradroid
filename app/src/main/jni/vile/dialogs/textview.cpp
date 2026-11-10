@@ -142,6 +142,14 @@ void Textview::SetCursor(SDL_Surface *Sheet,int FrameWidth,int FrameHeight,Uint3
 	}
 }
 
+/*! \brief Sets the extent the click cursor clamps to: the dialog
+ * window passed to Resize (see Printer::SetCursorClamp) */
+void Textview::SetCursorClamp(int W,int H){
+	if(w_text){
+		w_text->SetCursorClamp(W,H);
+	}
+}
+
 /*! \brief Shows or hides the click-to-continue cursor */
 void Textview::ShowCursor(bool Enable){
 	if(w_text){

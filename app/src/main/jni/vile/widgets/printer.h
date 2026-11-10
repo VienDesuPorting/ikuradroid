@@ -61,6 +61,10 @@ class Printer : public Widget {
 		Uint32 cursor_lasttick;
 		Uint32 cursor_framems;
 		bool cursor_on;
+		// Cursor clamp extent: the dialog window, not this
+		// widget (0 = clamp to the printer rectangle)
+		int cursor_clampw;
+		int cursor_clamph;
 		void FreeCursor();
 	public:
 		Printer(int X,int Y,int Width,int Height);
@@ -83,6 +87,7 @@ class Printer : public Widget {
 		void SetWordwrap(bool Enable);
 		void SetLeading(int Leading);
 		void SetCursor(SDL_Surface *Sheet,int FrameWidth,int FrameHeight,Uint32 FrameMS);
+		void SetCursorClamp(int W,int H);
 		void ShowCursor(bool Enable);
 		void SetBackgroundColor(Uint32 Color);
 		void SetFontFace(string Filename);

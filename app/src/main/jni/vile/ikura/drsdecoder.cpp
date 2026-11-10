@@ -117,23 +117,24 @@ bool DRSDecoder::EventGameTick(){
 	}
 	if(state==IS_WAITCLICK){
 		if(keyctrl()){
-			// Skip state and fall back
+			// Skip state and fall back; the drained control stream
+			// clears the page wherever it says so (ctl03)
 			w_textview->CompleteText();
 			while(SkipAnimation());
-			w_textview->ClearText();
 			SkipTextQueue();
 			state=IS_NORMAL;
 			keyok=false;
-			page_has_text=false;
 		}
 		else if(keyok){
-			// Page turn: drop the finished page and resume the script
+			// Dismiss the waited line/page and resume the control
+			// stream; the stream itself owns the page clear (ctl03),
+			// so a line wait (ctl02) releases without wiping the
+			// page; the cursor hides until the next wait (0x41a000)
 			w_textview->CompleteText();
 			while(SkipAnimation());
-			w_textview->ClearText();
+			ShowTextCursor(-1,false);
 			state=IS_NORMAL;
 			keyok=false;
-			page_has_text=false;
 			if(RunTextQueue()){
 				return true;
 			}
@@ -473,6 +474,9 @@ bool DRSDecoder::OP20(const Uint8 *Data,int Length){
 	w_textview->MoveDialog(x,y);
 	if(w && h){
 		w_textview->Resize(w,h);
+		// The click cursor clamps to the dialog window, not to the
+		// inner print area (0x41a1c0 reads the window right/bottom)
+		w_textview->SetCursorClamp(w,h);
 	}
 	if(Length>=33){
 		// Inner print area, relative to the dialog
@@ -648,14 +652,19 @@ bool DRSDecoder::RunTextQueue(){
 					w_textview->PrintText(cmd.text.c_str());
 					page_has_text=true;
 				}
-				// Hold the VM until the line has been typed out; the book
-				// cursor (slot 0) tracks the carriage while it waits
-				ShowTextCursor(0,true);
+				// Hold the VM until the line has been typed out. The
+				// original draws no cursor while the pen moves: the
+				// book only appears when the 02/11 wait starts
 				state=IS_WAITTEXT;
 				return true;
 			case TQ_LINEWAIT:
-				// ctl02: the soft line wait ended with the typed line
-				continue;
+				// ctl02: a real click wait - 0x41b250(0) parks the
+				// interpreter (state 2) until a key or click releases
+				// it (0x41ab80); the book cursor (slot 0) sits at the
+				// carriage while it waits
+				ShowTextCursor(0,true);
+				state=IS_WAITCLICK;
+				return true;
 			case TQ_NEWLINE:
 				w_textview->PrintNewline();
 				continue;
