@@ -737,6 +737,36 @@ bool ONScripter::clickWait(char* out_text)
 
     string_buffer_offset += script_h.checkClickstr(script_h.getStringBuffer() + string_buffer_offset);
 
+    /* ONScripter-RU swallows the leading space of the text that follows a
+     * click-wait: "!..`@` Если" renders as "!..Если" - the first glyph of
+     * the continuation sits exactly 3 cells behind '!' on the reference
+     * screenshots, no space cell in between. The '`' text markers between
+     * the clickstr and the next word are consumed as well, applying the
+     * same 1-byte toggle processText would apply (in ONScripter-RU this
+     * happens because the textgosub subroutine's commands reset its
+     * leading-space flag). The space after '\' (new page) is NOT
+     * swallowed - that one is the paragraph indent of the next page, so
+     * clickNewPage() keeps it. */
+    if (script_h.enc.getEncoding() == Encoding::CODE_CP1251) {
+        while (1) {
+            char c = script_h.getStringBuffer()[string_buffer_offset];
+            if (c == script_h.enc.getTextMarker()) {
+                int status = script_h.getEndStatus();
+                if (status & ScriptHandler::END_1BYTE_CHAR)
+                    script_h.setEndStatus(status & ~ScriptHandler::END_1BYTE_CHAR, true);
+                else
+                    script_h.setEndStatus(ScriptHandler::END_1BYTE_CHAR);
+                string_buffer_offset++;
+                continue;
+            }
+            if (c == ' ') {
+                string_buffer_offset++;
+                continue;
+            }
+            break;
+        }
+    }
+
     if ((skip_mode & (SKIP_NORMAL | SKIP_TO_EOP) || ctrl_pressed_status) && !textgosub_label) {
         clickstr_state = CLICK_NONE;
         if (out_text) {
@@ -1034,15 +1064,36 @@ bool ONScripter::checkLineBreak(const char* buf, FontInfo* fi)
 
 bool ONScripter::checkLigatureLineBreak(const char* buf, FontInfo* fi)
 {
-    if (script_h.current_language != 0) return false;
+    /* Word wrap by whole words is a 1-byte-language feature, hence the
+     * current_language gate for CP932/UTF-8 games. Russian CP1251 titles
+     * must take the gate bypass: ONScripter-RU wraps their text by whole
+     * words as well (its break machinery sees the CP1251 bytes like SJIS
+     * lead bytes, so breaks are only ever registered at spaces - measured
+     * on Higanbana First Night: "оставил" moves to the next line intact,
+     * and a word that ends exactly on the last cell stays put), while the
+     * "language english" marker their scripts carry is not an ONScripter
+     * command and leaves current_language at its Japanese default. */
+    if (script_h.current_language != 0 &&
+        script_h.enc.getEncoding() != Encoding::CODE_CP1251) return false;
 
     openFont(fi);
+
+    bool is_cp1251 = script_h.enc.getEncoding() == Encoding::CODE_CP1251;
 
     int w = 0;
     while (buf[0] != ' ' && buf[0] != 0x0a && buf[0] != 0 &&
            buf[0] != script_h.enc.getTextMarker()) {
         int n = script_h.enc.getBytes(buf[0]);
         unsigned short unicode = script_h.enc.getUTF16(buf);
+
+        /* A CP1251 Unicode escape (0xDA + 5 digits) renders as ONE glyph
+         * ("Ъ00171" = «). Summing its six bytes as six separate advances
+         * would nearly double the width of every quoted word and wrap
+         * lines far too early, so count it as a single glyph. */
+        if (n == 1 && is_cp1251 && isUnicodeEscapeCP1251(buf)) {
+            n = 6;
+            unicode = parseUnicodeEscape(buf);
+        }
 
         int minx, maxx, miny, maxy, advanced;
         TTF_GlyphMetrics((TTF_Font*)fi->ttf_font[0], unicode,
@@ -1053,7 +1104,14 @@ bool ONScripter::checkLigatureLineBreak(const char* buf, FontInfo* fi)
     }
     w -= fi->pitch_xy[0] - fi->font_size_xy[0];
 
-    return fi->isEndOfLine(w * 2.0 / fi->pitch_xy[0]);
+    float margin = w * 2.0 / fi->pitch_xy[0];
+    /* ONScripter-RU keeps a word that ends exactly on the last cell of
+     * the line ("описывать" filling cells 36..44 stays where it is, on
+     * the reference screenshot); only a word that would truly overflow
+     * the line is wrapped. The stock formula wraps exact-fit words too. */
+    if (is_cp1251) margin -= 1.0;
+
+    return fi->isEndOfLine(margin);
 }
 
 void ONScripter::processEOT()
@@ -1119,6 +1177,37 @@ bool ONScripter::processText()
             sentence_font.newLine();
         }
         pending_newline = false;
+    }
+
+    /* ONScripter-RU doLineBreak() semantics for CP1251: when the pen has
+     * reached the end of the line and the next glyph is a space, the line
+     * wraps NOW and the space(s) are swallowed, so the continuation starts
+     * flush with its first glyph instead of burning a leading space cell.
+     * Measured on Higanbana First Night: "...Если описывать" fills the
+     * line up to cell 44 and "словами" starts at cell 1 of the next line
+     * on the reference engine (not cell 2 behind a drawn space). */
+    if (script_h.enc.getEncoding() == Encoding::CODE_CP1251 &&
+        script_h.getStringBuffer()[string_buffer_offset] == ' ' &&
+        sentence_font.isEndOfLine()) {
+        sentence_font.newLine();
+        for (int i = 0; i < indent_offset; i++) {
+            if (script_h.enc.getEncoding() == Encoding::CODE_CP932) {
+                current_page->add(0x81);
+                current_page->add(0x40);
+            }
+            else {
+                current_page->add(0xe3);
+                current_page->add(0x80);
+                current_page->add(0x80);
+            }
+            sentence_font.advanceCharInHankaku(2);
+        }
+        while (script_h.getStringBuffer()[string_buffer_offset] == ' ')
+            string_buffer_offset++;
+        if (script_h.getStringBuffer()[string_buffer_offset] == 0x00) {
+            processEOT();
+            return false;
+        }
     }
 
     line_enter_status = 2;
