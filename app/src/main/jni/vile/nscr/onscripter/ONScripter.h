@@ -311,6 +311,7 @@ public:
     int barCommand();
     int aviCommand();
     int automode_timeCommand();
+    int automodeCommand();
     int autoclickCommand();
     int allsp2resumeCommand();
     int allspresumeCommand();

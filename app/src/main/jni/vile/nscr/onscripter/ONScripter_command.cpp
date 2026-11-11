@@ -3945,8 +3945,32 @@ int ONScripter::bltCommand()
 
     if (btndef_info.image_surface == NULL) return RET_CONTINUE;
     if (dw == 0 || dh == 0 || sw == 0 || sh == 0) return RET_CONTINUE;
-    
+
+#ifdef IKURADROID_AUTODRIVE
+    /* TEMPORARY diagnosis: blt is the only draw that goes straight to
+     * the window renderer - track where it lands. */
+    if (getenv("IKURADROID_AUTODRIVE"))
+        fprintf(stderr, "[blt] dst=(%d,%d,%d,%d) src=(%d,%d,%d,%d) ts=%u\n",
+                dx, dy, dw, dh, sx, sy, sw, sh, (unsigned)SDL_GetTicks());
+#endif
+
     if ( sw == dw && sw > 0 && sh == dh && sh > 0 ){
+
+        /* Clip the tile to the game screen first. The 07th Expansion
+         * scripts blt 640x480 tiles at offsets that hang off the
+         * right/bottom edge (e.g. the Higurashi staff roll's
+         * "blt 54,305,640,480,0,0,640,480") and rely on the SDL1.2
+         * destination surface clipping the overhang away. The SDL2
+         * direct path below renders through the WINDOW renderer where
+         * nothing clips, so the overhang painted a permanent white
+         * stripe into the letterbox margin next to the play area. */
+        if (dx < 0) { sx -= dx; dw += dx; dx = 0; }
+        if (dy < 0) { sy -= dy; dh += dy; dy = 0; }
+        if (dx + dw > screen_width)  dw = screen_width  - dx;
+        if (dy + dh > screen_height) dh = screen_height - dy;
+        if (dw <= 0 || dh <= 0) return RET_CONTINUE;
+        sw = dw;
+        sh = dh;
 
         SDL_Rect src_rect = {sx,sy,(Uint16)sw,(Uint16)sh};
         SDL_Rect dst_rect = {dx,dy,(Uint16)dw,(Uint16)dh};
@@ -4157,6 +4181,27 @@ int ONScripter::automode_timeCommand()
 {
     automode_time = script_h.readInt();
     
+    return RET_CONTINUE;
+}
+
+int ONScripter::automodeCommand()
+{
+    if ( current_mode != DEFINE_MODE )
+        errorAndExit( "automode: not in the define section" );
+
+    /* Higurashi-RU ships "automode ;; for convenience" in *define and
+     * the эталон engine auto-advances the intro from the first line.
+     * The vendored lut mapped the define command to mode_extCommand,
+     * which only sets the (unused anywhere) mode_ext_flag - so our
+     * builds never auto-advanced. Turn the flag on for real, with a
+     * slightly slower per-line wait than the upstream 1000 ms default
+     * so the intro reads comfortably on a phone. */
+    automode_flag = true;
+    automode_time = 1200;
+    __android_log_print(ANDROID_LOG_INFO, "ONS",
+        "define automode: auto-advance enabled (per-line wait %d ms)",
+        automode_time);
+
     return RET_CONTINUE;
 }
 

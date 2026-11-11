@@ -361,10 +361,19 @@ void ONScripter::drawChar(char* text, FontInfo* info, bool flush_flag, bool look
                 info->advanceCharInHankaku(2);
             break;
         }
-        // For single-byte encodings (CP1251, ASCII), advance by the actual
-        // glyph width so characters are spaced proportionally, not fixed-width.
-        if (script_h.enc.getEncoding() == Encoding::CODE_UTF8 ||
-            script_h.enc.getEncoding() == Encoding::CODE_CP1251) {
+        // Single-byte text advances by exactly ONE hankaku cell, like
+        // ONScripter-RU's advanceCharInHankaku(1): the эталон paces
+        // backtick text on the window's half-width grid (13px for a
+        // 26px font), so "Кажется," hugs its comma and "..." keeps the
+        // эталон's ellipsis rhythm. Taking the TTF advance here (the
+        // Higanbana-era proportional branch) paced Anonymous Pro at
+        // 14.19px - every glyph drifted ~9% right and long lines ran
+        // ~32px past the эталон. Proportional advance stays for UTF-8
+        // (true proportional faces) and for the 6-byte CP1251 Unicode
+        // escapes above (n >= 2 branch). For a strictly monospaced
+        // 13px/26px face (Higanbana's GA Umineko font) both formulas
+        // degenerate to the same 1.0 cell, so that title is unchanged.
+        if (script_h.enc.getEncoding() == Encoding::CODE_UTF8) {
             // handle a proportional font
             adv += info->pitch_xy[0] - info->font_size_xy[0];
             info->advanceCharInHankaku(adv * 2.0 / info->pitch_xy[0]);
@@ -705,6 +714,14 @@ bool ONScripter::doClickEnd()
     bool ret = false;
 
     refresh_shadow_text_mode |= REFRESH_CURSOR_MODE;
+
+#ifdef IKURADROID_AUTODRIVE
+    /* TEMPORARY diagnosis: which wait branch parks the engine. */
+    if (getenv("IKURADROID_AUTODRIVE"))
+        fprintf(stderr, "[doClickEnd] automode=%d autoclick=%d chars=%d ts=%u\n",
+                (int)automode_flag, (int)autoclick_time,
+                num_chars_in_sentence, (unsigned)SDL_GetTicks());
+#endif
 
     if (automode_flag) {
         event_mode = WAIT_TEXT_MODE | WAIT_INPUT_MODE | WAIT_VOICE_MODE | WAIT_TIMER_MODE;
@@ -1291,7 +1308,17 @@ bool ONScripter::processText()
 
         return true;
     }
-    else if (ch == '!' && !(script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR)) {
+    else if (ch == '!' &&
+             (script_h.getStringBuffer()[string_buffer_offset + 1] == 's' ||
+              script_h.getStringBuffer()[string_buffer_offset + 1] == 'w' ||
+              script_h.getStringBuffer()[string_buffer_offset + 1] == 'd')) {
+        /* The !s/!sd/!w/!d text commands are recognized in BOTH text
+         * modes: the vendored gate (skipping the whole branch under
+         * END_1BYTE_CHAR) printed Higurashi-RU's mid-sentence "!w2000"
+         * verbatim in backtick text, while the эталон consumes it and
+         * auto-advances. A bare "!" (Higanbana's "!..", the "?!"/"!!"
+         * pairs) is NOT a command and falls through to the literal
+         * draw at the tail of this chain, exactly like ONScripter-RU. */
         string_buffer_offset++;
         if (script_h.getStringBuffer()[string_buffer_offset] == 's') {
             string_buffer_offset++;
@@ -1483,6 +1510,16 @@ bool ONScripter::processText()
     else {
         out_text[0] = ch;
 
+#ifdef IKURADROID_AUTODRIVE
+        /* TEMPORARY diagnosis: every literal char the text pump sees. */
+        if (getenv("IKURADROID_AUTODRIVE") && num_chars_in_sentence < 6)
+            fprintf(stderr, "[txt] ch=%d(%c) off=%d end1byte=%d ts=%u\n",
+                    (int)(unsigned char)ch,
+                    (ch >= 32 && ch < 127) ? ch : '.',
+                    string_buffer_offset,
+                    (int)((script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR) != 0),
+                    (unsigned)SDL_GetTicks());
+#endif
         int matched_len = script_h.checkClickstr(script_h.getStringBuffer() + string_buffer_offset);
 
         if (matched_len > 0) {
@@ -1495,18 +1532,28 @@ bool ONScripter::processText()
         else if (script_h.getStringBuffer()[string_buffer_offset + 1] &&
                  script_h.checkClickstr(&script_h.getStringBuffer()[string_buffer_offset + 1]) == 1 &&
                  script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR) {
+            /* The (char, clickstr) pair, e.g. Higurashi-RU's
+             * "...прощения... \": the pending char is drawn by the
+             * click handler below, so the offset must step over it
+             * first - clickWait/clickNewPage only consume the clickstr
+             * AT the offset they are handed. Without the step the pair
+             * re-parsed forever: every click redrew the same trailing
+             * space and the page never turned. */
             if (script_h.getStringBuffer()[string_buffer_offset + 2] &&
                 script_h.checkClickstr(&script_h.getStringBuffer()[string_buffer_offset + 2]) > 0) {
                 clickstr_state = CLICK_NONE;
             }
             else if (script_h.getStringBuffer()[string_buffer_offset + 1] == '@') {
+                string_buffer_offset++;
                 return clickWait(out_text);
             }
             else if (script_h.getStringBuffer()[string_buffer_offset + 1] == '\\') {
+                string_buffer_offset++;
                 return clickNewPage(out_text);
             }
             else {
                 out_text[1] = script_h.getStringBuffer()[string_buffer_offset + 1];
+                string_buffer_offset += 2;
                 if (sentence_font.getRemainingLine() <= clickstr_line)
                     return clickNewPage(out_text);
                 else
