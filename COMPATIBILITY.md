@@ -71,6 +71,7 @@ English version: [COMPATIBILITY.en.md](COMPATIBILITY.en.md)
 | Тайтл | Статус |
 | --- | --- |
 | Higanbana no Saku Yoru ni | проверен |
+| Higurashi no Naku Koro ni (русификатор, перепакован) | не проверен |
 | Rose Guns Days: The Best | проверен |
 | Umineko no Naku Koro ni Hane | проверен |
 | Umineko no Naku Koro ni (остальные части) | не проверен |

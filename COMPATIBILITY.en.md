@@ -71,6 +71,7 @@ Current statuses also live in `app/src/main/assets/engines.json` and are shown o
 | Title | Status |
 | --- | --- |
 | Higanbana no Saku Yoru ni | tested |
+| Higurashi no Naku Koro ni (RU fan patch, repacked) | not tested |
 | Rose Guns Days: The Best | tested |
 | Umineko no Naku Koro ni Hane | tested |
 | Umineko no Naku Koro ni (other parts) | not tested |

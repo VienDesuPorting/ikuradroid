@@ -19,6 +19,14 @@
  * ", Russian Patch" or "(rus)" makes VNDB searches miss, while a real
  * subtitle after a comma ("Sharin no Kuni, Himawari no Shoujo") is
  * kept, because only marker words are cut.
+ *
+ * versionstr values run through the same decoder: they carry raw
+ * CP932/CP1251 bytes, and NewStringUTF aborts the whole process when
+ * handed any non-UTF-8 byte sequence (Higurashi's Shift-JIS versionstr
+ * killed the library scan with "illegal start byte 0x82"). The JNI
+ * bridge additionally validates every byte of the final string, so a
+ * probe can never take the app down regardless of what a script
+ * contains.
  */
 #include "ons_title.h"
 #include "Encoding.h"
@@ -158,9 +166,40 @@ static void ons_utf16_to_utf8(const std::vector<unsigned short> &units,
     out[o] = 0;
 }
 
+/* Keeps printable ASCII only; every other byte becomes '?'. Last-resort
+ * fallback for values neither CP932 nor CP1251 reading can score. */
+static void ons_ascii_sanitize(const char *in, char *out, size_t outlen)
+{
+    size_t o = 0;
+    for (size_t i = 0; in[i] && o + 1 < outlen; i++) {
+        unsigned char c = (unsigned char)in[i];
+        out[o++] = (c >= 0x20 && c < 0x7f) ? (char)c : '?';
+    }
+    out[o] = 0;
+}
+
 /* ------------------------------------------------------------------
  * Suffix trimming (works on the UTF-8 result)
  * ------------------------------------------------------------------ */
+
+/* Replaces U+3000 ideographic spaces with ASCII spaces. Japanese
+ * scripts separate the version tail with one ("title\u3000Ver0.40")
+ * and the tail cut below only knows the ASCII kind. */
+static void ons_normalize_ideographic_space(char *s)
+{
+    char *r = s, *w = s;
+    while (*r) {
+        if ((unsigned char)r[0] == 0xe3 && (unsigned char)r[1] == 0x80 &&
+            (unsigned char)r[2] == 0x80) {
+            *w++ = ' ';
+            r += 3;
+        }
+        else {
+            *w++ = *r++;
+        }
+    }
+    *w = 0;
+}
 
 /* Trims edge whitespace and stray CRs. */
 static void ons_trim(char *s)
@@ -453,7 +492,9 @@ bool ONScripterProbeTitle(const char *dir, char *out, size_t outlen)
                 if (have_define_caption) break;
             }
             else if (llen > 7 && !memcmp(l, "caption", 7) &&
-                     (l[7] == ' ' || l[7] == '\t')) {
+                     (l[7] == ' ' || l[7] == '\t' || l[7] == '"')) {
+                /* Higurashi writes caption"title" without a space; the
+                 * original engine accepts that, so must the probe. */
                 size_t vlen;
                 const unsigned char *v =
                     ons_quoted_value(l + 7, llen - 7, &vlen);
@@ -475,7 +516,7 @@ bool ONScripterProbeTitle(const char *dir, char *out, size_t outlen)
             }
             else if (!have_versionstr && llen > 10 &&
                      !memcmp(l, "versionstr", 10) &&
-                     (l[10] == ' ' || l[10] == '\t')) {
+                     (l[10] == ' ' || l[10] == '\t' || l[10] == '"')) {
                 size_t vlen;
                 const unsigned char *v =
                     ons_quoted_value(l + 10, llen - 10, &vlen);
@@ -501,7 +542,14 @@ bool ONScripterProbeTitle(const char *dir, char *out, size_t outlen)
             via = "caption";
         }
         else if (have_versionstr) {
-            snprintf(out, outlen, "%s", versionstr);
+            /* versionstr is stored raw - decode it the same way caption
+             * values are decoded. Passing the raw bytes on is fatal:
+             * NewStringUTF aborts the process on non-UTF-8 input. */
+            if (!ons_decode_caption((const unsigned char *)versionstr,
+                                    strlen(versionstr), out, outlen)) {
+                ons_ascii_sanitize(versionstr, out, outlen);
+            }
+            ons_normalize_ideographic_space(out);
             ons_cut_version_tail(out);
             via = "versionstr";
         }
@@ -540,6 +588,32 @@ Java_su_viende_ikuradroid_GameLibrary_probeNscrTitleNative(JNIEnv *env,
 
     ONScripterProbeTitle(dir, out, sizeof(out));
     env->ReleaseStringUTFChars(jdir, dir);
+
+    /* Final safety net: make every byte valid Modified UTF-8 before it
+     * reaches NewStringUTF. A bad sequence aborts the whole runtime
+     * (JNI DETECTED ERROR -> SIGABRT), not just this call, so the
+     * library scan must never trust probe output blindly. */
+    {
+        size_t n = strlen(out), i = 0, w = 0;
+        while (i < n) {
+            size_t adv = 0;
+            int cp = ons_utf8_cp(out + i, n - i, &adv);
+            unsigned char c0 = (unsigned char)out[i];
+            bool ok = cp >= 0x20 && cp != 0x7f &&
+                      !(cp >= 0xd800 && cp <= 0xdfff) && adv <= 3;
+            if (ok && adv == 2 && c0 < 0xc2) ok = false; /* overlong */
+            if (!ok) {
+                out[w++] = '?';
+                i++;
+                continue;
+            }
+            if (i != w) memmove(out + w, out + i, adv);
+            w += adv;
+            i += adv;
+        }
+        out[w] = 0;
+    }
+
     return env->NewStringUTF(out);
 }
 #endif

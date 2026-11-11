@@ -54,6 +54,18 @@ Tested on a device: **Higanbana no Saku Yoru ni** (both parts, Russian translati
    ```
 
    Ikura GDL usually needs `GGD` / `ISF` and `*.suf`; Will needs archives like `Rio.arc` and `Chip.arc`; NScripter needs `nscript.dat`/`pscript.dat` (or a plain-text `0.txt`) and, for Russian translations, `default.ttf`.
+
+   Russian fan patches sometimes ship as an overlay: the translation sits next to the game in its own folder with its own `nscript.dat`, `arc.nsa` and font. Such a patch needs no merging - the engine supports the `patch/` folder (an ONScripter heritage): files in `patch/arc.nsa` override same-named files of the root `arc.nsa`, while the script and the font go into the game root. Higurashi no Naku Koro ni with its Russian patch, for example, is assembled like this:
+
+   ```text
+   Higurashi no Naku Koro ni (RU)/
+   ├── nscript.dat      <- from the patch folder
+   ├── default.ttf      <- the patch font (rename default.TTF)
+   ├── arc.nsa          <- original Japanese archive
+   ├── patch/
+   │   └── arc.nsa      <- the patch's Russian archive
+   └── WAV/             <- original voice and music
+   ```
 3. Start IkuraDroid, grant file access, tap **Choose folder** and select the `Novels` folder (or a game folder directly).
 4. Open the game from the library.
 
