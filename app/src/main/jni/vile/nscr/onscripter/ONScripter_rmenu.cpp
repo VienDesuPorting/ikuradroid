@@ -1032,27 +1032,46 @@ void ONScripter::executeSystemLookback()
         event_mode = WAIT_BUTTON_MODE;
         waitEventSub(-1);
 
-        if (current_button_state.button == 0 ||
-            (current_page == start_page &&
-             current_button_state.button == -2)) {
+        /* IkuraDroid: at the oldest page a further wheel-up is a no-op. */
+        if ( current_page == start_page &&
+             current_button_state.button == -2 ){
             continue;
         }
-        if (current_button_state.button == -1 ||
-            (current_button_state.button == -3 &&
-             current_page->next == cached_page) ||
-            current_button_state.button <= -4) {
+
+        /* IkuraDroid: a plain tap exits the lookback back to the game.
+         * Vanilla re-renders and keeps waiting (the reference is driven by
+         * the wheel and the right click), but on a touch screen the built-in
+         * lookback has neither wheel-down nor script arrows on most titles,
+         * so a tap was a silent no-op: the History menu row looked like the
+         * engine froze on a wrong yellow page (the previous page re-drawn
+         * with the vanilla yellow lookback_color at the window origin). */
+        if ( current_button_state.button == 0 ||
+            ( current_button_state.button == -3 &&
+             current_page->next == cached_page ) ||
+            current_button_state.button <= -4 ){
             event_mode = IDLE_EVENT_MODE;
             deleteButtonLink();
-            if (lookback_sp[0] >= 0)
-                sprite_info[lookback_sp[0]].visible = false;
-            if (lookback_sp[1] >= 0)
-                sprite_info[lookback_sp[1]].visible = false;
+            if ( lookback_sp[0] >= 0 )
+                sprite_info[ lookback_sp[0] ].visible = false;
+            if ( lookback_sp[1] >= 0 )
+                sprite_info[ lookback_sp[1] ].visible = false;
             leaveSystemCall();
             return;
         }
 
-        if (current_button_state.button == 1 ||
-            current_button_state.button == -2) {
+        if ( current_button_state.button == -1 ){
+            event_mode = IDLE_EVENT_MODE;
+            deleteButtonLink();
+            if ( lookback_sp[0] >= 0 )
+                sprite_info[ lookback_sp[0] ].visible = false;
+            if ( lookback_sp[1] >= 0 )
+                sprite_info[ lookback_sp[1] ].visible = false;
+            leaveSystemCall();
+            return;
+        }
+
+        if ( current_button_state.button == 1 ||
+            current_button_state.button == -2 ){
             current_page = current_page->previous;
         }
         else

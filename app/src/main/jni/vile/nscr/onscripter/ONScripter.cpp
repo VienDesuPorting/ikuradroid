@@ -1191,9 +1191,52 @@ void ONScripter::executeLabel()
             /* Higurashi RU: *b_title draws sprite buttons - Start at
              * (216,250); the 07th logo and the text lines advance on a
              * click anywhere. */
+            /* IKURADROID_CLICKS caps the number of synthetic clicks so
+             * the tail of the run exercises the pure automode-timer path
+             * (the click path was proven clean and masks the auto bug). */
+            int click_cap = -1;
+            if (getenv("IKURADROID_CLICKS"))
+                click_cap = atoi(getenv("IKURADROID_CLICKS"));
+            /* IKURADROID_HKEY=N: replace click #N with an H keypress - the
+             * History menu row protocol key - to exercise the lookback
+             * enter (yellow page) and the tap-exit on the frames. */
+            int hkey_at = -1;
+            if (getenv("IKURADROID_HKEY"))
+                hkey_at = atoi(getenv("IKURADROID_HKEY"));
             int i = 0;
             for (int n = 0; n < 4000; n++) {
                 SDL_Delay(350);
+                if (click_cap >= 0 && i >= click_cap) {
+                    /* With a click cap: re-enable the define automode with
+                     * the SDLK_a toggle (the clicks kill it in
+                     * mousePressEvent), optionally send the History H key
+                     * after IKURADROID_HDELAY ms (it is only accepted inside
+                     * a WAIT_TEXT wait - the automode wait qualifies), then
+                     * keep clicking: the first click exercises the tap-exit. */
+                    SDL_Event key;
+                    SDL_zero(key);
+                    key.type = SDL_KEYUP;
+                    key.key.keysym.sym = SDLK_a;
+                    while (SDL_PushEvent(&key) < 0) SDL_Delay(10);
+                    if (getenv("IKURADROID_HDELAY")) {
+                        SDL_Delay(atoi(getenv("IKURADROID_HDELAY")));
+                        SDL_zero(key);
+                        key.type = SDL_KEYUP;
+                        key.key.keysym.sym = SDLK_h;
+                        while (SDL_PushEvent(&key) < 0) SDL_Delay(10);
+                    }
+                    click_cap = -1; /* keep clicking from here on */
+                    continue;
+                }
+                if (hkey_at >= 0 && i == hkey_at) {
+                    i++;
+                    SDL_Event key;
+                    SDL_zero(key);
+                    key.type = SDL_KEYUP;
+                    key.key.keysym.sym = SDLK_h;
+                    while (SDL_PushEvent(&key) < 0) SDL_Delay(10);
+                    continue;
+                }
                 int x, y;
                 /* Device coordinates for a 960x600 window with the
                  * 800x600 game area centered (device = game*1.25 + 80). */

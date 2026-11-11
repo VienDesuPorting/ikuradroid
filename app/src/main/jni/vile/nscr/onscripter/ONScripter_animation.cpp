@@ -139,11 +139,6 @@ void ONScripter::proceedAnimation(int current_time)
             if (!anim->abs_flag) {
                 dst_rect.x += sentence_font.x() * screen_ratio1 / screen_ratio2;
                 dst_rect.y += sentence_font.y() * screen_ratio1 / screen_ratio2;
-
-                /* Shift cursor down to the lower third of the text line
-                 * (same fix as in drawTaggedSurface / stopAnimation). */
-                int font_h = sentence_font.font_size_xy[1] * screen_ratio1 / screen_ratio2;
-                dst_rect.y += font_h * 6 / 10;
             }
             flushDirect(dst_rect, refreshMode());
         }
@@ -504,17 +499,6 @@ void ONScripter::drawTaggedSurface(SDL_Surface* dst_surface, AnimationInfo* anim
     if (!anim->abs_flag) {
         poly_rect.x += sentence_font.x() * screen_ratio1 / screen_ratio2;
         poly_rect.y += sentence_font.y() * screen_ratio1 / screen_ratio2;
-
-        /* For cursor markers (click-to-continue triangle), shift down so the
-         * marker appears at the BOTTOM of the text line (near baseline) rather
-         * than at the TOP. This matches the standard visual novel convention
-         * where the cursor sits at the lower third of the text height.
-         * We detect "this is a cursor" by checking anim == &cursor_info[0|1]. */
-        if (anim == &cursor_info[0] || anim == &cursor_info[1]) {
-            int font_h = sentence_font.font_size_xy[1] * screen_ratio1 / screen_ratio2;
-            /* Place cursor at ~60% down the font cell (lower third) */
-            poly_rect.y += font_h * 6 / 10;
-        }
     }
 
     if (!anim->affine_flag)
@@ -543,11 +527,6 @@ void ONScripter::stopAnimation(int click)
     if (!cursor_info[no].abs_flag) {
         dst_rect.x += sentence_font.x() * screen_ratio1 / screen_ratio2;
         dst_rect.y += sentence_font.y() * screen_ratio1 / screen_ratio2;
-
-        /* Same vertical shift as in drawTaggedSurface — place cursor at
-         * the lower third of the text line, not at the top. */
-        int font_h = sentence_font.font_size_xy[1] * screen_ratio1 / screen_ratio2;
-        dst_rect.y += font_h * 6 / 10;
     }
 
     flushDirect(dst_rect, refreshMode());
@@ -572,8 +551,6 @@ void ONScripter::loadCursor(int no, const char* str, int x, int y, bool abs_flag
 
     parseTaggedString(ai);
     setupAnimationInfo(ai);
-
-
     if (filelog_flag)
         script_h.findAndAddLog(script_h.log_info[ScriptHandler::FILE_LOG], ai->file_name, true); // a trick for save file
     ai->abs_flag = abs_flag;
