@@ -315,6 +315,12 @@ SDL_KeyboardEvent transJoystickAxis(SDL_JoyAxisEvent& jaxis)
 
 void ONScripter::flushEventSub(SDL_Event& event)
 {
+#ifdef IKURADROID_AUTODRIVE
+    /* TEMPORARY diagnosis: dump every incoming event type. */
+    if (getenv("IKURADROID_AUTODRIVE"))
+        fprintf(stderr, "[evdump] type=%u ts=%u\n", (unsigned)event.type,
+                (unsigned)SDL_GetTicks());
+#endif
     if (event.type == ONS_MUSIC_EVENT) {
         if (music_play_loop_flag ||
             (cd_play_loop_flag && !cdaudio_flag)) {
@@ -1371,6 +1377,12 @@ void ONScripter::runEventLoop()
     SDL_Event event, tmp_event;
 
     while (SDL_WaitEvent(&event)) {
+#ifdef IKURADROID_AUTODRIVE
+        /* TEMPORARY diagnosis: dump every event the engine pump sees. */
+        if (getenv("IKURADROID_AUTODRIVE"))
+            fprintf(stderr, "[evdump] type=%u ts=%u\n", (unsigned)event.type,
+                    (unsigned)SDL_GetTicks());
+#endif
 #if defined(USE_SMPEG)
         // required to repeat the movie
         if (layer_smpeg_sample)
@@ -1392,7 +1404,7 @@ void ONScripter::runEventLoop()
         }
 
         switch (event.type) {
-#if defined(IOS) || defined(ANDROID)
+#if defined(IOS) || (defined(ANDROID) && !defined(IKURADROID_PC_INPUT))
         /* IkuraDroid: touch is consumed directly, the ViLE way - no SDL
          * touch->mouse emulation anywhere under the engine (the hint is
          * switched off in initSDL, so the SDL_TOUCH_MOUSEID stream never

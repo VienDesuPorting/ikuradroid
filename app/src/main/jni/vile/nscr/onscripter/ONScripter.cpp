@@ -163,6 +163,33 @@ void ONScripter::initSDL()
     window = SDL_CreateWindow(NULL, 0, 0, 0, 0,
                               SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS | SDL_WINDOW_FULLSCREEN_DESKTOP);
     SDL_GetWindowSize(window, &device_width, &device_height);
+#ifdef IKURADROID_AUTODRIVE
+    /* TEMPORARY test hook: Xvfb has no WM, so the FULLSCREEN_DESKTOP
+     * window never grows past its fallback size; a letterboxed run
+     * (window wider than the game) needs an explicit size. */
+    if (getenv("IKURADROID_WINDOW")) {
+        int ww = 0, wh = 0;
+        sscanf(getenv("IKURADROID_WINDOW"), "%dx%d", &ww, &wh);
+        if (ww > 0 && wh > 0) {
+            /* SetWindowSize alone is deferred/ignored under Xvfb;
+             * recreate the window at the requested size. No OPENGL
+             * flag: headless X servers lack GLX and the create would
+             * fail outright (the software-renderer fallback below
+             * covers rendering). */
+            SDL_DestroyWindow(window);
+            window = SDL_CreateWindow(NULL, 0, 0, ww, wh,
+                                      SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS);
+            SDL_GetWindowSize(window, &device_width, &device_height);
+        }
+    }
+#endif
+    /* Desktop/Xvfb sessions may hand back a 0x0 client rect (no WM to
+     * map the window); fall back to the game resolution so the scaled
+     * surface degenerates to 1:1 instead of 0x0 and nothing renders. */
+    if (device_width <= 0 || device_height <= 0) {
+        device_width = screen_width;
+        device_height = screen_height;
+    }
     __android_log_print(ANDROID_LOG_INFO, "ONS",
         "initSDL: device=%dx%d, game=%dx%d",
         device_width, device_height, screen_width, screen_height);
@@ -183,6 +210,31 @@ void ONScripter::initSDL()
         screen_device_width, screen_device_height, device_width, device_height);
 
     renderer = SDL_CreateRenderer(window, -1, 0);
+    if (!renderer) {
+        /* Desktop sessions without GLX (Xvfb, headless CI): the OpenGL
+         * window flag leaves SDL without ANY usable renderer and every
+         * RenderCopy silently fails - the game would run blind. Drop
+         * the OpenGL window and force the software renderer. */
+        __android_log_print(ANDROID_LOG_WARN, "ONS",
+            "initSDL: no hardware renderer (%s), falling back to software",
+            SDL_GetError());
+        SDL_DestroyWindow(window);
+        /* Keep a valid device size (the IKURADROID_WINDOW harness hook
+         * may have set a letterboxed size); only fall back to the game
+         * resolution when the query came back empty. */
+        int nw = (device_width > 0) ? device_width : screen_width;
+        int nh = (device_height > 0) ? device_height : screen_height;
+        window = SDL_CreateWindow(NULL, 0, 0, nw, nh,
+                                  SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS);
+        SDL_GetWindowSize(window, &device_width, &device_height);
+        if (device_width <= 0 || device_height <= 0) {
+            device_width = screen_width;
+            device_height = screen_height;
+        }
+        screen_device_width = device_width;
+        screen_device_height = device_height;
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+    }
     texture_format = SDL_PIXELFORMAT_ARGB8888;
     SDL_RendererInfo info;
     SDL_GetRendererInfo(renderer, &info);
@@ -787,7 +839,12 @@ void ONScripter::flush(int refresh_mode, SDL_Rect* rect, bool clear_dirty_flag, 
 
 void ONScripter::flushDirect(SDL_Rect& rect, int refresh_mode)
 {
-    // printf("flush %d: %d %d %d %d\n", refresh_mode, rect.x, rect.y, rect.w, rect.h );
+#ifdef IKURADROID_AUTODRIVE
+    if (getenv("IKURADROID_SHOTS"))
+        fprintf(stderr, "[flushDirect] mode=%d rect=%d,%d,%d,%d ts=%u\n",
+                refresh_mode, rect.x, rect.y, rect.w, rect.h,
+                (unsigned)SDL_GetTicks());
+#endif
 
     refreshSurface(accumulation_surface, &rect, refresh_mode);
 #ifdef USE_SDL_RENDERER
@@ -800,6 +857,34 @@ void ONScripter::flushDirect(SDL_Rect& rect, int refresh_mode)
     SDL_UnlockSurface(accumulation_surface);
     SDL_RenderCopy(renderer, texture, &src_rect, &dst_rect);
     SDL_RenderPresent(renderer);
+#ifdef IKURADROID_AUTODRIVE
+    /* TEMPORARY test hook (headless CI-style drive): dump full window
+     * frames for visual verification. Enable by building with
+     * -DIKURADROID_AUTODRIVE and setting IKURADROID_SHOTS=1. Remove
+     * after diagnosis. */
+    if (getenv("IKURADROID_SHOTS")) {
+        static unsigned int shot_tick = 0;
+        static unsigned int shot_idx = 0;
+        ++shot_tick;
+        /* IKURADROID_SHOTS=2 dumps EVERY frame (flash-page debugging);
+         * =1 dumps the first ten and then every 30th flush. */
+        static int every = -1;
+        if (every < 0) every = (strcmp(getenv("IKURADROID_SHOTS"), "2") == 0) ? 1 : 30;
+        if (shot_tick <= 10 || shot_tick % every == 0) {
+            SDL_Surface *shot = SDL_CreateRGBSurfaceWithFormat(
+                0, device_width, device_height, 32, SDL_PIXELFORMAT_RGBA32);
+            if (shot) {
+                if (SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_RGBA32,
+                                         shot->pixels, shot->pitch) == 0) {
+                    char fb[64];
+                    snprintf(fb, sizeof(fb), "ONShot%04d.bmp", (int)shot_idx++);
+                    SDL_SaveBMP(shot, fb);
+                }
+                SDL_FreeSurface(shot);
+            }
+        }
+    }
+#endif
 #else
     SDL_Rect dst_rect = rect;
     if (AnimationInfo::doClipping(&dst_rect, &screen_rect) || dst_rect.w == 0 || dst_rect.h == 0) return;
@@ -1095,6 +1180,57 @@ void ONScripter::mouseOverCheck(int x, int y)
 
 void ONScripter::executeLabel()
 {
+#ifdef IKURADROID_AUTODRIVE
+    /* TEMPORARY test hook (headless CI-style drive): a helper thread
+     * pushes synthetic mouse clicks so the game can be walked through
+     * without a human. Enable by building with -DIKURADROID_AUTODRIVE
+     * and setting IKURADROID_AUTODRIVE=1. Remove after diagnosis. */
+    if (getenv("IKURADROID_AUTODRIVE")) {
+        static SDL_Thread *drive_thread = SDL_CreateThread([](void*)->int{
+            SDL_Delay(4000);
+            /* Higurashi RU: *b_title draws sprite buttons - Start at
+             * (216,250); the 07th logo and the text lines advance on a
+             * click anywhere. */
+            int i = 0;
+            for (int n = 0; n < 4000; n++) {
+                SDL_Delay(350);
+                int x, y;
+                /* Device coordinates for a 960x600 window with the
+                 * 800x600 game area centered (device = game*1.25 + 80). */
+                if (n < 5)            { x = 480; y = 300; } /* logo click-through */
+                else if (n < 25)      { x = 455; y = 340; } /* title Start */
+                else                  { x = 205; y = 162; } /* select: Onikakushi / advance */
+                i++;
+                SDL_Event down, up;
+                SDL_zero(down); SDL_zero(up);
+                down.type = SDL_MOUSEBUTTONDOWN;
+                down.button.button = SDL_BUTTON_LEFT;
+                down.button.x = x; down.button.y = y;
+                down.button.state = SDL_PRESSED; down.button.clicks = 1;
+                up.type = SDL_MOUSEBUTTONUP;
+                up.button.button = SDL_BUTTON_LEFT;
+                up.button.x = x; up.button.y = y;
+                up.button.state = SDL_RELEASED; up.button.clicks = 1;
+                /* Button hits are hover-driven (mousePressEvent reads
+                 * current_over_button), so a motion must precede every
+                 * click. The ONS audio chunk events flood the SDL queue
+                 * under a software renderer; a plain push silently fails
+                 * when it is full - retry until the events land. */
+                SDL_Event mo;
+                SDL_zero(mo);
+                mo.type = SDL_MOUSEMOTION;
+                mo.motion.x = x; mo.motion.y = y;
+                while (SDL_PushEvent(&mo) < 0) SDL_Delay(10);
+                SDL_Delay(30);
+                while (SDL_PushEvent(&down) < 0) SDL_Delay(10);
+                while (SDL_PushEvent(&up) < 0) SDL_Delay(10);
+            }
+            return 0;
+        }, "ons-autodrive", 0);
+        (void)drive_thread;
+    }
+#endif
+
 executeLabelTop:
 
     while (current_line < current_label_info.num_of_lines) {

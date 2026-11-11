@@ -96,12 +96,18 @@ OBJS += $(BUILD)/host_stubs.o
 # stubs for <jni.h>/<android/log.h> come from scripts/nscr_stubs).
 NSCR  := $(VILE)/nscr
 JNI   := $(ROOT)/app/src/main/jni
+# NSCR_ANDROID_DEFINE defaults to -DANDROID (the engine takes its
+# touch/FINGER input path, like on the phone). For desktop verification
+# runs override it: make NSCR_ANDROID_DEFINE= ... so the SDL mouse
+# branch of runEventLoop becomes live.
+NSCR_ANDROID_DEFINE ?= -DANDROID
 NSCRXXFLAGS := -std=gnu++14 -fpermissive -w -O2 -g \
+       $(NSCREXTRAFLAGS) \
        -I$(NSCR)/onscripter -I$(NSCR)/sdl_compat -I$(NSCR)/bzip2 \
        -I$(JNI)/sdl/include -I$(JNI)/sdl_image -I$(JNI)/sdl_mixer \
        -I$(JNI)/sdl_ttf -I$(JNI)/smpeg2-2.0.0 -I$(JNI)/smpeg2-2.0.0/smpeg \
        -I$(ROOT)/scripts/nscr_stubs \
-       -DLINUX -DANDROID -DUSE_SDL_RENDERER -DPDA_AUTOSIZE -DENABLE_1BYTE_CHAR \
+       -DLINUX $(NSCR_ANDROID_DEFINE) -DUSE_SDL_RENDERER -DPDA_AUTOSIZE -DENABLE_1BYTE_CHAR \
        -DSDL_JAVA_PACKAGE_PATH=su_viende_ikuradroid \
        -include $(NSCR)/sdl_compat/sdl12_compat.h
 

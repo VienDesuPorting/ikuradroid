@@ -24,6 +24,23 @@
  * silent: logcat only showed the SDL_Quit teardown. Pipe the engine's
  * stderr into logcat under ONS_STDERR so every one of those ~50 message
  * sites becomes visible the moment it fires. */
+/* On the desktop build __android_log_print() is a stub that prints to
+ * stderr - which after the dup2() below IS the pipe. The reader would
+ * then echo every line back into its own pipe and catch it again, an
+ * infinite feedback loop that fills the pipe and blocks the engine on
+ * its first ~64 KB of stderr (observed: vile-pc hung with a thread
+ * stuck in pipe_write before any window appeared). Keep a dup of the
+ * REAL stderr around and let the reader print there on desktop. */
+static int ons_real_stderr_fd = -1;
+
+static void ons_log_line(const char *line)
+{
+    if (ons_real_stderr_fd >= 0)
+        dprintf(ons_real_stderr_fd, "W/ONS_STDERR: %s\n", line);
+    else
+        __android_log_print(ANDROID_LOG_WARN, "ONS_STDERR", "%s", line);
+}
+
 static void *ons_stderr_reader(void *arg)
 {
     int fd = (int)(intptr_t)arg;
@@ -39,7 +56,7 @@ static void *ons_stderr_reader(void *arg)
             if (buf[i] == '\n') {
                 buf[i] = '\0';
                 if (i > start)
-                    __android_log_print(ANDROID_LOG_WARN, "ONS_STDERR", "%s", buf + start);
+                    ons_log_line(buf + start);
                 start = i + 1;
             }
         }
@@ -52,12 +69,12 @@ static void *ons_stderr_reader(void *arg)
         }
         if (len == sizeof(buf) - 1) {
             buf[len] = '\0';
-            __android_log_print(ANDROID_LOG_WARN, "ONS_STDERR", "%s", buf);
+            ons_log_line(buf);
             len = 0;
         }
     }
     if (len > 0)
-        __android_log_print(ANDROID_LOG_WARN, "ONS_STDERR", "%s", buf);
+        ons_log_line(buf);
     return NULL;
 }
 
@@ -65,6 +82,7 @@ static void ons_redirect_stderr()
 {
     int fds[2];
     if (pipe(fds) != 0) return;
+    ons_real_stderr_fd = dup(2); /* desktop reader prints here, not into the pipe */
     if (dup2(fds[1], 2) < 0) {
         close(fds[0]);
         close(fds[1]);
