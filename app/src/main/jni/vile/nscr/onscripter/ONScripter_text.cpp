@@ -1171,16 +1171,16 @@ void ONScripter::processEOT()
         // if sentence_font.isLineEmpty() is true, newPage() might be already issued
         if (!sentence_font.isEndOfLine()) current_page->add(0x0a);
 
-        /* In 1-byte char mode (backtick/CP1251/UTF-8), the @ or \ that follows
-         * the text may be a SEPARATE token. If we call newLine() now, it resets
-         * xy[0] to 0, and the cursor (drawn by clickWait/clickNewPage) would
-         * appear at the START of the next line instead of the END of the text.
-         * Defer newLine() to the next processText() call if the next token
-         * turns out to be text, not a clickstr. */
-        if (script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR) {
-            pending_newline = true;
-        }
-        else {
+        /* 1-byte char mode (backtick/CP1251/UTF-8): NO screen line break
+         * at the end of a text token. The reference ONScripter-RU binary
+         * has no EOT newline in this mode at all (processEOT@0x29bfa only
+         * feeds the lookback page and parks the engine): the pen stays
+         * at the end of the text and the NEXT token continues on the
+         * SAME screen line. Wrapping is by width in drawChar() and by
+         * explicit script commands (br). Higanbana-RU: "zaryadala," and
+         * "*mesomeso*......" share line 5 on the reference; our deferred
+         * newLine machinery pushed the word onto its own line 6. */
+        if (!(script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR)) {
             sentence_font.newLine();
         }
     }
@@ -1214,31 +1214,6 @@ bool ONScripter::processText()
         return false;
     }
 
-    /* If processEOT() deferred newLine() (1-byte char mode), execute it now
-     * — but ONLY if the current character is NOT a clickstr (@ or \).
-     * If it IS a clickstr, the cursor must stay at the END of the text. */
-    if (pending_newline) {
-        char ch = script_h.getStringBuffer()[string_buffer_offset];
-        if (ch != '@' && ch != '\\') {
-            /* Higanbana-RU "line click-wait" marker: a bare '/' token
-             * (buffer "/\0" - the '/' follows the closing backtick of the
-             * previous text token, then the line ends). The binary of the
-             * reference ONScripter-RU has NO pending_newline machinery at
-             * all; its '/' branch (no 1-byte gate, buf[1]==0 check) merely
-             * sets new_line_skip_flag, so "зарыдала, `/" and the NEXT text
-             * token stay on the SAME screen line ("зарыдала, *мэсомэсо*......"
-             * is line 5 on the reference screenshot, not two lines).
-             * Executing the deferred newLine() here broke the next token
-             * onto its own line. Mirror the reference: when the pending
-             * token is the bare '/' marker, drop the pending newline -
-             * the '/' branch below sets the skip flag and consumes it. */
-            if (!(ch == '/' &&
-                  script_h.getStringBuffer()[string_buffer_offset + 1] == 0x00)) {
-                sentence_font.newLine();
-            }
-        }
-        pending_newline = false;
-    }
 
     /* ONScripter-RU doLineBreak() semantics for CP1251: when the pen has
      * reached the end of the line and the next glyph is a space, the line
