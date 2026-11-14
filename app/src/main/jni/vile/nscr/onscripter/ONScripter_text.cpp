@@ -123,6 +123,23 @@ static inline unsigned short parseUnicodeEscape(const char* text)
     return code;
 }
 
+/* A "#RRGGBB" color tag as it appears inside a 1-byte text run
+ * (same shape readColor() consumes: '#' + six hex digits). It renders
+ * no glyphs - processText switches the pen color and steps over all
+ * seven bytes - so width measurement must skip it the same way. */
+static inline bool isColorTag(const char* text)
+{
+    if (text[0] != '#') return false;
+    for (int i = 1; i <= 6; i++) {
+        char ch = text[i];
+        if (!((ch >= '0' && ch <= '9') ||
+              (ch >= 'a' && ch <= 'f') ||
+              (ch >= 'A' && ch <= 'F')))
+            return false;
+    }
+    return true;
+}
+
 int ONScripter::drawGlyph(SDL_Surface* dst_surface, FontInfo* info, SDL_Color& color, char* text, int xy[2], AnimationInfo* cache_info, SDL_Rect* clip, SDL_Rect& dst_rect)
 {
     unsigned short unicode;
@@ -1111,6 +1128,18 @@ bool ONScripter::checkLigatureLineBreak(const char* buf, FontInfo* fi)
             n = 6;
             unicode = parseUnicodeEscape(buf);
         }
+        else if (buf[0] == '#' && isColorTag(buf)) {
+            /* A #RRGGBB color tag renders NO glyphs - processText
+             * consumes it as a color switch (offset += 7), same as the
+             * '#' branch above. Summing its seven bytes as advances
+             * made a word that carries a tag measure wider than it
+             * renders: Higanbana's "`#ECD672*мэсомэсо*#FFFFFF......`"
+             * wrapped *мэсомэсо*...... onto its own line while
+             * ONScripter-RU keeps it inline after "зарыдала,". Skip the
+             * tag: zero cells on screen, zero cells in the measurement. */
+            buf += 7;
+            continue;
+        }
 
         int minx, maxx, miny, maxy, advanced;
         TTF_GlyphMetrics((TTF_Font*)fi->ttf_font[0], unicode,
@@ -1191,7 +1220,22 @@ bool ONScripter::processText()
     if (pending_newline) {
         char ch = script_h.getStringBuffer()[string_buffer_offset];
         if (ch != '@' && ch != '\\') {
-            sentence_font.newLine();
+            /* Higanbana-RU "line click-wait" marker: a bare '/' token
+             * (buffer "/\0" - the '/' follows the closing backtick of the
+             * previous text token, then the line ends). The binary of the
+             * reference ONScripter-RU has NO pending_newline machinery at
+             * all; its '/' branch (no 1-byte gate, buf[1]==0 check) merely
+             * sets new_line_skip_flag, so "зарыдала, `/" and the NEXT text
+             * token stay on the SAME screen line ("зарыдала, *мэсомэсо*......"
+             * is line 5 on the reference screenshot, not two lines).
+             * Executing the deferred newLine() here broke the next token
+             * onto its own line. Mirror the reference: when the pending
+             * token is the bare '/' marker, drop the pending newline -
+             * the '/' branch below sets the skip flag and consumes it. */
+            if (!(ch == '/' &&
+                  script_h.getStringBuffer()[string_buffer_offset + 1] == 0x00)) {
+                sentence_font.newLine();
+            }
         }
         pending_newline = false;
     }
