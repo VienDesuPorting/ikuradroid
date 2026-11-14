@@ -913,12 +913,16 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                             showGameMenu();
                         } else if (downward
                                 && dy >= menuDp(MENU_SWIPE_TRAVEL_DP)) {
-                            // Confirmed top-down swipe: the touch
-                            // counterpart of the PC original's Escape /
-                            // right click (see sendGameCancel).
+                            /* IkuraDroid: the top-down swipe no longer acts
+                             * as the PC Escape / right click (it opened the
+                             * engine's own rmenu system menu - a duplicate
+                             * of the M3 sheet that also risked accidental
+                             * triggers mid-read; the user asked it gone).
+                             * It is swallowed like any other unclassified
+                             * vertical run: the live DOWN is cancelled so
+                             * nothing clicks, and no cancel key is sent. */
                             mSwipeConsumed = true;
                             cancelEngineTouch(ev);
-                            sendGameCancel();
                         } else if (travel >= menuDp(MENU_SWIPE_SLOP_DP)
                                 && !upward && !downward) {
                             // Proven not a vertical gesture: hand the rest

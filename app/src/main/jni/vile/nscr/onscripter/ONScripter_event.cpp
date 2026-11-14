@@ -1159,7 +1159,13 @@ bool ONScripter::keyPressEvent(SDL_KeyboardEvent* event)
         else if (!spclclk_flag && useescspc_flag && event->keysym.sym == SDLK_SPACE) {
             current_button_state.button = -11;
         }
-        else if (((!getcursor_flag && event->keysym.sym == SDLK_LEFT) ||
+        else if (((!getcursor_flag && event->keysym.sym == SDLK_LEFT &&
+                   /* IkuraDroid: LEFT enters lookback ONLY when the
+                    * lookback is already open (page navigation); entering
+                    * the history from gameplay by an accidental LEFT is
+                    * unwanted - the single entry is the M3 menu's History
+                    * row, which sends the H key below. */
+                   system_menu_mode == SYSTEM_LOOKBACK) ||
                   event->keysym.sym == SDLK_h) &&
                  (event_mode & WAIT_TEXT_MODE ||
                   (usewheel_flag && !getcursor_flag && event_mode & WAIT_BUTTON_MODE) ||

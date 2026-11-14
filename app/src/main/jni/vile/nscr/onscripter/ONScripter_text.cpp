@@ -1374,7 +1374,14 @@ bool ONScripter::processText()
         string_buffer_offset++;
         return true;
     }
-    else if (ch == '/' && !(script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR)) {
+    else if (ch == '/' &&
+             (!(script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR) ||
+              /* Higurashi-RU: '/' at the END of a 1-byte (backtick) text
+               * line is the "line click-wait + newline" marker, exactly
+               * like in the 2-byte mode - ONScripter-RU hides it. A '/'
+               * with characters after it ("1/5", "Mr./Mrs.") is a literal
+               * and must keep falling through to the literal draw below. */
+              script_h.getStringBuffer()[string_buffer_offset + 1] == 0x00)) {
         if (ruby_struct.stage == RubyStruct::BODY) {
             current_page->add('/');
             sentence_font.addLineOffset(ruby_struct.margin);
