@@ -8,6 +8,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CodingErrorAction;
@@ -193,6 +194,66 @@ public final class GameLibrary {
             base = context.getFilesDir();
         }
         return new File(base, INSTALL_DIR);
+    }
+
+    // ------------------------------------------------------------------
+    // Fresh-install detection
+    // ------------------------------------------------------------------
+
+    /** Marker file in no_backup/ - a directory no backup transport ever
+     *  includes and that the system wipes together with the app on
+     *  uninstall. Its absence is the only reliable "the APK was deleted"
+     *  signal the app can read back. */
+    private static final String INSTALL_MARKER = "library_install_marker";
+
+    /**
+     * Records this installation as alive. Returns true when the marker
+     * was already there (same install, or the very first launch ever);
+     * false right after a fresh install, when any library state that
+     * made it into the prefs is stale and must be dropped.
+     *
+     * Why it exists: the reported "after deleting the APK and adding
+     * novels, the old ones reappear" - the library prefs (roots, hidden
+     * titles, renames, covers) were being resurrected by a backup
+     * transport, so a fresh install started non-empty and the centered
+     * empty state never showed. allowBackup is now false, which cuts the
+     * standard Auto Backup path; the marker catches any transport that
+     * still restores the prefs while no_backup/ stays empty.
+     */
+    public static boolean isSameInstall(Context context) {
+        File marker = new File(context.getNoBackupFilesDir(), INSTALL_MARKER);
+        if (marker.isFile()) {
+            return true;
+        }
+        try {
+            marker.createNewFile();
+        } catch (IOException ignored) {
+            // The reset below would then run on every launch - harmless:
+            // in a truly fresh install the prefs are empty anyway.
+        }
+        return false;
+    }
+
+    /**
+     * Drops every persisted library state (roots, hidden titles, renames,
+     * cover caches) in one clear(). Used right after a fresh install so
+     * resurrected entries cannot surface games the deleted APK used to
+     * know; the user's own game folders on shared storage are untouched.
+     */
+    public static void resetLibraryState(Context context) {
+        context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
+                .edit().clear().apply();
+    }
+
+    /**
+     * Wipes the app-owned legacy copies in the install area. These are
+     * SAF-era game copies the app made itself (never user files), so a
+     * fresh install that finds any is looking at garbage the previous
+     * installation left behind - exactly the "the app does not clean up
+     * after itself" complaint.
+     */
+    public static void clearInstallArea(Context context) {
+        deleteRecursively(installRoot(context));
     }
 
     // ------------------------------------------------------------------
