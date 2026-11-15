@@ -2,7 +2,16 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
-All releases older than 2.5.0 have been removed from GitHub Releases: after the rework that went into 2.5.0, the old builds are obsolete and no longer make sense. The current version is 2.5.1.
+All releases older than 2.5.0 have been removed from GitHub Releases: after the rework that went into 2.5.0, the old builds are obsolete and no longer make sense. The current version is 2.6.0.
+
+## 2.6.0 — 2026-11-15
+
+- NScripter: the NScripter interpreter is built in — a fork of ONScripter (the ONScripter-Droid base, 20230825) with CP1251 support. Russian fan translations now launch right in the app: both parts of Higanbana no Saku Yoru ni, Umineko no Naku Koro ni Hane and its other parts, Rose Guns Days: The Best — all playable on a real device. Save/load and the backlog run on the engine's own screens. Fan patches that ship as files on top of the original game work through the `patch/` folder — nothing needs merging: files from `patch/` override the same-named ones from the original archives.
+- NScripter: Higurashi no Naku Koro ni with the Russian fan patch is playable. The title needs text rework that is not a priority right now; the issue will be addressed in a future version.
+- Kana ~ Little Sister: the title now launches and is runnable. There remain open questions on the correct behavior of music, in-game choices and saves.
+- Saves: fixed the save bug for titles on the Ikura GDL/Will engines, where saves were not written into the game folder and were lost after reinstalling the app. On first launch the old saves are migrated into the folders of their respective titles automatically.
+- Ikura GDL: a series of engine fixes without which Kana ~ Little Sister would not launch or complete: crashes on scene transitions and hangs on menu screens.
+- Compatibility: the compatibility table has moved into its own document, `COMPATIBILITY.md` (an English version exists too), and the statuses have become more honest — there are now four: playable / runnable / launches / not tested. The Engines screen shows the same marks for every title and links to the full table.
 
 ## 2.5.1 — 2026-10-03
 
