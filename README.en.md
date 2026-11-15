@@ -16,7 +16,7 @@ Interface: English / Russian. License: GPLv3.
 
 The game compatibility table has grown and moved to a separate document:
 
-[![Compatibility](https://img.shields.io/badge/Compatibility-10_of_31_playable-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.en.md)
+[![Compatibility](https://img.shields.io/badge/Compatibility-9_of_31_playable-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.en.md)
 
 ## Known issues
 

@@ -16,7 +16,7 @@ English version: [README.en.md](README.en.md)
 
 Таблица совместимости игр выросла и переехала в отдельный документ:
 
-[![Совместимость](https://img.shields.io/badge/Совместимость-10_из_31_проходимы-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.md)
+[![Совместимость](https://img.shields.io/badge/Совместимость-9_из_31_проходимы-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.md)
 
 ## Известные баги
 

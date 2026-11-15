@@ -41,9 +41,10 @@ import java.util.Locale;
  * the engine's own NativeName() strings wherever one exists, so the
  * screen never promises more than the engine implements.
  *
- * Titles carry the same three-level status as the compatibility table:
- * playable (beaten on a real device), launches (confirmed start, no full
- * playthrough) and untested. A missing "status" falls back to the legacy
+ * Titles carry the same four-level status as the compatibility table:
+ * playable (beaten on a real device), runnable (playable, but with
+ * known open issues), launches (confirmed start, no full playthrough)
+ * and untested. A missing "status" falls back to the legacy
  * "tested" boolean so an old data file still renders correctly.
  *
  * The table's Notes column (what exactly still needs work or checking)
@@ -53,6 +54,7 @@ import java.util.Locale;
 public class EnginesActivity extends AppCompatActivity {
 
     private static final String STATUS_PLAYABLE = "playable";
+    private static final String STATUS_RUNNABLE = "runnable";
     private static final String STATUS_LAUNCHES = "launches";
 
     private static final String REPO_COMPATIBILITY_RU =
@@ -153,8 +155,10 @@ public class EnginesActivity extends AppCompatActivity {
 
     /**
      * One line per title: a status mark in front of the name - a check
-     * mark for playable (primary color, semi-bold), a dash for launches
-     * (still the muted body color) and a plain bullet for untested.
+     * mark for playable (primary color, semi-bold), a tilde for
+     * runnable - playable, but with known open issues (primary color),
+     * a dash for launches (still the muted body color) and a plain
+     * bullet for untested.
      */
     private CharSequence titlesSpan(TextView view, Engine engine) {
         SpannableStringBuilder builder = new SpannableStringBuilder();
@@ -164,19 +168,25 @@ public class EnginesActivity extends AppCompatActivity {
             if (builder.length() > 0) {
                 builder.append('\n');
             }
-            boolean playable = STATUS_PLAYABLE.equals(engine.titleStatus[i]);
+            String status = engine.titleStatus[i];
+            boolean playable = STATUS_PLAYABLE.equals(status);
+            boolean runnable = STATUS_RUNNABLE.equals(status);
             int start = builder.length();
             if (playable) {
                 builder.append("\u2713 ");        // check mark
-            } else if (STATUS_LAUNCHES.equals(engine.titleStatus[i])) {
+            } else if (runnable) {
+                builder.append("~ ");             // tilde
+            } else if (STATUS_LAUNCHES.equals(status)) {
                 builder.append("\u2013 ");        // en dash
             } else {
                 builder.append("\u2022 ");        // bullet
             }
             builder.append(engine.titles[i]);
-            if (playable) {
+            if (playable || runnable) {
                 builder.setSpan(new ForegroundColorSpan(primary), start,
                         builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            if (playable) {
                 builder.setSpan(new StyleSpan(Typeface.BOLD), start,
                         builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }

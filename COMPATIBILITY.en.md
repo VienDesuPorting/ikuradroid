@@ -5,12 +5,13 @@ Every engine module from the tables is compiled into the app. What exactly has b
 A status states what can honestly be claimed from the data at hand:
 
 - **playable** — beaten on a real device: text, graphics, audio and saves all work;
+- **runnable** — launches and plays, but with known open issues: the note says what exactly is still in progress;
 - **launches** — launching is confirmed (menu or first scene), but a full playthrough has not been verified;
 - **not tested** — nobody has checked the launch on a real device yet.
 
 The Notes column says what still needs work or checking.
 
-Titles are kept in sync with `app/src/main/assets/engines.json` and appear on the in-app **Engines** screen with the same three marks: a check mark for playable, a dash for launches, a bullet for not tested.
+Titles are kept in sync with `app/src/main/assets/engines.json` and appear on the in-app **Engines** screen with the same four marks: a check mark for playable, a tilde for runnable, a dash for launches, a bullet for not tested.
 
 Русская версия: [COMPATIBILITY.md](COMPATIBILITY.md)
 
@@ -24,7 +25,7 @@ Titles are kept in sync with `app/src/main/assets/engines.json` and appear on th
 | Hitomi -My Stepsister- | not tested | |
 | Idols Galore! | not tested | |
 | Kana ... Okaeri! | not tested | |
-| Kana ~ Little Sister | playable | needs checking against the PC version and further work |
+| Kana ~ Little Sister | runnable | open questions on music, in-game choices and saves |
 | The Sagara Family | not tested | |
 | Snow | not tested | |
 | Virgin | not tested | |
@@ -80,7 +81,7 @@ Titles are kept in sync with `app/src/main/assets/engines.json` and appear on th
 | --- | --- | --- |
 | Higanbana no Saku Yoru ni: The First Night | playable | |
 | Higanbana no Saku Yoru ni: The Second Night | playable | |
-| Higurashi no Naku Koro ni (RU fan patch, repacked) | playable | needs further work and checking against the PC version |
+| Higurashi no Naku Koro ni (RU fan patch, repacked) | playable | needs text rework - not a priority right now, to be fixed in a future version |
 | Rose Guns Days: The Best | playable | |
 | Umineko no Naku Koro ni Hane | playable | |
 | Umineko no Naku Koro ni (other parts) | playable | |
