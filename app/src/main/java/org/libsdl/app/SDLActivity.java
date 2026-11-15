@@ -453,7 +453,43 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         String fName = launchIntent.getStringExtra("fname");
         String fPath = launchIntent.getStringExtra("fpath");
         gCurrentDirectoryPath = fPath + "/" + fName;
-        gCurrentSavePath = getExternalFilesDir(null).getAbsolutePath();
+
+        // Savegames live IN THE GAME FOLDER (like the PC engine does it):
+        // the app-private getExternalFilesDir(null) (Android/data/...)
+        // is wiped by the system on uninstall, which destroyed every
+        // save on reinstall. The game folders sit on real external
+        // storage that survives an uninstall (the app holds
+        // MANAGE_EXTERNAL_STORAGE / All-files access). If the folder
+        // turns out non-writable (a read-only share, SAF-only access),
+        // fall back to the old private dir: a save that cannot be
+        // written at all is worse than one lost on reinstall.
+        gCurrentSavePath = gCurrentDirectoryPath;
+        if (!new java.io.File(gCurrentSavePath).canWrite()) {
+            gCurrentSavePath = getExternalFilesDir(null).getAbsolutePath();
+        }
+
+        // One-time migration: move any saves written by older builds
+        // into the private Android/data dir over to the game folder, so
+        // they are visible (and survive) under the new scheme.
+        java.io.File legacyDir = getExternalFilesDir(null);
+        if (legacyDir != null && gCurrentSavePath.equals(gCurrentDirectoryPath)) {
+            java.io.File gameDirFile = new java.io.File(gCurrentDirectoryPath);
+            java.io.File[] legacyFiles = legacyDir.listFiles();
+            if (legacyFiles != null) {
+                for (java.io.File legacy : legacyFiles) {
+                    // Savegame files carry no extension: <NativeID><index>.
+                    String ln = legacy.getName();
+                    if (ln.indexOf('.') < 0 && ln.matches(".+\\d{3}")) {
+                        java.io.File moved = new java.io.File(gameDirFile, ln);
+                        if (!moved.exists()) {
+                            //noinspection ResultOfMethodCallIgnored
+                            legacy.renameTo(moved);
+                        }
+                    }
+                }
+            }
+        }
+
         nativeInit(gCurrentDirectoryPath, gCurrentSavePath);
 
         // Set up JNI
