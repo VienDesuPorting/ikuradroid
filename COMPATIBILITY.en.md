@@ -34,7 +34,7 @@ Titles are kept in sync with `app/src/main/assets/engines.json` and appear on th
 | Title | Status | Notes |
 | --- | --- | --- |
 | Critical Point | playable | |
-| Princess Waltz | launches | per a user report it works fully — [issue #1](https://github.com/VienDesuPorting/ikuradroid/issues/1); not verified by us |
+| Princess Waltz | launches | per [issue #1](https://github.com/VienDesuPorting/ikuradroid/issues/1) it works fully. However, it has not been verified by the developer. |
 | Starry Sky | not tested | |
 | Yume Miru Kusuri | not tested | |
 | Little My Maid | launches | needs further work |

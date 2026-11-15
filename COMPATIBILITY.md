@@ -34,7 +34,7 @@ English version: [COMPATIBILITY.en.md](COMPATIBILITY.en.md)
 | Тайтл | Статус | Примечание |
 | --- | --- | --- |
 | Critical Point | проходима | |
-| Princess Waltz | запускается | по отчёту пользователя работает полностью — [issue #1](https://github.com/VienDesuPorting/ikuradroid/issues/1); лично не проверялась |
+| Princess Waltz | запускается | согласно [issue #1](https://github.com/VienDesuPorting/ikuradroid/issues/1), работает полностью. Однако разработчиком не проверялось. |
 | Starry Sky | не проверен | |
 | Yume Miru Kusuri | не проверен | |
 | Little My Maid | запускается | требует доработок |
