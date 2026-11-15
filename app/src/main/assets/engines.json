@@ -4,79 +4,79 @@
       "name": "Ikura GDL",
       "tested": true,
       "titles": [
-        { "name": "Crescendo", "tested": true },
-        { "name": "Heart de Roommate", "tested": true },
-        { "name": "Cat Girl Alliance", "tested": false },
-        { "name": "Hitomi -My Stepsister-", "tested": false },
-        { "name": "Idols Galore!", "tested": false },
-        { "name": "Kana ... Okaeri!", "tested": false },
-        { "name": "Kana ~ Little Sister", "tested": true },
-        { "name": "The Sagara Family", "tested": false },
-        { "name": "Snow", "tested": false },
-        { "name": "Virgin", "tested": false }
+        { "name": "Crescendo", "tested": true, "status": "playable" },
+        { "name": "Heart de Roommate", "tested": true, "status": "playable" },
+        { "name": "Cat Girl Alliance", "tested": false, "status": "launches" },
+        { "name": "Hitomi -My Stepsister-", "tested": false, "status": "untested" },
+        { "name": "Idols Galore!", "tested": false, "status": "untested" },
+        { "name": "Kana ... Okaeri!", "tested": false, "status": "untested" },
+        { "name": "Kana ~ Little Sister", "tested": true, "status": "playable" },
+        { "name": "The Sagara Family", "tested": false, "status": "untested" },
+        { "name": "Snow", "tested": false, "status": "untested" },
+        { "name": "Virgin", "tested": false, "status": "untested" }
       ]
     },
     {
       "name": "Will",
       "tested": true,
       "titles": [
-        { "name": "Critical Point", "tested": true },
-        { "name": "Princess Waltz", "tested": false },
-        { "name": "Starry Sky", "tested": false },
-        { "name": "Yume Miru Kusuri", "tested": false },
-        { "name": "Little My Maid", "tested": false }
+        { "name": "Critical Point", "tested": true, "status": "playable" },
+        { "name": "Princess Waltz", "tested": false, "status": "launches" },
+        { "name": "Starry Sky", "tested": false, "status": "untested" },
+        { "name": "Yume Miru Kusuri", "tested": false, "status": "untested" },
+        { "name": "Little My Maid", "tested": false, "status": "launches" }
       ]
     },
     {
       "name": "Crowd",
       "tested": false,
       "titles": [
-        { "name": "Tokimeki Check-in!", "tested": false },
-        { "name": "XChange 1", "tested": false },
-        { "name": "XChange 3", "tested": false }
+        { "name": "Tokimeki Check-in!", "tested": false, "status": "untested" },
+        { "name": "XChange 1", "tested": false, "status": "untested" },
+        { "name": "XChange 3", "tested": false, "status": "untested" }
       ]
     },
     {
       "name": "C-Ware",
       "tested": false,
       "titles": [
-        { "name": "DiviDead", "tested": false }
+        { "name": "DiviDead", "tested": false, "status": "untested" }
       ]
     },
     {
       "name": "JAST",
       "tested": false,
       "titles": [
-        { "name": "Season of the Sakura", "tested": false },
-        { "name": "3 Sisters Story", "tested": false },
-        { "name": "Runaway City", "tested": false }
+        { "name": "Season of the Sakura", "tested": false, "status": "untested" },
+        { "name": "3 Sisters Story", "tested": false, "status": "untested" },
+        { "name": "Runaway City", "tested": false, "status": "untested" }
       ]
     },
     {
       "name": "Windy",
       "tested": false,
       "titles": [
-        { "name": "Mayclub VR Dating SX", "tested": false },
-        { "name": "Nocturnal Illusion Renewal", "tested": false }
+        { "name": "Mayclub VR Dating SX", "tested": false, "status": "untested" },
+        { "name": "Nocturnal Illusion Renewal", "tested": false, "status": "untested" }
       ]
     },
     {
       "name": "T-Love",
       "tested": false,
       "titles": [
-        { "name": "True Love", "tested": false }
+        { "name": "True Love", "tested": false, "status": "untested" }
       ]
     },
     {
       "name": "NScripter",
       "tested": true,
       "titles": [
-        { "name": "Higanbana no Saku Yoru ni: The First Night", "tested": true },
-        { "name": "Higanbana no Saku Yoru ni: The Second Night", "tested": true },
-        { "name": "Higurashi no Naku Koro ni", "tested": true },
-        { "name": "Rose Guns Days: The Best", "tested": true },
-        { "name": "Umineko no Naku Koro ni Hane", "tested": true },
-        { "name": "Umineko no Naku Koro ni", "tested": true }
+        { "name": "Higanbana no Saku Yoru ni: The First Night", "tested": true, "status": "playable" },
+        { "name": "Higanbana no Saku Yoru ni: The Second Night", "tested": true, "status": "playable" },
+        { "name": "Higurashi no Naku Koro ni", "tested": true, "status": "playable" },
+        { "name": "Rose Guns Days: The Best", "tested": true, "status": "playable" },
+        { "name": "Umineko no Naku Koro ni Hane", "tested": true, "status": "playable" },
+        { "name": "Umineko no Naku Koro ni", "tested": true, "status": "playable" }
       ]
     }
   ]
