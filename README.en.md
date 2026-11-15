@@ -89,6 +89,7 @@ The desktop Linux core build (`vile-pc`) lives in [`pc/`](pc/README.md).
 
 - desktop builds of the core for Linux and Windows;
 - NScripter: video intro playback;
+- forking and embedding [OpenBGI](https://github.com/Cytlan/openbgi), an open-source reimplementation of the **BGI** (Ethornell) engine;
 - testing the remaining titles on real devices;
 - further work on the Will modules and other engines.
 
