@@ -93,7 +93,7 @@ OBJS += $(BUILD)/obj/nscr/sdl_compat/sdl12_compat_runtime.o
 OBJS += $(BUILD)/host_stubs.o
 
 # ONScripter-Droid C++ flags (mirror vile/nscr/Android.mk LOCAL_CFLAGS;
-# stubs for <jni.h>/<android/log.h> come from scripts/nscr_stubs).
+# stubs for <jni.h>/<android/log.h> come from pc/stubs).
 NSCR  := $(VILE)/nscr
 JNI   := $(ROOT)/app/src/main/jni
 # NSCR_ANDROID_DEFINE defaults to -DANDROID (the engine takes its
@@ -106,7 +106,7 @@ NSCRXXFLAGS := -std=gnu++14 -fpermissive -w -O2 -g \
        -I$(NSCR)/onscripter -I$(NSCR)/sdl_compat -I$(NSCR)/bzip2 \
        -I$(JNI)/sdl/include -I$(JNI)/sdl_image -I$(JNI)/sdl_mixer \
        -I$(JNI)/sdl_ttf -I$(JNI)/smpeg2-2.0.0 -I$(JNI)/smpeg2-2.0.0/smpeg \
-       -I$(ROOT)/scripts/nscr_stubs \
+       -I$(ROOT)/pc/stubs \
        -DLINUX $(NSCR_ANDROID_DEFINE) -DUSE_SDL_RENDERER -DPDA_AUTOSIZE -DENABLE_1BYTE_CHAR \
        -DSDL_JAVA_PACKAGE_PATH=su_viende_ikuradroid \
        -include $(NSCR)/sdl_compat/sdl12_compat.h
