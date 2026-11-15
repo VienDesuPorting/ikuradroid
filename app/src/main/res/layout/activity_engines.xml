@@ -51,6 +51,17 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
 
+            <!-- The Notes column lives only in the repo tables; this button
+                 opens them in the browser (RU or EN edition, matching the
+                 app locale). -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/engines_compat_button"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/engines_compat_link" />
+
         </LinearLayout>
 
     </ScrollView>

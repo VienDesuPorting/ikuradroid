@@ -102,6 +102,8 @@
     <string name="engine_status_tested">проверен</string>
     <string name="engine_status_not_tested">не проверен</string>
     <string name="engines_data_error">Список движков (engines.json) отсутствует или повреждён.</string>
+    <string name="engines_compat_link">Полная таблица совместимости</string>
+    <string name="engines_link_error">Не найдено приложение, способное открыть эту ссылку.</string>
 
     <!-- О приложении -->
     <string name="about_tagline">Интерпретатор визуальных новелл Ikura GDL для Android</string>

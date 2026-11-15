@@ -1,6 +1,9 @@
 package su.viende.ikuradroid;
 
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -11,6 +14,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -27,6 +31,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 /**
  * Engines and supported titles, data-driven from assets/engines.json.
@@ -40,11 +45,20 @@ import java.nio.charset.StandardCharsets;
  * playable (beaten on a real device), launches (confirmed start, no full
  * playthrough) and untested. A missing "status" falls back to the legacy
  * "tested" boolean so an old data file still renders correctly.
+ *
+ * The table's Notes column (what exactly still needs work or checking)
+ * lives only in the repository, so a button under the cards opens the
+ * full table in the browser instead of duplicating it here.
  */
 public class EnginesActivity extends AppCompatActivity {
 
     private static final String STATUS_PLAYABLE = "playable";
     private static final String STATUS_LAUNCHES = "launches";
+
+    private static final String REPO_COMPATIBILITY_RU =
+            "https://github.com/VienDesuPorting/ikuradroid/blob/main/COMPATIBILITY.md";
+    private static final String REPO_COMPATIBILITY_EN =
+            "https://github.com/VienDesuPorting/ikuradroid/blob/main/COMPATIBILITY.en.md";
 
     private static final class Engine {
         final String name;
@@ -88,6 +102,17 @@ public class EnginesActivity extends AppCompatActivity {
         });
 
         LinearLayout container = (LinearLayout) findViewById(R.id.engines_container);
+
+        // Wired before the data load: the link must stay clickable even
+        // when engines.json is broken and the screen shows the error text
+        findViewById(R.id.engines_compat_button).setOnClickListener(
+                new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openCompatibilityTable();
+            }
+        });
+
         Engine[] engines = loadEngines();
         if (engines == null) {
             // A broken data file must never look like "no engines exist"
@@ -171,6 +196,25 @@ public class EnginesActivity extends AppCompatActivity {
                     view, resolved);
         } catch (IllegalArgumentException e) {
             return emphasize ? 0xFF808080 : 0xFF808080;
+        }
+    }
+
+    /**
+     * Opens the repository compatibility table in the browser. The Notes
+     * column (what still needs work or checking) exists only there, so
+     * the table is the source of truth the button leads to. A device
+     * without any browser is rare but possible - a toast keeps the tap
+     * from being swallowed silently.
+     */
+    private void openCompatibilityTable() {
+        String language = Locale.getDefault().getLanguage();
+        String url = "ru".equals(language)
+                ? REPO_COMPATIBILITY_RU : REPO_COMPATIBILITY_EN;
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, R.string.engines_link_error,
+                    Toast.LENGTH_SHORT).show();
         }
     }
 

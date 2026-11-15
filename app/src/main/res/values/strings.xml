@@ -102,6 +102,8 @@
     <string name="engine_status_tested">tested</string>
     <string name="engine_status_not_tested">not tested</string>
     <string name="engines_data_error">The engine list (engines.json) is missing or malformed.</string>
+    <string name="engines_compat_link">Full compatibility table</string>
+    <string name="engines_link_error">No app found that can open this link.</string>
 
     <!-- About screen -->
     <string name="about_tagline">Ikura GDL visual novel interpreter for Android</string>
