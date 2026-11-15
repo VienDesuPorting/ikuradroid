@@ -479,11 +479,13 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 for (java.io.File legacy : legacyFiles) {
                     // Savegame files carry no extension: <NativeID><index>.
                     String ln = legacy.getName();
-                    if (ln.indexOf('.') < 0 && ln.matches(".+\\d{3}")) {
+                    if (legacy.isFile() && ln.indexOf('.') < 0
+                            && ln.matches(".+\\d{3}")) {
                         java.io.File moved = new java.io.File(gameDirFile, ln);
-                        if (!moved.exists()) {
+                        if (!moved.exists()
+                                && moveFileAcrossFilesystems(legacy, moved)) {
                             //noinspection ResultOfMethodCallIgnored
-                            legacy.renameTo(moved);
+                            legacy.delete();
                         }
                     }
                 }
@@ -2565,6 +2567,49 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             return -1;
         }
         return 0;
+    }
+
+    /** Moves one file, also across filesystem boundaries. File.renameTo()
+     *  silently fails with EXDEV when source and target live on different
+     *  volumes - which is exactly the migration case here: the legacy
+     *  Android/data dir sits on emulated storage while the game folder
+     *  may sit on a physical SD card. Copy the bytes over and let the
+     *  caller delete the source only after the copy fully succeeded.
+     *  \return True when the target now holds a complete copy */
+    private static boolean moveFileAcrossFilesystems(java.io.File src,
+                                                     java.io.File dst) {
+        java.io.FileInputStream in = null;
+        java.io.FileOutputStream out = null;
+        boolean copyOk = false;
+        try {
+            in = new java.io.FileInputStream(src);
+            out = new java.io.FileOutputStream(dst);
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                out.write(buf, 0, n);
+            }
+            out.getFD().sync();
+            copyOk = (dst.length() == src.length());
+        } catch (java.io.IOException e) {
+            copyOk = false;
+        } finally {
+            if (in != null) {
+                try { in.close(); } catch (java.io.IOException ignored) {}
+            }
+            if (out != null) {
+                try { out.close(); } catch (java.io.IOException ignored) {}
+            }
+        }
+        // A size mismatch means the copy is incomplete - drop it, or the
+        // leftover stub would block every future migration attempt
+        // (!moved.exists() gate) while the real save stays stuck in the
+        // private dir that the uninstall will wipe.
+        if (!copyOk) {
+            //noinspection ResultOfMethodCallIgnored
+            dst.delete();
+        }
+        return copyOk;
     }
 }
 
