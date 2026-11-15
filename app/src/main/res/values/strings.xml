@@ -96,9 +96,9 @@
     <string name="game_gone">The game folder is no longer accessible</string>
 
     <!-- Engines screen. Titles mirror the NativeName() strings of the
-         compiled engine modules (jni/vile); the tested mark is earned
-         only by a real-device run. -->
-    <string name="engines_note">Script engines implemented by ViLE and compiled into this build. A title earns the tested mark only after it has been checked end to end on a real device; what exactly has been reworked is visible in the changelog. Everything else stays marked as not tested for now.</string>
+         compiled engine modules (jni/vile); the three title marks match
+         the compatibility table: playable / launches / not tested. -->
+    <string name="engines_note">Script engines implemented by ViLE and compiled into this build. Titles carry the same marks as the compatibility table: a check mark means beaten on a real device, a dash means a confirmed launch without a full playthrough, a bullet means not tested yet. What exactly has been reworked is visible in the changelog.</string>
     <string name="engine_status_tested">tested</string>
     <string name="engine_status_not_tested">not tested</string>
     <string name="engines_data_error">The engine list (engines.json) is missing or malformed.</string>

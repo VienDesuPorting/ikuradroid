@@ -10,7 +10,7 @@ A status states what can honestly be claimed from the data at hand:
 
 The Notes column says what still needs work or checking.
 
-Titles marked playable are kept in sync with `app/src/main/assets/engines.json` and get a check mark on the in-app **Engines** screen; the screen does not distinguish intermediate statuses yet.
+Titles are kept in sync with `app/src/main/assets/engines.json` and appear on the in-app **Engines** screen with the same three marks: a check mark for playable, a dash for launches, a bullet for not tested.
 
 Русская версия: [COMPATIBILITY.md](COMPATIBILITY.md)
 

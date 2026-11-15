@@ -36,24 +36,27 @@ import java.nio.charset.StandardCharsets;
  * the engine's own NativeName() strings wherever one exists, so the
  * screen never promises more than the engine implements.
  *
- * Statuses are honest: a title is marked tested only after it has been
- * checked end to end on a real device in this port. Everything else
- * stays "not tested" no matter what the desktop ViLE documentation
- * claimed - compiled-in code is a baseline, not a verification.
+ * Titles carry the same three-level status as the compatibility table:
+ * playable (beaten on a real device), launches (confirmed start, no full
+ * playthrough) and untested. A missing "status" falls back to the legacy
+ * "tested" boolean so an old data file still renders correctly.
  */
 public class EnginesActivity extends AppCompatActivity {
+
+    private static final String STATUS_PLAYABLE = "playable";
+    private static final String STATUS_LAUNCHES = "launches";
 
     private static final class Engine {
         final String name;
         final boolean tested;
         final String[] titles;
-        final boolean[] titleTested;
+        final String[] titleStatus;
 
-        Engine(String name, boolean tested, String[] titles, boolean[] titleTested) {
+        Engine(String name, boolean tested, String[] titles, String[] titleStatus) {
             this.name = name;
             this.tested = tested;
             this.titles = titles;
-            this.titleTested = titleTested;
+            this.titleStatus = titleStatus;
         }
     }
 
@@ -124,8 +127,9 @@ public class EnginesActivity extends AppCompatActivity {
     }
 
     /**
-     * One line per title: tested titles carry a check mark in the primary
-     * color (and a semi-bold face), the rest stay muted bullets.
+     * One line per title: a status mark in front of the name - a check
+     * mark for playable (primary color, semi-bold), a dash for launches
+     * (still the muted body color) and a plain bullet for untested.
      */
     private CharSequence titlesSpan(TextView view, Engine engine) {
         SpannableStringBuilder builder = new SpannableStringBuilder();
@@ -135,11 +139,17 @@ public class EnginesActivity extends AppCompatActivity {
             if (builder.length() > 0) {
                 builder.append('\n');
             }
-            boolean tested = engine.titleTested[i];
+            boolean playable = STATUS_PLAYABLE.equals(engine.titleStatus[i]);
             int start = builder.length();
-            builder.append(tested ? "\u2713 " : "\u2022 ")
-                    .append(engine.titles[i]);
-            if (tested) {
+            if (playable) {
+                builder.append("\u2713 ");        // check mark
+            } else if (STATUS_LAUNCHES.equals(engine.titleStatus[i])) {
+                builder.append("\u2013 ");        // en dash
+            } else {
+                builder.append("\u2022 ");        // bullet
+            }
+            builder.append(engine.titles[i]);
+            if (playable) {
                 builder.setSpan(new ForegroundColorSpan(primary), start,
                         builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 builder.setSpan(new StyleSpan(Typeface.BOLD), start,
@@ -187,14 +197,21 @@ public class EnginesActivity extends AppCompatActivity {
                 JSONObject entry = array.getJSONObject(i);
                 JSONArray titles = entry.getJSONArray("titles");
                 String[] names = new String[titles.length()];
-                boolean[] tested = new boolean[titles.length()];
+                String[] statuses = new String[titles.length()];
                 for (int j = 0; j < titles.length(); j++) {
                     JSONObject title = titles.getJSONObject(j);
                     names[j] = title.getString("name");
-                    tested[j] = title.optBoolean("tested", false);
+                    // explicit status wins; the legacy tested boolean is
+                    // the fallback for data files that predate it
+                    String status = title.optString("status", null);
+                    if (status == null || status.length() == 0) {
+                        status = title.optBoolean("tested", false)
+                                ? STATUS_PLAYABLE : "untested";
+                    }
+                    statuses[j] = status;
                 }
                 engines[i] = new Engine(entry.getString("name"),
-                        entry.optBoolean("tested", false), names, tested);
+                        entry.optBoolean("tested", false), names, statuses);
             }
             return engines;
         } catch (Exception e) {
