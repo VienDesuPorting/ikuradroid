@@ -4,7 +4,7 @@
 
 The project grew out of the abandoned 2016 Android port of **ViLE (Visual Library Engine)**. ViLE itself covered not only Ikura GDL but also Will, Crowd, C-Ware, JAST, Windy and T-Love. The current goal is to polish the old games and gradually bring back support for the other engines.
 
-On top of the base engine code, modules are built for specific games — for example **Little My Maid** (the Will family): game launch and scene playback, PC-style choices, enlarged touch hit areas and the points bar on the game window frame. See [CHANGELOG.en.md](CHANGELOG.en.md) for the details.
+On top of the base engine code, modules are built for specific games — for example **Little My Maid** (the Will family). See [CHANGELOG.en.md](CHANGELOG.en.md) for the details.
 
 For Russian fan translations an NScripter interpreter is embedded — an **ONScripter** fork (Ogapee, GPLv2) with CP1251 support. The existing ONScripterRU is outdated and no longer works on modern devices: it only ships 32-bit (AArch32) libraries, and its sources are gone.
 
