@@ -10,9 +10,9 @@ Interface: English / Russian. License: GPLv3.
 
 ## Compatibility
 
-The table of tested and not-yet-tested games has grown and moved to a separate document:
+The game compatibility table has grown and moved to a separate document:
 
-[![Compatibility](https://img.shields.io/badge/Compatibility-6_of_29_tested-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.en.md)
+[![Compatibility](https://img.shields.io/badge/Compatibility-10_of_31_playable-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.en.md)
 
 ## Known issues
 

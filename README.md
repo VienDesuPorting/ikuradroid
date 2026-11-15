@@ -10,9 +10,9 @@ English version: [README.en.md](README.en.md)
 
 ## Совместимость
 
-Таблица протестированных и ещё не проверенных игр выросла и переехала в отдельный документ:
+Таблица совместимости игр выросла и переехала в отдельный документ:
 
-[![Совместимость](https://img.shields.io/badge/Совместимость-6_из_29_проверено-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.md)
+[![Совместимость](https://img.shields.io/badge/Совместимость-10_из_31_проходимы-3DDC84?style=for-the-badge&logo=android&logoColor=white)](COMPATIBILITY.md)
 
 ## Известные баги
 

@@ -10,7 +10,7 @@
         { "name": "Hitomi -My Stepsister-", "tested": false },
         { "name": "Idols Galore!", "tested": false },
         { "name": "Kana ... Okaeri!", "tested": false },
-        { "name": "Kana ~ Little Sister", "tested": false },
+        { "name": "Kana ~ Little Sister", "tested": true },
         { "name": "The Sagara Family", "tested": false },
         { "name": "Snow", "tested": false },
         { "name": "Virgin", "tested": false }
@@ -71,10 +71,12 @@
       "name": "NScripter",
       "tested": true,
       "titles": [
-        { "name": "Higanbana no Saku Yoru ni", "tested": true },
+        { "name": "Higanbana no Saku Yoru ni: The First Night", "tested": true },
+        { "name": "Higanbana no Saku Yoru ni: The Second Night", "tested": true },
+        { "name": "Higurashi no Naku Koro ni", "tested": true },
         { "name": "Rose Guns Days: The Best", "tested": true },
         { "name": "Umineko no Naku Koro ni Hane", "tested": true },
-        { "name": "Umineko no Naku Koro ni (other parts)", "tested": false }
+        { "name": "Umineko no Naku Koro ni", "tested": true }
       ]
     }
   ]
