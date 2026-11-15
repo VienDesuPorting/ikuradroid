@@ -81,7 +81,7 @@ Titles marked playable are kept in sync with `app/src/main/assets/engines.json` 
 | Higanbana no Saku Yoru ni: The First Night | playable | |
 | Higanbana no Saku Yoru ni: The Second Night | playable | |
 | Higurashi no Naku Koro ni (RU fan patch, repacked) | playable | needs further work and checking against the PC version |
-| Rose Guns Days: The Best | playable | |
+| Rose Guns Days: The Best | playable | the unknown-effect crash after the intro is fixed |
 | Umineko no Naku Koro ni Hane | playable | |
 | Umineko no Naku Koro ni (other parts) | playable | |
 
