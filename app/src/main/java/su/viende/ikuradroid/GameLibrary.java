@@ -2,6 +2,7 @@ package su.viende.ikuradroid;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 
 import org.json.JSONObject;
 
@@ -207,23 +208,37 @@ public final class GameLibrary {
     private static final String INSTALL_MARKER = "library_install_marker";
 
     /**
-     * Records this installation as alive. Returns true when the marker
-     * was already there (same install, or the very first launch ever);
-     * false right after a fresh install, when any library state that
-     * made it into the prefs is stale and must be dropped.
+     * Records this installation as alive. Returns true when this is the
+     * same install that was alive on the previous launch: either the
+     * marker is already there, or the APK was updated in place (package
+     * timestamps say so) and the marker was simply not yet known to the
+     * older build. Returns false right after a real fresh install, when
+     * any library state that made it into the prefs is stale and must
+     * be dropped.
      *
-     * Why it exists: the reported "after deleting the APK and adding
-     * novels, the old ones reappear" - the library prefs (roots, hidden
-     * titles, renames, covers) were being resurrected by a backup
-     * transport, so a fresh install started non-empty and the centered
-     * empty state never showed. allowBackup is now false, which cuts the
-     * standard Auto Backup path; the marker catches any transport that
-     * still restores the prefs while no_backup/ stays empty.
+     * Why the timestamps: the marker has only been written by builds
+     * that already knew it, and an update keeps the app's data
+     * directory - so the first launch of a new build over an older one
+     * must not mistake "no marker" for a fresh install. A fresh install
+     * sets firstInstallTime == lastUpdateTime; every later update bumps
+     * only lastUpdateTime. When they differ, the APK was installed
+     * earlier and updated now: the library state predates this build
+     * and must survive.
      */
     public static boolean isSameInstall(Context context) {
         File marker = new File(context.getNoBackupFilesDir(), INSTALL_MARKER);
         if (marker.isFile()) {
             return true;
+        }
+        boolean freshInstall = true;
+        try {
+            PackageInfo info = context.getPackageManager()
+                    .getPackageInfo(context.getPackageName(), 0);
+            freshInstall = info.firstInstallTime == info.lastUpdateTime;
+        } catch (Exception e) {
+            // PackageManager being unavailable is not a reason to wipe a
+            // library that may be alive: treat this launch as an update.
+            freshInstall = false;
         }
         try {
             marker.createNewFile();
@@ -231,7 +246,7 @@ public final class GameLibrary {
             // The reset below would then run on every launch - harmless:
             // in a truly fresh install the prefs are empty anyway.
         }
-        return false;
+        return !freshInstall;
     }
 
     /**

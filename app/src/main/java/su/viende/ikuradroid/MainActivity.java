@@ -1289,13 +1289,17 @@ public class MainActivity extends AppCompatActivity
         protected void onResume() {
                 super.onResume();
                 if (!GameLibrary.isSameInstall(this)) {
-                        // Fresh install (the APK was deleted): any library
-                        // state that made it here was resurrected by a backup
-                        // transport - the reported "old novels reappear, the
-                        // centered add button is gone". Drop the stale prefs
-                        // and the leftover app-owned install copies, so the
-                        // library really starts empty. The user's own game
-                        // folders on shared storage are never touched.
+                        // A genuine fresh install (the APK was deleted):
+                        // any library state that made it here was
+                        // resurrected by a backup transport - "old novels
+                        // reappear, the centered add button is gone".
+                        // GameLibrary discriminates via the package
+                        // timestamps, so an in-place update from an older
+                        // build never reaches this branch - its library
+                        // is alive. Drop the stale prefs and the leftover
+                        // app-owned install copies, so the library really
+                        // starts empty. The user's own game folders on
+                        // shared storage are never touched.
                         GameLibrary.resetLibraryState(this);
                         GameLibrary.clearInstallArea(this);
                 }

@@ -82,7 +82,7 @@
 #define PACKAGE_VERSION "2.6.0"
 
 /* SCM Revision */
-#define SCM_VERSION "1556076"
+#define SCM_VERSION "86f35c9"
 
 /* Define to the type of arg 1 for `select'. */
 #define SELECT_TYPE_ARG1 int
