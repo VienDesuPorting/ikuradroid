@@ -81,7 +81,7 @@ English version: [COMPATIBILITY.en.md](COMPATIBILITY.en.md)
 | --- | --- | --- |
 | Higanbana no Saku Yoru ni: The First Night | проходима | |
 | Higanbana no Saku Yoru ni: The Second Night | проходима | |
-| Higurashi no Naku Koro ni (русификатор, перепакован) | проходима | требует доработок по тексту — не приоритетно, будет исправлено в будущей версии |
+| Higurashi no Naku Koro ni | проходима | требует доработок по тексту — не приоритетно, будет исправлено в будущей версии |
 | Rose Guns Days: The Best | проходима | |
 | Umineko no Naku Koro ni Hane | проходима | |
 | Umineko no Naku Koro ni (остальные части) | проходима | |

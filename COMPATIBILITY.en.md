@@ -81,7 +81,7 @@ Titles are kept in sync with `app/src/main/assets/engines.json` and appear on th
 | --- | --- | --- |
 | Higanbana no Saku Yoru ni: The First Night | playable | |
 | Higanbana no Saku Yoru ni: The Second Night | playable | |
-| Higurashi no Naku Koro ni (RU fan patch, repacked) | playable | needs text rework - not a priority right now, to be fixed in a future version |
+| Higurashi no Naku Koro ni | playable | needs text rework - not a priority right now, to be fixed in a future version |
 | Rose Guns Days: The Best | playable | |
 | Umineko no Naku Koro ni Hane | playable | |
 | Umineko no Naku Koro ni (other parts) | playable | |
