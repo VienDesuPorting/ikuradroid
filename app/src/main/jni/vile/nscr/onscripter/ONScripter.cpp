@@ -44,6 +44,8 @@
 #ifdef ANDROID
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 #include <android/log.h>
 #endif
 
@@ -940,7 +942,7 @@ void ONScripter::mouseOverCheck(int x, int y)
         // Log each button's rect
         dbl = root_button_link.next;
         int i = 0;
-        while (dbl && i < 5) {
+        while (dbl && i < 12) {
             __android_log_print(ANDROID_LOG_INFO, "ONS_TOUCH",
                 "  btn[%d] no=%d rect=(%d,%d,%d,%d) type=%d",
                 i, dbl->no,
@@ -1240,9 +1242,48 @@ void ONScripter::executeLabel()
                 int x, y;
                 /* Device coordinates for a 960x600 window with the
                  * 800x600 game area centered (device = game*1.25 + 80). */
-                if (n < 5)            { x = 480; y = 300; } /* logo click-through */
-                else if (n < 25)      { x = 455; y = 340; } /* title Start */
-                else                  { x = 205; y = 162; } /* select: Onikakushi / advance */
+                /* IKURADROID_SPOT="x1,y1[;x2,y2...][:N]" overrides the
+                 * whole schedule with GAME-space spots (converted to
+                 * device space here): each spot is clicked N times
+                 * before the schedule advances to the next one - lets
+                 * the stand drive titles whose menus sit elsewhere
+                 * than Higurashi's (e.g. Umineko-RU: Start, then EP1).
+                 * With a single spot the whole run keeps clicking it.
+                 * A ":N" suffix sets the per-spot dwell (default 8). */
+                static int spots[8][2];
+                static int n_spots = -1, spot_dwell = 8, spot_i = 0;
+                if (n_spots < 0) {
+                    n_spots = 0;
+                    const char* env = getenv("IKURADROID_SPOT");
+                    if (env) {
+                        const char* p = env;
+                        while (*p && n_spots < 8) {
+                            int gx = 0, gy = 0, used = 0;
+                            if (sscanf(p, "%d,%d%n", &gx, &gy, &used) == 2) {
+                                spots[n_spots][0] = gx * 800 / 640 + 80;
+                                spots[n_spots][1] = gy * 600 / 480;
+                                n_spots++;
+                                p += used;
+                                if (*p == ';') p++;
+                                else break;
+                            }
+                            else break;
+                        }
+                        const char* colon = strrchr(env, ':');
+                        if (colon && n_spots > 0 && atoi(colon + 1) > 0)
+                            spot_dwell = atoi(colon + 1);
+                    }
+                }
+                if (n_spots > 0) {
+                    if (spot_i / spot_dwell >= n_spots)
+                        spot_i = (n_spots - 1) * spot_dwell; /* stay on the last */
+                    x = spots[spot_i / spot_dwell][0];
+                    y = spots[spot_i / spot_dwell][1];
+                    spot_i++;
+                }
+                else if (n < 5)           { x = 480; y = 300; } /* logo click-through */
+                else if (n < 25)          { x = 455; y = 340; } /* title Start */
+                else                      { x = 205; y = 162; } /* select: Onikakushi / advance */
                 i++;
                 SDL_Event down, up;
                 SDL_zero(down); SDL_zero(up);
