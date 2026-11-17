@@ -37,17 +37,24 @@ The game compatibility table has grown and moved to a separate document:
 
    Ikura GDL usually needs `GGD` / `ISF` and `*.suf`; Will needs archives like `Rio.arc` and `Chip.arc`; NScripter needs `nscript.dat`/`pscript.dat` (or a plain-text `0.txt`) and, for Russian translations, `default.ttf`.
 
-   Russian fan patches sometimes ship as an overlay: the translation sits next to the game in its own folder with its own `nscript.dat`, `arc.nsa` and font. Such a patch needs no merging - the engine supports the `patch/` folder (an ONScripter heritage): files in `patch/arc.nsa` override same-named files of the root `arc.nsa`, while the script and the font go into the game root. Higurashi no Naku Koro ni with its Russian patch, for example, is assembled like this:
+   Russian fan patches sometimes ship as an overlay: the translation sits next to the game in its own folder with its own `nscript.dat`, `arc.nsa` and font. Such a patch needs no merging - the engine supports the `patch/` folder (an ONScripter heritage): files in `patch/arc.nsa` override same-named files of the root `arc.nsa`, while the script and the font go into the game root. Umineko no Naku Koro ni with the Honyaku-Subs Russian patch, for example, is assembled like this:
 
    ```text
-   Higurashi no Naku Koro ni (RU)/
-   ├── nscript.dat      <- from the patch folder
-   ├── default.ttf      <- the patch font (rename default.TTF)
+   Umineko/
+   ├── nscript.dat      <- from the patch folder (translated script)
+   ├── default.ttf      <- the patch font
    ├── arc.nsa          <- original Japanese archive
+   ├── arc1.nsa         <- the other original archives
+   ├── arc2.nsa         <- (all of the game's archives)
    ├── patch/
    │   └── arc.nsa      <- the patch's Russian archive
-   └── WAV/             <- original voice and music
+   ├── BGM/             <- original music
+   ├── SE/              <- original sound effects
+   ├── movie/           <- original movies
+   └── ...              <- the rest of the original game's folders
    ```
+
+   The procedure: lay the patch archive's contents over the game folder (its `nscript.dat` and `default.ttf` into the root, its `arc.nsa` into `patch/`), keeping the original archives and folders in place. Updating the translation later means just replacing the files in `patch/` - the base game is never touched.
 3. Start IkuraDroid, grant file access, tap **Choose folder** and select the `Novels` folder (or a game folder directly).
 4. Open the game from the library.
 
