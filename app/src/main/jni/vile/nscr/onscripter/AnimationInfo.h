@@ -159,7 +159,6 @@ public:
     void setImage(SDL_Surface* surface, Uint32 texture_format);
     unsigned char getAlpha(int x, int y);
 
-    void convertFromYUV(SDL_Overlay* src);
     void subtract(SDL_Surface* surface, AnimationInfo* layer_info, unsigned char* layer_alpha_buf);
 };
 

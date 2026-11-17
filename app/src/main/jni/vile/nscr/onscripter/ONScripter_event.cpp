@@ -143,7 +143,7 @@ extern "C" Uint32 SDLCALL bgmfadeCallback(Uint32 interval, void* param)
  * OS Dependent Input Translation
  * **************************************** */
 
-SDLKey transKey(SDLKey key)
+SDL_Keycode transKey(SDL_Keycode key)
 {
 #if defined(IPODLINUX)
     switch (key) {
@@ -189,16 +189,16 @@ SDLKey transKey(SDLKey key)
     case SDLK_RIGHT:
         key = SDLK_RETURN;
         break; /* vkRIGHT */
-    case SDLK_KP0:
+    case SDLK_KP_0:
         key = SDLK_q;
         break; /* vkStart */
-    case SDLK_KP1:
+    case SDLK_KP_1:
         key = SDLK_RETURN;
         break; /* vkA     */
-    case SDLK_KP2:
+    case SDLK_KP_2:
         key = SDLK_SPACE;
         break; /* vkB     */
-    case SDLK_KP3:
+    case SDLK_KP_3:
         key = SDLK_ESCAPE;
         break; /* vkC     */
     default:
@@ -208,10 +208,10 @@ SDLKey transKey(SDLKey key)
     return key;
 }
 
-SDLKey transJoystickButton(Uint8 button)
+SDL_Keycode transJoystickButton(Uint8 button)
 {
 #if defined(PSP)
-    SDLKey button_map[] = {SDLK_ESCAPE, /* TRIANGLE */
+    SDL_Keycode button_map[] = {SDLK_ESCAPE, /* TRIANGLE */
                            SDLK_RETURN, /* CIRCLE   */
                            SDLK_SPACE, /* CROSS    */
                            SDLK_RCTRL, /* SQUARE   */
@@ -228,7 +228,7 @@ SDLKey transJoystickButton(Uint8 button)
                            /* HOLD     */};
     return button_map[button];
 #elif defined(__PS3__)
-    SDLKey button_map[] = {
+    SDL_Keycode button_map[] = {
         SDLK_0, /* SELECT   */
         SDLK_UNKNOWN, /* L3       */
         SDLK_UNKNOWN, /* R3       */
@@ -251,7 +251,7 @@ SDLKey transJoystickButton(Uint8 button)
     };
     return button_map[button];
 #elif defined(GP2X)
-    SDLKey button_map[] = {
+    SDL_Keycode button_map[] = {
         SDLK_UP, /* UP        */
         SDLK_UNKNOWN, /* UPLEFT    */
         SDLK_LEFT, /* LEFT      */
@@ -283,7 +283,7 @@ SDL_KeyboardEvent transJoystickAxis(SDL_JoyAxisEvent& jaxis)
 
     SDL_KeyboardEvent event;
 
-    SDLKey axis_map[] = {SDLK_LEFT, /* AL-LEFT  */
+    SDL_Keycode axis_map[] = {SDLK_LEFT, /* AL-LEFT  */
                          SDLK_RIGHT, /* AL-RIGHT */
                          SDLK_UP, /* AL-UP    */
                          SDLK_DOWN /* AL-DOWN  */};
@@ -719,43 +719,43 @@ void ONScripter::variableEditMode(SDL_KeyboardEvent* event)
         break;
 
     case SDLK_9:
-    case SDLK_KP9:
+    case SDLK_KP_9:
         variable_edit_num = variable_edit_num * 10 + 9;
         break;
     case SDLK_8:
-    case SDLK_KP8:
+    case SDLK_KP_8:
         variable_edit_num = variable_edit_num * 10 + 8;
         break;
     case SDLK_7:
-    case SDLK_KP7:
+    case SDLK_KP_7:
         variable_edit_num = variable_edit_num * 10 + 7;
         break;
     case SDLK_6:
-    case SDLK_KP6:
+    case SDLK_KP_6:
         variable_edit_num = variable_edit_num * 10 + 6;
         break;
     case SDLK_5:
-    case SDLK_KP5:
+    case SDLK_KP_5:
         variable_edit_num = variable_edit_num * 10 + 5;
         break;
     case SDLK_4:
-    case SDLK_KP4:
+    case SDLK_KP_4:
         variable_edit_num = variable_edit_num * 10 + 4;
         break;
     case SDLK_3:
-    case SDLK_KP3:
+    case SDLK_KP_3:
         variable_edit_num = variable_edit_num * 10 + 3;
         break;
     case SDLK_2:
-    case SDLK_KP2:
+    case SDLK_KP_2:
         variable_edit_num = variable_edit_num * 10 + 2;
         break;
     case SDLK_1:
-    case SDLK_KP1:
+    case SDLK_KP_1:
         variable_edit_num = variable_edit_num * 10 + 1;
         break;
     case SDLK_0:
-    case SDLK_KP0:
+    case SDLK_KP_0:
         variable_edit_num = variable_edit_num * 10 + 0;
         break;
 
@@ -819,9 +819,9 @@ void ONScripter::variableEditMode(SDL_KeyboardEvent* event)
     case SDLK_ESCAPE:
         if (variable_edit_mode == EDIT_SELECT_MODE) {
             variable_edit_mode = NOT_EDIT_MODE;
-            SDL_WM_SetCaption(DEFAULT_WM_TITLE, DEFAULT_WM_ICON);
+            SDL_SetWindowTitle(window, DEFAULT_WM_TITLE);
             SDL_Delay(100);
-            SDL_WM_SetCaption(wm_title_string, wm_icon_string);
+            SDL_SetWindowTitle(window, wm_title_string);
             return;
         }
         variable_edit_mode = EDIT_SELECT_MODE;
@@ -868,7 +868,7 @@ void ONScripter::variableEditMode(SDL_KeyboardEvent* event)
                 EDIT_MODE_PREFIX, var_name, p, (variable_edit_sign == 1) ? "" : "-", variable_edit_num);
     }
 
-    SDL_WM_SetCaption(wm_edit_string, wm_icon_string);
+    SDL_SetWindowTitle(window, wm_edit_string);
 }
 
 void ONScripter::shiftCursorOnButton(int diff)
@@ -906,7 +906,7 @@ void ONScripter::shiftCursorOnButton(int diff)
         x = x * screen_device_width / screen_width + offset_x;
         y = y * screen_device_height / screen_height + offset_y;
         shift_over_button = button->no;
-        SDL_WarpMouse(x, y);
+        SDL_WarpMouseInWindow(window, x, y);
     }
 }
 
@@ -1014,7 +1014,7 @@ bool ONScripter::keyPressEvent(SDL_KeyboardEvent* event)
             variable_edit_sign = 1;
             variable_edit_num = 0;
             sprintf(wm_edit_string, "%s%s", EDIT_MODE_PREFIX, EDIT_SELECT_STRING);
-            SDL_WM_SetCaption(wm_edit_string, wm_icon_string);
+            SDL_SetWindowTitle(window, wm_edit_string);
         }
     }
 
@@ -1540,6 +1540,23 @@ void ONScripter::runEventLoop()
             ret = mousePressEvent(&event.button);
             if (ret) return;
             break;
+
+        case SDL_MOUSEWHEEL:
+            /* SDL 1.2 delivered the wheel as buttons 4/5; SDL 2 has a
+             * dedicated event. Feed it through mousePressEvent the same
+             * way the old WHEELUP/WHEELDOWN button codes did (keyboard
+             * arrow emulation above still uses those codes). */
+            {
+                SDL_MouseButtonEvent bevent;
+                memset(&bevent, 0, sizeof(bevent));
+                bevent.type = SDL_MOUSEBUTTONDOWN;
+                bevent.button = (event.wheel.y > 0) ? SDL_BUTTON_WHEELUP
+                                                    : SDL_BUTTON_WHEELDOWN;
+                SDL_GetMouseState(&bevent.x, &bevent.y);
+                ret = mousePressEvent(&bevent);
+                if (ret) return;
+            }
+            break;
 #endif
         case SDL_JOYBUTTONDOWN:
             event.key.type = SDL_KEYDOWN;
@@ -1654,11 +1671,12 @@ void ONScripter::runEventLoop()
             }
 #endif
             if (event.window.event == SDL_WINDOWEVENT_EXPOSED) {
-#ifdef USE_SDL_RENDERER
-                SDL_RenderPresent(renderer);
-#else
-                SDL_UpdateRect(screen_surface, 0, 0, screen_width, screen_height);
-#endif
+                /* The backbuffer contents are undefined between frames
+                 * (SDL2 makes no promise after RenderPresent), so a bare
+                 * RenderPresent is not enough to restore the window
+                 * after an expose: repaint the game area properly. */
+                dirty_rect.fill(screen_width, screen_height);
+                flush(refreshMode());
                 break;
             }
             break;

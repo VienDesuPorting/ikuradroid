@@ -89,7 +89,6 @@ OBJS += $(foreach tu,$(ONS_TUS),$(BUILD)/obj/nscr/onscripter/$(tu).o)
 
 # ONScripter-Droid C parts (mirrors vile/nscr/Android.mk static libraries)
 OBJS += $(patsubst $(VILE)/nscr/bzip2/%.c,$(BUILD)/obj/nscr/bzip2/%.o,$(wildcard $(VILE)/nscr/bzip2/*.c))
-OBJS += $(BUILD)/obj/nscr/sdl_compat/sdl12_compat_runtime.o
 OBJS += $(BUILD)/host_stubs.o
 
 # ONScripter-Droid C++ flags (mirror vile/nscr/Android.mk LOCAL_CFLAGS;
@@ -103,13 +102,12 @@ JNI   := $(ROOT)/app/src/main/jni
 NSCR_ANDROID_DEFINE ?= -DANDROID
 NSCRXXFLAGS := -std=gnu++14 -fpermissive -w -O2 -g \
        $(NSCREXTRAFLAGS) \
-       -I$(NSCR)/onscripter -I$(NSCR)/sdl_compat -I$(NSCR)/bzip2 \
+       -I$(NSCR)/onscripter -I$(NSCR)/bzip2 \
        -I$(JNI)/sdl/include -I$(JNI)/sdl_image -I$(JNI)/sdl_mixer \
        -I$(JNI)/sdl_ttf -I$(JNI)/smpeg2-2.0.0 -I$(JNI)/smpeg2-2.0.0/smpeg \
        -I$(ROOT)/pc/stubs \
        -DLINUX $(NSCR_ANDROID_DEFINE) -DUSE_SDL_RENDERER -DPDA_AUTOSIZE -DENABLE_1BYTE_CHAR \
-       -DSDL_JAVA_PACKAGE_PATH=su_viende_ikuradroid \
-       -include $(NSCR)/sdl_compat/sdl12_compat.h
+       -DSDL_JAVA_PACKAGE_PATH=su_viende_ikuradroid
 
 # Engine include paths (mirror Android.mk LOCAL_C_INCLUDES)
 INC := -I$(VILE) -I$(VILE)/engine -I$(VILE)/dialogs -I$(VILE)/widgets \
@@ -159,10 +157,6 @@ $(BUILD)/obj/nscr/%.o: $(VILE)/nscr/%.cpp
 $(BUILD)/obj/nscr/bzip2/%.o: $(VILE)/nscr/bzip2/%.c
 >mkdir -p $(dir $@)
 >$(CC) -O2 -I$(NSCR)/bzip2 -c $< -o $@
-
-$(BUILD)/obj/nscr/sdl_compat/sdl12_compat_runtime.o: $(VILE)/nscr/sdl_compat/sdl12_compat_runtime.c
->mkdir -p $(dir $@)
->$(CC) -O2 -g -D_GNU_SOURCE -I$(NSCR)/sdl_compat -I$(JNI)/sdl/include -c $< -o $@
 
 # generic rule must come last; explicit ONScripter objects resolve through
 # the shorter-stem nscr pattern rule above

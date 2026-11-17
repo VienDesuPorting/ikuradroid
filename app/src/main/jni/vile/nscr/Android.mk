@@ -33,21 +33,6 @@ LOCAL_SRC_FILES := \
 
 include $(BUILD_STATIC_LIBRARY)
 
-# --- SDL 1.2 -> SDL 2 shim runtime (static) -----------------------------
-include $(CLEAR_VARS)
-
-LOCAL_MODULE := sdl12_compat
-
-LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/sdl_compat \
-	$(LOCAL_PATH)/../../sdl/include
-
-LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/sdl_compat
-
-LOCAL_SRC_FILES := sdl_compat/sdl12_compat_runtime.c
-
-include $(BUILD_STATIC_LIBRARY)
-
 # --- ONScripter-Droid (static, linked into ikuradroid) ------------------
 include $(CLEAR_VARS)
 
@@ -57,7 +42,6 @@ LOCAL_MODULE := nscr
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/$(ONS_DIR) \
-	$(LOCAL_PATH)/sdl_compat \
 	$(LOCAL_PATH)/bzip2 \
 	$(LOCAL_PATH)/../../sdl/include \
 	$(LOCAL_PATH)/../../sdl_image \
@@ -65,8 +49,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/../../sdl_ttf
 
 LOCAL_EXPORT_C_INCLUDES := \
-	$(LOCAL_PATH)/$(ONS_DIR) \
-	$(LOCAL_PATH)/sdl_compat
+	$(LOCAL_PATH)/$(ONS_DIR)
 
 LOCAL_SRC_FILES := \
 	ons_glue.cpp \
@@ -104,12 +87,11 @@ LOCAL_CFLAGS := \
 	-DUSE_SDL_RENDERER \
 	-DPDA_AUTOSIZE \
 	-DENABLE_1BYTE_CHAR \
-	-DSDL_JAVA_PACKAGE_PATH=su_viende_ikuradroid \
-	-include $(LOCAL_PATH)/sdl_compat/sdl12_compat.h
+	-DSDL_JAVA_PACKAGE_PATH=su_viende_ikuradroid
 
 # ONScripter sources were compiled as C++14 in the reference build
 LOCAL_CPPFLAGS := -std=gnu++14
 
-LOCAL_STATIC_LIBRARIES := sdl12_compat bzip2
+LOCAL_STATIC_LIBRARIES := bzip2
 
 include $(BUILD_STATIC_LIBRARY)

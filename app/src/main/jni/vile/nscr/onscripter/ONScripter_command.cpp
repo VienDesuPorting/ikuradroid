@@ -1694,7 +1694,7 @@ int ONScripter::movemousecursorCommand()
     x = x * screen_device_width / screen_width;
     y = y * screen_device_height / screen_height;
 
-    SDL_WarpMouse(x, y);
+    SDL_WarpMouseInWindow(window, x, y);
 
     return RET_CONTINUE;
 }
@@ -1725,13 +1725,11 @@ int ONScripter::menu_windowCommand()
 {
     if ( fullscreen_mode ){
 #if !defined(PSP)
-        if ( !SDL_WM_ToggleFullScreen( screen_surface ) ){
-            screen_surface = SDL_SetVideoMode( screen_device_width, screen_device_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG );
-#ifdef ANDROID
-            SDL_SetSurfaceBlendMode(screen_surface, SDL_BLENDMODE_NONE);
-#endif            
-            flushDirect( screen_rect, refreshMode() );
-        }
+        /* SDL 2: leave fullscreen on the existing window. The old
+         * SDL_WM_ToggleFullScreen / SDL_SetVideoMode fallback pair is
+         * SDL 1.2 (the shim used to fake it); the window and renderer
+         * stay valid, only the presentation mode changes. */
+        SDL_SetWindowFullscreen(window, 0);
 #endif
         fullscreen_mode = false;
     }
@@ -1743,13 +1741,7 @@ int ONScripter::menu_fullCommand()
 {
     if ( !fullscreen_mode ){
 #if !defined(PSP)
-        if ( !SDL_WM_ToggleFullScreen( screen_surface ) ){
-            screen_surface = SDL_SetVideoMode( screen_device_width, screen_device_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG|SDL_FULLSCREEN );
-#ifdef ANDROID
-            SDL_SetSurfaceBlendMode(screen_surface, SDL_BLENDMODE_NONE);
-#endif            
-            flushDirect( screen_rect, refreshMode() );
-        }
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 #endif
         fullscreen_mode = true;
     }
@@ -3632,8 +3624,8 @@ int ONScripter::captionCommand()
     setStr( &wm_title_string, buf2 );
     setStr( &wm_icon_string,  buf2 );
     delete[] buf2;
-    
-    SDL_WM_SetCaption( wm_title_string, wm_icon_string );
+
+    SDL_SetWindowTitle(window, wm_title_string);
 
     return RET_CONTINUE;
 }
@@ -3852,7 +3844,8 @@ int ONScripter::btndefCommand()
             parseTaggedString( &btndef_info );
             btndef_info.trans_mode = AnimationInfo::TRANS_COPY;
             setupAnimationInfo( &btndef_info );
-            SDL_SetAlpha( btndef_info.image_surface, DEFAULT_BLIT_FLAG, SDL_ALPHA_OPAQUE );
+            SDL_SetSurfaceAlphaMod( btndef_info.image_surface, SDL_ALPHA_OPAQUE );
+            SDL_SetSurfaceBlendMode( btndef_info.image_surface, SDL_BLENDMODE_NONE );
         }
     }
     
@@ -3971,38 +3964,46 @@ int ONScripter::bltCommand()
 
     if ( sw == dw && sw > 0 && sh == dh && sh > 0 ){
 
-        /* Clip the tile to the game screen first. The 07th Expansion
-         * scripts blt 640x480 tiles at offsets that hang off the
-         * right/bottom edge (e.g. the Higurashi staff roll's
-         * "blt 54,305,640,480,0,0,640,480") and rely on the SDL1.2
-         * destination surface clipping the overhang away. The SDL2
-         * direct path below renders through the WINDOW renderer where
-         * nothing clips, so the overhang painted a permanent white
-         * stripe into the letterbox margin next to the play area. */
-        if (dx < 0) { sx -= dx; dw += dx; dx = 0; }
-        if (dy < 0) { sy -= dy; dh += dy; dy = 0; }
-        if (dx + dw > screen_width)  dw = screen_width  - dx;
-        if (dy + dh > screen_height) dh = screen_height - dy;
-        if (dw <= 0 || dh <= 0) return RET_CONTINUE;
-        sw = dw;
-        sh = dh;
-
-        SDL_Rect src_rect = {sx,sy,(Uint16)sw,(Uint16)sh};
-        SDL_Rect dst_rect = {dx,dy,(Uint16)dw,(Uint16)dh};
-
-#ifdef USE_SDL_RENDERER
-        dst_rect.x = dst_rect.x * screen_device_width / screen_width + (device_width -screen_device_width )/2;
-        dst_rect.y = dst_rect.y * screen_device_width / screen_width + (device_height-screen_device_height)/2;
-        dst_rect.w = dst_rect.w * screen_device_width / screen_width;
-        dst_rect.h = dst_rect.h * screen_device_width / screen_width;
-        SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, btndef_info.image_surface);
-        SDL_RenderCopy(renderer, texture, &src_rect, &dst_rect);
-        SDL_RenderPresent(renderer);
-        SDL_DestroyTexture(texture);
+        /* IkuraDroid: blt originally drew through the WINDOW renderer
+         * (SDL_CreateTextureFromSurface + RenderCopy straight to the
+         * screen, bypassing accumulation_surface). That had two SDL2
+         * problems: consecutive blt tiles survive only because the
+         * backbuffer happens to persist across RenderPresent (driver
+         * undefined behavior; the same assumption broke the letterbox
+         * margins on newer Adreno GPUs), and the tile is not recorded
+         * in accumulation_surface, so the next flush() repaints the
+         * game area from the stale buffer and the tile blinks away.
+         * Route 1:1 blits through accumulation_surface + flushDirect
+         * like every other draw; the scaled case below already did. */
+        SDL_LockSurface(accumulation_surface);
+        SDL_LockSurface(btndef_info.image_surface);
+        ONSBuf *dst_buf = (ONSBuf*)accumulation_surface->pixels;
+        ONSBuf *src_buf = (ONSBuf*)btndef_info.image_surface->pixels;
+#if defined(BPP16)
+        int dst_width = accumulation_surface->pitch / 2;
+        int src_width = btndef_info.image_surface->pitch / 2;
 #else
-        SDL_BlitSurface( btndef_info.image_surface, &src_rect, screen_surface, &dst_rect );
-        SDL_UpdateRect( screen_surface, dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h );
+        int dst_width = accumulation_surface->pitch / 4;
+        int src_width = btndef_info.image_surface->pitch / 4;
 #endif
+        for (int i = dy ; i < dy + dh ; i++){
+            if (i < 0 || i >= screen_height) continue;
+            int y = sy + i - dy;
+            for (int j = dx ; j < dx + dw ; j++){
+                if (j < 0 || j >= screen_width) continue;
+                int x = sx + j - dx;
+                if (x<0 || x>=btndef_info.image_surface->w ||
+                    y<0 || y>=btndef_info.image_surface->h)
+                    *(dst_buf + dst_width*i + j) = 0;
+                else
+                    *(dst_buf + dst_width*i + j) = *(src_buf + y*src_width + x);
+            }
+        }
+        SDL_UnlockSurface(btndef_info.image_surface);
+        SDL_UnlockSurface(accumulation_surface);
+
+        SDL_Rect dst_rect = {dx,dy,(Uint16)dw,(Uint16)dh};
+        flushDirect( dst_rect, REFRESH_NONE_MODE );
         dirty_rect.clear();
     }
     else{

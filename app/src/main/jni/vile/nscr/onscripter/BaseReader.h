@@ -51,6 +51,8 @@
    The _ons wrappers in onscripter_main.cpp are still compiled in (they
    handle the rare case where fopen fails by trying the Java path), but
    we don't redirect the standard names to them anymore. */
+#include <sys/types.h> /* mode_t below (used to arrive transitively via
+                          the SDL 1.2 shim's <SDL.h> include) */
 extern "C" int fseek_ons(FILE* stream, long offset, int whence);
 extern "C" long ftell_ons(FILE* stream);
 extern "C" int fgetc_ons(FILE* stream);

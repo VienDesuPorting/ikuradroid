@@ -114,25 +114,10 @@ void ONScripter::initSDL()
     screen_ratio2 = script_h.screen_width;
     screen_width = PDA_WIDTH;
 #elif defined(PDA_AUTOSIZE)
-    SDL_Rect** modes;
-    modes = SDL_ListModes(NULL, SDL_FULLSCREEN);
-    if (modes == (SDL_Rect**)0) {
-        fprintf(stderr, "No Video mode available.\n");
-        exit(-1);
-    }
-    else if (modes == (SDL_Rect**)-1) {
-        // no restriction
-    }
-    else {
-        int width;
-        if (modes[0]->w * screen_height > modes[0]->h * screen_width)
-            width = (modes[0]->h * screen_width / screen_height) & (~0x01); // to be 2 bytes aligned
-        else
-            width = modes[0]->w;
-        screen_ratio1 = width;
-        screen_ratio2 = script_h.screen_width;
-        screen_width = width;
-    }
+    /* SDL 1.2 queried the largest video mode here to size the game
+     * surface. SDL 2 has no mode list; under USE_SDL_RENDERER (the
+     * only build left) the window is created first and the game is
+     * scaled to it below, so the logical size stays the script size. */
 #endif
 
     screen_height = screen_width * script_h.screen_height / script_h.screen_width;
@@ -242,6 +227,9 @@ void ONScripter::initSDL()
     SDL_GetRendererInfo(renderer, &info);
     if (info.texture_formats[0] == SDL_PIXELFORMAT_ABGR8888)
         texture_format = SDL_PIXELFORMAT_ABGR8888;
+    /* Draw color for the letterbox clear in flushDirect: set once
+     * here, re-applied there (other draw calls are all textures). */
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 #else
 #if defined(ANDROID)
@@ -251,39 +239,22 @@ void ONScripter::initSDL()
     screen_width = script_h.screen_width;
     screen_height = script_h.screen_height;
 #endif
-    screen_surface = SDL_SetVideoMode(screen_width, screen_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG | (fullscreen_mode ? SDL_FULLSCREEN : 0));
-#ifdef BPP16
-    texture_format = SDL_PIXELFORMAT_RGB565;
-#else
-#if defined(ANDROID)
-    SDL_SetSurfaceBlendMode(screen_surface, SDL_BLENDMODE_NONE);
-    texture_format = SDL_PIXELFORMAT_ABGR8888;
-#else
-    texture_format = SDL_PIXELFORMAT_ARGB8888;
-#endif
-#endif
+    /* SDL 1.2 surface-based path: dead since the SDL 2 port (the shim
+     * used to provide SDL_SetVideoMode). Kept only so the file keeps
+     * compiling if USE_SDL_RENDERER is ever undefined; the renderer
+     * path above is the one IkuraDroid runs. */
 #endif
 
     /* ---------------------------------------- */
     /* Check if VGA screen is available. */
 #if !defined(USE_SDL_RENDERER) && (PDA_WIDTH == 640)
-    if (screen_surface == NULL) {
-        screen_ratio1 /= 2;
-        screen_width /= 2;
-        screen_height /= 2;
-        screen_device_width = screen_width;
-        screen_device_height = screen_height;
-        screen_surface = SDL_SetVideoMode(screen_device_width, screen_device_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG | (fullscreen_mode ? SDL_FULLSCREEN : 0));
-    }
+    /* SDL 1.2 fallback (screen_surface stays NULL under the renderer
+     * path): dead since the SDL 2 port. */
 #endif
     underline_value = script_h.screen_height;
 
 #ifndef USE_SDL_RENDERER
-    if (screen_surface == NULL) {
-        fprintf(stderr, "Couldn't set %dx%dx%d video mode: %s\n",
-                screen_width, screen_height, screen_bpp, SDL_GetError());
-        exit(-1);
-    }
+    fprintf(stderr, "non-renderer builds are gone since the SDL 2 port\n");
 #endif
     printf("Display: %d x %d (%d bpp)\n", screen_width, screen_height, screen_bpp);
     dirty_rect.setDimension(screen_width, screen_height);
@@ -296,7 +267,7 @@ void ONScripter::initSDL()
     memcpy(wm_title_string, DEFAULT_WM_TITLE, strlen(DEFAULT_WM_TITLE) + 1);
     wm_icon_string = new char[strlen(DEFAULT_WM_ICON) + 1];
     memcpy(wm_icon_string, DEFAULT_WM_TITLE, strlen(DEFAULT_WM_ICON) + 1);
-    SDL_WM_SetCaption(wm_title_string, wm_icon_string);
+    SDL_SetWindowTitle(window, wm_title_string);
 }
 
 void ONScripter::openAudio(int freq)
@@ -857,6 +828,16 @@ void ONScripter::flushDirect(SDL_Rect& rect, int refresh_mode)
     SDL_LockSurface(accumulation_surface);
     SDL_UpdateTexture(texture, &rect, (unsigned char*)accumulation_surface->pixels + accumulation_surface->pitch * rect.y + rect.x * sizeof(ONSBuf), accumulation_surface->pitch);
     SDL_UnlockSurface(accumulation_surface);
+    /* The backbuffer is UNDEFINED after SDL_RenderPresent. Only the
+     * game rectangle is ever copied below, so without an explicit clear
+     * the letterbox margins kept whatever the GPU driver felt like
+     * leaving there: newer Adreno (8s Gen 3/4) hands back garbage
+     * (noise on one side, a wrapped repeat of the previous frame on
+     * the other), while older Adreno/Mali happened to preserve the
+     * buffer, which is why the bug showed only on some phones. Paint
+     * the whole target black before each copy. */
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, &dst_rect);
     SDL_RenderPresent(renderer);
 #ifdef IKURADROID_AUTODRIVE
@@ -891,19 +872,9 @@ void ONScripter::flushDirect(SDL_Rect& rect, int refresh_mode)
     SDL_Rect dst_rect = rect;
     if (AnimationInfo::doClipping(&dst_rect, &screen_rect) || dst_rect.w == 0 || dst_rect.h == 0) return;
     SDL_BlitSurface(accumulation_surface, &dst_rect, screen_surface, &dst_rect);
-    SDL_UpdateRect(screen_surface, dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h);
-#endif
-}
-
-void ONScripter::flushDirectYUV(SDL_Overlay* overlay)
-{
-#ifdef USE_SDL_RENDERER
-    SDL_Rect dst_rect = {(device_width - screen_device_width) / 2,
-                         (device_height - screen_device_height) / 2,
-                         screen_device_width, screen_device_height};
-    SDL_UpdateTexture(texture, &screen_rect, overlay->pixels[0], overlay->pitches[0]);
-    SDL_RenderCopy(renderer, texture, &screen_rect, &dst_rect);
-    SDL_RenderPresent(renderer);
+    /* SDL 1.2 needed SDL_UpdateRect to post the blit to the screen;
+     * the surface path is dead under SDL 2 (renderer owns the window),
+     * kept only for reference. */
 #endif
 }
 
@@ -1508,7 +1479,10 @@ void ONScripter::refreshMouseOverButton()
     return;
 #endif
     SDL_GetMouseState(&mx, &my);
-    if (!(SDL_GetAppState() & SDL_APPMOUSEFOCUS)) {
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_FOCUS) {
+        /* real mouse focus: keep the reported position */
+    }
+    else {
         mx = screen_device_width;
         my = screen_device_height;
     }

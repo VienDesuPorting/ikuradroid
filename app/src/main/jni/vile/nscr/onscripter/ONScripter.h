@@ -73,6 +73,15 @@
 #define DEFAULT_WM_TITLE "ONScripter"
 #define DEFAULT_WM_ICON "ONScripter"
 
+/* SDL 1.2 reported the mouse wheel as buttons 4/5 (SDL_BUTTON_WHEELUP /
+ * WHEELDOWN). SDL 2 delivers SDL_MOUSEWHEEL events instead — the event
+ * loop synthesizes these codes from it, and the keyboard arrow emulation
+ * keeps using them; see runEventLoop() in ONScripter_event.cpp. They must
+ * not collide with the real SDL button codes (1..5): SDL2's X2 button is
+ * 5, so the wheel codes live above the SDL_BUTTON_X2 range. */
+#define SDL_BUTTON_WHEELUP 6
+#define SDL_BUTTON_WHEELDOWN 7
+
 class ONScripter : public ScriptParser {
 public:
     typedef AnimationInfo::ONSBuf ONSBuf;
@@ -427,7 +436,6 @@ private:
     void resetSentenceFont();
     void flush(int refresh_mode, SDL_Rect* rect = NULL, bool clear_dirty_flag = true, bool direct_flag = false);
     void flushDirect(SDL_Rect& rect, int refresh_mode);
-    void flushDirectYUV(SDL_Overlay* overlay);
     void mouseOverCheck(int x, int y);
 
 public:
