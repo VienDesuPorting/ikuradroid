@@ -151,6 +151,8 @@ void ScriptParser::reset()
     kidokuskip_flag = false;
     kidokumode_flag = true;
     autosaveoff_flag = false;
+    errorsave_flag = false;
+    mode_wave_demo_flag = false;
 
     rmode_flag = true;
     windowback_flag = false;

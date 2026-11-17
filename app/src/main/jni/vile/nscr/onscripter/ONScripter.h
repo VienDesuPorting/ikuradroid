@@ -176,6 +176,7 @@ public:
     int savegameCommand();
     int savefileexistCommand();
     int savescreenshotCommand();
+    int deletescreenshotCommand();
     int resettimerCommand();
     int resetCommand();
     int repaintCommand();

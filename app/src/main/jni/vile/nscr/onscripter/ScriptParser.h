@@ -158,6 +158,9 @@ public:
     int forCommand();
     int filelogCommand();
     int englishCommand();
+    int languageCommand();
+    int errorsaveCommand();
+    int mode_wave_demoCommand();
     int effectcutCommand();
     int effectblankCommand();
     int effectCommand();
@@ -263,6 +266,8 @@ protected:
     bool kidokuskip_flag;
     bool kidokumode_flag;
     bool autosaveoff_flag;
+    bool errorsave_flag;
+    bool mode_wave_demo_flag;
 
     int z_order;
     bool rmode_flag;

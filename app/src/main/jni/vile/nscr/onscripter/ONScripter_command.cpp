@@ -1035,6 +1035,21 @@ int ONScripter::savetimeCommand()
     return RET_CONTINUE;
 }
 
+int ONScripter::deletescreenshotCommand()
+{
+    /* Umineko-RU drops the in-memory shot after saving the thumbnail.
+     * screenshot_surface itself is a permanent engine-owned buffer
+     * (re-created on every getscreenshot), so the only stale state to
+     * clear is the capture size: without it a later savescreenshot
+     * without a preceding getscreenshot would keep squeezing the shot
+     * to the last requested size. Reset to the full screen, matching
+     * the constructor default. */
+    screenshot_w = screen_width;
+    screenshot_h = screen_height;
+
+    return RET_CONTINUE;
+}
+
 int ONScripter::savescreenshotCommand()
 {
     if      ( script_h.isName( "savescreenshot" ) ){

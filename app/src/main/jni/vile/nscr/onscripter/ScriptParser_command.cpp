@@ -1183,6 +1183,60 @@ int ScriptParser::englishCommand()
     return RET_CONTINUE;
 }
 
+int ScriptParser::languageCommand()
+{
+    /* Umineko-RU carries "language english" in *define. ONScripter-ru maps
+     * it onto a script_language enum; we already handle per-language text
+     * through langjp/langen + english mode, and the CP1251 word-wrap gate
+     * in checkLigatureLineBreak() deliberately ignores current_language
+     * (see the comment there). So the directive only records the language
+     * for langjp/langen line filtering and never flips english_mode: the
+     * whole-word wrap the Russian titles rely on must keep working. */
+    if (current_mode != DEFINE_MODE)
+        errorAndExit("language: not in the define section.");
+
+    const char* which = script_h.readStr();
+    if (which && strcmp(which, "japanese") == 0)
+        script_h.current_language = 1;
+    else if (which && strcmp(which, "english") == 0)
+        script_h.current_language = 0;
+    else {
+        script_h.skipToken();
+        return RET_CONTINUE;
+    }
+
+    return RET_CONTINUE;
+}
+
+int ScriptParser::errorsaveCommand()
+{
+    /* Umineko-RU (*define, commented "save to slot 999 on error"): the
+     * save-on-error safety net is a Windows debug convenience there; the
+     * Android port has no crash handler that could honor it, so accept
+     * the directive and only remember it. */
+    if (current_mode != DEFINE_MODE)
+        errorAndExit("errorsave: not in the define section");
+
+    errorsave_flag = true;
+
+    return RET_CONTINUE;
+}
+
+int ScriptParser::mode_wave_demoCommand()
+{
+    /* Umineko-RU (*define): when set, wave/ogg chunks keep playing during
+     * normal skip (ONScripter-ru plays them because the OP movie runs on
+     * demo scenes reached with skip). Our skip path already keeps channel
+     * >= ONS_MIX_CHANNELS sounds; remembering the flag lets the audio
+     * layer make the same distinction later without touching the script. */
+    if (current_mode != DEFINE_MODE)
+        errorAndExit("mode_wave_demo: not in the define section");
+
+    mode_wave_demo_flag = true;
+
+    return RET_CONTINUE;
+}
+
 int ScriptParser::effectcutCommand()
 {
     if (current_mode != DEFINE_MODE)
