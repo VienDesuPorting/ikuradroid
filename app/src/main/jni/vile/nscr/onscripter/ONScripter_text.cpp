@@ -974,6 +974,15 @@ int ONScripter::textCommand()
 
     char* buf = script_h.getStringBuffer();
 
+    /* A ruby markup can never span tokens: '(' and its '/' + ')' live in one
+     * text run. If the previous token left the stage at BODY (unbalanced or
+     * 1-byte literal paren, see the '(' branch in processText), drop it now -
+     * otherwise a stale ruby_end pointer would steer a later '/' marker off
+     * the end of the (shorter) current token. */
+    if (ruby_struct.stage != RubyStruct::NONE &&
+        (script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR))
+        ruby_struct.stage = RubyStruct::NONE;
+
     bool tag_flag = true;
     unsigned short unicode = script_h.enc.getUTF16("y", Encoding::CODE_CP932);
     int n = script_h.enc.getBytes(buf[string_buffer_offset]);
@@ -1386,7 +1395,15 @@ bool ONScripter::processText()
     }
     else if (ch == '(' &&
              (!english_mode ||
-              !(script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR))) {
+              !(script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR)) &&
+             /* Ruby markup is 2-byte/Japanese-only. In 1-byte (CP1251
+              * backtick / UTF-8) text a '(' is ALWAYS a literal paren of
+              * the prose ("скотч(клей)", "(смех)"); starting a ruby scan
+              * there left ruby_end pointing into string_buffer bytes that
+              * later tokens overwrite, and the NEXT '/' line marker jumped
+              * the offset onto that stale pointer - drawing garbage past
+              * the token NUL (Umineko-RU mojibake after click-waits). */
+             !(script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR)) {
         current_page->add('(');
         startRuby(script_h.getStringBuffer() + string_buffer_offset + 1, sentence_font);
 
@@ -1401,7 +1418,15 @@ bool ONScripter::processText()
                * with characters after it ("1/5", "Mr./Mrs.") is a literal
                * and must keep falling through to the literal draw below. */
               script_h.getStringBuffer()[string_buffer_offset + 1] == 0x00)) {
-        if (ruby_struct.stage == RubyStruct::BODY) {
+        /* The ruby sub-branch is 2-byte/Japanese-only. A stale BODY stage
+         * must never steer the offset in 1-byte (CP1251/UTF-8 backtick)
+         * mode: ruby markup can never appear there, but the stage can leak
+         * from an earlier token whose literal '(' started a ruby scan (the
+         * '(' branch below), leaving ruby_end pointing into overwritten
+         * string_buffer bytes. Umineko-RU then drew those stale bytes as
+         * mojibake glyphs ("й Ь Е ▪▪[ ▼ ▪") after click-waits. */
+        if (ruby_struct.stage == RubyStruct::BODY &&
+            !(script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR)) {
             current_page->add('/');
             sentence_font.addLineOffset(ruby_struct.margin);
             string_buffer_offset = ruby_struct.ruby_end - script_h.getStringBuffer();
@@ -1417,6 +1442,7 @@ bool ONScripter::processText()
             return true;
         }
         else { // skip new line
+            ruby_struct.stage = RubyStruct::NONE; // drop a stale BODY here
             new_line_skip_flag = true;
             string_buffer_offset++;
             if (script_h.getStringBuffer()[string_buffer_offset] != 0x00)
@@ -1536,16 +1562,6 @@ bool ONScripter::processText()
     else {
         out_text[0] = ch;
 
-#ifdef IKURADROID_AUTODRIVE
-        /* TEMPORARY diagnosis: every literal char the text pump sees. */
-        if (getenv("IKURADROID_AUTODRIVE") && num_chars_in_sentence < 6)
-            fprintf(stderr, "[txt] ch=%d(%c) off=%d end1byte=%d ts=%u\n",
-                    (int)(unsigned char)ch,
-                    (ch >= 32 && ch < 127) ? ch : '.',
-                    string_buffer_offset,
-                    (int)((script_h.getEndStatus() & ScriptHandler::END_1BYTE_CHAR) != 0),
-                    (unsigned)SDL_GetTicks());
-#endif
         int matched_len = script_h.checkClickstr(script_h.getStringBuffer() + string_buffer_offset);
 
         if (matched_len > 0) {
