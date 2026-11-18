@@ -104,23 +104,34 @@ void ONScripter::shiftHalfPixelY(SDL_Surface* surface)
  *
  * The original ONScripter-RU handles this natively; the stock ogapee
  * ONScripter does not, so we add it here.
+ *
+ * Reference semantics (ONScripter-RU libapplication.so, drawChar + globals
+ * g_ModeSpecialChars/Counter/Index, verified by disassembly): after a 0xDA
+ * byte the parser consumes EXACTLY the next five bytes without validating
+ * that they are digits, accumulating
+ *     value = sum((ch_i - 0x30) & 0xFF) * 10^(5-i)),
+ * and the fifth byte finalizes the escape: the run renders as the single
+ * glyph (unsigned short)value. Translators rely on this for short escapes
+ * followed by padding spaces ("Ъ2423   читается") and for escapes that run
+ * into quotes ("Ъ9734\"") - demanding five DIGITS (our first
+ * implementation) made those runs fall through to literal "Ъ2423" text on
+ * screen. Port the exact consume-5 rule instead; a lone trailing 0xDA at
+ * the end of a buffer is left alone (no overread past the terminator).
  * ------------------------------------------------------------------------- */
 static inline bool isUnicodeEscapeCP1251(const char* text)
 {
-    return (unsigned char)text[0] == 0xDA &&
-           text[1] >= '0' && text[1] <= '9' &&
-           text[2] >= '0' && text[2] <= '9' &&
-           text[3] >= '0' && text[3] <= '9' &&
-           text[4] >= '0' && text[4] <= '9' &&
-           text[5] >= '0' && text[5] <= '9';
+    if ((unsigned char)text[0] != 0xDA) return false;
+    for (int i = 1; i <= 5; i++)
+        if (text[i] == 0) return false;
+    return true;
 }
 
 static inline unsigned short parseUnicodeEscape(const char* text)
 {
-    unsigned short code = 0;
+    unsigned int value = 0;
     for (int i = 1; i <= 5; i++)
-        code = (unsigned short)(code * 10 + (text[i] - '0'));
-    return code;
+        value = value * 10 + ((unsigned char)text[i] - 0x30) % 256u;
+    return (unsigned short)value;
 }
 
 /* A "#RRGGBB" color tag as it appears inside a 1-byte text run
@@ -317,15 +328,12 @@ void ONScripter::drawChar(char* text, FontInfo* info, bool flush_flag, bool look
     char text2[8] = {};
     int n = script_h.enc.getBytes(text[0]);
 
-    /* Check for CP1251 Unicode escape sequence (6 bytes representing 1 glyph) */
+    /* Check for CP1251 Unicode escape sequence (6 bytes representing 1 glyph).
+     * Same acceptance rule as isUnicodeEscapeCP1251: any five non-NUL bytes
+     * after the 0xDA marker (see the comment block above for why). */
     bool is_unicode_escape = false;
     if (script_h.enc.getEncoding() == Encoding::CODE_CP1251 &&
-        (unsigned char)text[0] == 0xDA &&
-        text[1] >= '0' && text[1] <= '9' &&
-        text[2] >= '0' && text[2] <= '9' &&
-        text[3] >= '0' && text[3] <= '9' &&
-        text[4] >= '0' && text[4] <= '9' &&
-        text[5] >= '0' && text[5] <= '9') {
+        isUnicodeEscapeCP1251(text)) {
         is_unicode_escape = true;
         n = 6;
     }
@@ -530,14 +538,10 @@ void ONScripter::drawString(const char* str, uchar3 color, FontInfo* info, bool 
             continue;
         }
         else if (*str) {
-            /* Check for CP1251 Unicode escape (0xDA + 5 digits) */
+            /* Check for CP1251 Unicode escape (0xDA + 5 bytes, see the
+             * isUnicodeEscapeCP1251 comment block for the exact rule) */
             if (script_h.enc.getEncoding() == Encoding::CODE_CP1251 &&
-                (unsigned char)*str == 0xDA &&
-                str[1] >= '0' && str[1] <= '9' &&
-                str[2] >= '0' && str[2] <= '9' &&
-                str[3] >= '0' && str[3] <= '9' &&
-                str[4] >= '0' && str[4] <= '9' &&
-                str[5] >= '0' && str[5] <= '9') {
+                isUnicodeEscapeCP1251(str)) {
                 if (checkLigatureLineBreak(str, info))
                     info->newLine();
                 for (int i = 0; i < 6; i++)
@@ -629,16 +633,12 @@ void ONScripter::restoreTextBuffer(SDL_Surface* surface)
 
             int n = script_h.enc.getBytes(out_text[0]);
 
-            /* Check for CP1251 Unicode escape in lookback buffer */
+            /* Check for CP1251 Unicode escape in lookback buffer (same
+             * any-5-bytes rule as isUnicodeEscapeCP1251) */
             bool is_unicode_escape = false;
             if (script_h.enc.getEncoding() == Encoding::CODE_CP1251 &&
-                (unsigned char)out_text[0] == 0xDA &&
                 i + 5 < current_page->text_count &&
-                current_page->text[i + 1] >= '0' && current_page->text[i + 1] <= '9' &&
-                current_page->text[i + 2] >= '0' && current_page->text[i + 2] <= '9' &&
-                current_page->text[i + 3] >= '0' && current_page->text[i + 3] <= '9' &&
-                current_page->text[i + 4] >= '0' && current_page->text[i + 4] <= '9' &&
-                current_page->text[i + 5] >= '0' && current_page->text[i + 5] <= '9') {
+                isUnicodeEscapeCP1251(current_page->text + i)) {
                 is_unicode_escape = true;
                 n = 6;
                 for (int j = 1; j < 6; j++)
@@ -1522,19 +1522,10 @@ bool ONScripter::processText()
         return true;
     }
     else if (script_h.enc.getEncoding() == Encoding::CODE_CP1251 &&
-             (unsigned char)ch == 0xDA &&
-             script_h.getStringBuffer()[string_buffer_offset + 1] >= '0' &&
-             script_h.getStringBuffer()[string_buffer_offset + 1] <= '9' &&
-             script_h.getStringBuffer()[string_buffer_offset + 2] >= '0' &&
-             script_h.getStringBuffer()[string_buffer_offset + 2] <= '9' &&
-             script_h.getStringBuffer()[string_buffer_offset + 3] >= '0' &&
-             script_h.getStringBuffer()[string_buffer_offset + 3] <= '9' &&
-             script_h.getStringBuffer()[string_buffer_offset + 4] >= '0' &&
-             script_h.getStringBuffer()[string_buffer_offset + 4] <= '9' &&
-             script_h.getStringBuffer()[string_buffer_offset + 5] >= '0' &&
-             script_h.getStringBuffer()[string_buffer_offset + 5] <= '9') {
-        /* CP1251 Unicode escape sequence: 0xDA + 5 decimal digits.
-         * Copies all 6 bytes into out_text so drawChar() can detect and render it. */
+             isUnicodeEscapeCP1251(script_h.getStringBuffer() + string_buffer_offset)) {
+        /* CP1251 Unicode escape sequence: 0xDA + 5 bytes (acceptance rule
+         * documented at isUnicodeEscapeCP1251). Copies all 6 bytes into
+         * out_text so drawChar() can detect and render it. */
         for (int i = 0; i < 6; i++)
             out_text[i] = script_h.getStringBuffer()[string_buffer_offset + i];
 
