@@ -314,19 +314,45 @@ FILE* DirectReader::getFileHandle(const char* file_name, int& compression_type, 
     convertFromSJISToUTF8(capital_name_tmp, capital_name);
     strcpy(capital_name, capital_name_tmp);
     len = strlen(capital_name);
-#elif defined(LINUX)
-    convertFromSJISToEUC(capital_name);
 #endif
 
     *length = 0;
-    if ((fp = fopen(capital_name, "rb")) != NULL && len >= 3) {
-        compression_type = getRegisteredCompressionType(capital_name);
-        if (compression_type == NBZ_COMPRESSION || compression_type == SPB_COMPRESSION) {
-            *length = getDecompressedFileLength(compression_type, fp, 0);
+    fp = NULL;
+    if (len >= 3) {
+        /* Filename encoding fallback, in the ONScripter-RU order: the raw
+         * script bytes first, then Shift-JIS re-encoded as UTF-8, then as
+         * EUC-JP. Script filenames are Shift-JIS byte strings; the mounted
+         * game folder can hold either encoding depending on how the archive
+         * was unpacked. The old LINUX-only build converted straight to EUC,
+         * so every Japanese-named BGM ("夏の扉.ogg") silently failed to open
+         * on Android's UTF-8 filesystem and the game ran without music,
+         * while ASCII names ("HANE.ogg") kept playing. */
+        if ((fp = fopen(capital_name, "rb")) == NULL) {
+            convertFromSJISToUTF8(capital_name_tmp, capital_name);
+            if (strcmp(capital_name_tmp, capital_name) != 0 &&
+                (fp = fopen(capital_name_tmp, "rb")) != NULL) {
+                strcpy(capital_name, capital_name_tmp);
+            }
         }
-        else {
-            fseek(fp, 0, SEEK_END);
-            *length = ftell(fp);
+        if (fp == NULL) {
+#if defined(LINUX)
+            char euc_name[MAX_FILE_NAME_LENGTH * 2 + 1];
+            strncpy(euc_name, capital_name, sizeof(euc_name) - 1);
+            euc_name[sizeof(euc_name) - 1] = '\0';
+            convertFromSJISToEUC(euc_name);
+            if ((fp = fopen(euc_name, "rb")) != NULL)
+                strncpy(capital_name, euc_name, MAX_FILE_NAME_LENGTH * 2);
+#endif
+        }
+        if (fp != NULL) {
+            compression_type = getRegisteredCompressionType(capital_name);
+            if (compression_type == NBZ_COMPRESSION || compression_type == SPB_COMPRESSION) {
+                *length = getDecompressedFileLength(compression_type, fp, 0);
+            }
+            else {
+                fseek(fp, 0, SEEK_END);
+                *length = ftell(fp);
+            }
         }
     }
 
