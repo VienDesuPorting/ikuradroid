@@ -2,7 +2,15 @@
 
 English translation of the Russian changelog ([CHANGELOG.md](CHANGELOG.md)), which remains the authoritative version. The history of the old 2015–2016 Android port lives in the README and the archived VK thread.
 
-All releases older than 2.5.0 have been removed from GitHub Releases: after the rework that went into 2.5.0, the old builds are obsolete and no longer make sense. The current version is 2.6.0.
+All releases older than 2.5.0 have been removed from GitHub Releases: after the rework that went into 2.5.0, the old builds are obsolete and no longer make sense. The current version is 2.6.2.
+
+## 2.6.2 — 2026-11-18
+
+- Umineko no Naku Koro ni and Umineko no Naku Koro ni Chiru with the Russian fan patch: music no longer disappears mid-game. Some of the tracks sit in files with Japanese names, and the engine could not find them among the unpacked ones — the game ran in silence, while tracks with Latin names kept playing as if nothing happened. Chiru also complained about missing sound files. The files are now found no matter which tool unpacked the game.
+- Umineko no Naku Koro ni with the Russian fan patch: garbage in the text after a click is gone — extra characters could appear when moving to the next line. The culprit was an ordinary parenthesis in the Russian text, which the engine took for the start of Japanese ruby markup.
+- Umineko no Naku Koro ni with the Russian fan patch: in the line where the name "Rosa" is explained with kanji, a literal service code of the translation — "Ъ2423" — could print instead of the proper character. Such codes are now parsed the same way as in the original player of this translation and turn back into kanji.
+- NScripter: on some newer devices, interference resembling analog TV noise and a doubled image of the menu appeared instead of the black bars around the picture. The bars are now always drawn plain black, on every device.
+- The installation guide's fan-patch example now uses Umineko no Naku Koro ni: it has several archives and folders, which makes it easy to see what exactly goes into `patch/`.
 
 ## 2.6.0 — 2026-11-15
 
