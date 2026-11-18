@@ -75,8 +75,9 @@
         { "name": "Higanbana no Saku Yoru ni: The Second Night", "tested": true, "status": "playable" },
         { "name": "Higurashi no Naku Koro ni", "tested": true, "status": "playable" },
         { "name": "Rose Guns Days: The Best", "tested": true, "status": "playable" },
-        { "name": "Umineko no Naku Koro ni Hane", "tested": true, "status": "playable" },
-        { "name": "Umineko no Naku Koro ni", "tested": true, "status": "playable" }
+        { "name": "Umineko no Naku Koro ni", "tested": true, "status": "playable" },
+        { "name": "Umineko no Naku Koro ni Chiru", "tested": true, "status": "playable" },
+        { "name": "Umineko no Naku Koro ni Hane", "tested": true, "status": "playable" }
       ]
     }
   ]
